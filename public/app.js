@@ -1,0 +1,1286 @@
+// ── REFS ────────────────────────────────────────────────────────────────────
+const fileInput       = document.getElementById('file-input');
+const dropZone        = document.getElementById('drop-zone');
+const fileListEl      = document.getElementById('file-list');
+const uploadBtn       = document.getElementById('upload-btn');
+const actionsSection  = document.getElementById('actions-section');
+const uploadedFilesEl = document.getElementById('uploaded-files');
+const selectAll       = document.getElementById('select-all');
+const summarizeBtn    = document.getElementById('summarize-btn');
+const quizBtn         = document.getElementById('quiz-btn');
+const quizCount       = document.getElementById('quiz-count');
+const summarySection  = document.getElementById('summary-section');
+const summaryResults  = document.getElementById('summary-results');
+const quizSection     = document.getElementById('quiz-section');
+const quizContainer   = document.getElementById('quiz-container');
+const submitQuiz      = document.getElementById('submit-quiz');
+const quizFooter      = document.getElementById('quiz-footer');
+const quizScore       = document.getElementById('quiz-score');
+const quizProgressInfo= document.getElementById('quiz-progress-info');
+const loader          = document.getElementById('loader');
+const loaderText      = document.getElementById('loader-text');
+const copyAllBtn      = document.getElementById('copy-all-btn');
+const summaryTabs     = document.getElementById('summary-tabs');
+
+let selectedFiles    = [];
+let uploadedFilesMeta = [];
+
+// ── THEME ────────────────────────────────────────────────────────────────────
+const themeToggle = document.getElementById('theme-toggle');
+const html        = document.documentElement;
+const savedTheme  = localStorage.getItem('edu-ai-theme') || 'dark';
+html.setAttribute('data-theme', savedTheme);
+themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+themeToggle.addEventListener('click', () => {
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('edu-ai-theme', next);
+});
+
+// ── UPLOAD ───────────────────────────────────────────────────────────────────
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag-over');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+dropZone.addEventListener('click', e => {
+  if (e.target === fileInput) return;
+  if (e.target.classList.contains('dz-btn') || e.target.htmlFor === 'file-input') return;
+  fileInput.click();
+});
+fileInput.addEventListener('change', () => addFiles(Array.from(fileInput.files)));
+
+function addFiles(files) {
+  files.forEach(f => {
+    const ext = f.name.split('.').pop().toLowerCase();
+    if (!['pdf','ppt','pptx'].includes(ext)) return;
+    if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
+  });
+  renderFileList();
+}
+
+function renderFileList() {
+  fileListEl.innerHTML = '';
+  selectedFiles.forEach((f, i) => {
+    const ext  = f.name.split('.').pop().toUpperCase();
+    const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' Mo' : (f.size/1024).toFixed(0)+' Ko';
+    const div  = document.createElement('div');
+    div.className = 'file-item';
+    div.innerHTML = `<div class="file-item-left"><span class="file-ext">${ext}</span><span>${f.name}</span><span class="file-size">${size}</span></div><span class="remove" data-i="${i}">✕</span>`;
+    fileListEl.appendChild(div);
+  });
+  fileListEl.querySelectorAll('.remove').forEach(btn =>
+    btn.addEventListener('click', e => { selectedFiles.splice(+e.target.dataset.i, 1); renderFileList(); })
+  );
+  uploadBtn.disabled = selectedFiles.length === 0;
+}
+
+uploadBtn.addEventListener('click', async () => {
+  showLoader('Chargement des fichiers...');
+  const formData = new FormData();
+  selectedFiles.forEach(f => formData.append('files', f));
+  try {
+    const res  = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    uploadedFilesMeta = data.files;
+    renderUploadedFiles();
+    actionsSection.classList.remove('hidden');
+    actionsSection.scrollIntoView({ behavior: 'smooth' });
+  } catch (err) { alert('Erreur : ' + err.message); }
+  finally { hideLoader(); }
+});
+
+function renderUploadedFiles() {
+  uploadedFilesEl.innerHTML = '';
+  uploadedFilesMeta.forEach(f => {
+    const ext = f.name.split('.').pop().toUpperCase();
+    const div = document.createElement('div');
+    div.className = 'file-checkbox';
+    div.innerHTML = `<input type="checkbox" value="${f.id}" data-name="${f.name}" data-path="${f.path}" checked /><span class="file-ext">${ext}</span><span>${f.name}</span>`;
+    uploadedFilesEl.appendChild(div);
+  });
+}
+
+selectAll.addEventListener('change', () =>
+  uploadedFilesEl.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = selectAll.checked)
+);
+
+function getSelectedUploadedFiles() {
+  const uploaded = Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'))
+    .map(c => ({ id: c.value, name: c.dataset.name, path: c.dataset.path }));
+  const library = Array.from(document.querySelectorAll('#library-subjects input[type=checkbox]:checked'))
+    .map(c => ({ id: c.value, name: c.dataset.name, path: c.dataset.path }));
+  return [...library, ...uploaded];
+}
+
+// ── BIBLIOTHÈQUE ─────────────────────────────────────────────────────────────
+const libPanel        = document.getElementById('library-panel');
+const libSubjects     = document.getElementById('library-subjects');
+const libCount        = document.getElementById('lib-count');
+const libSelectionBar = document.getElementById('lib-selection-bar');
+const libSelectionLbl = document.getElementById('lib-selection-label');
+const libGoBtn        = document.getElementById('lib-go-btn');
+
+const SECTION_ICONS = {
+  'pharmacie': '💊', 'sciences islamiques': '🕌', 'biologie': '🧬',
+  'chimie': '⚗️', 'physique': '⚡', 'mathématiques': '📐', 'informatique': '💻',
+};
+const SUBJECT_ICONS = {
+  'métrologie': '📐', 'qualité microbiologique': '🔬', 'microbiologie': '🔬',
+  'arabe': '🌙', 'nahw': '✍️', 'tajwid': '🎵',
+  'fiqh': '⚖️', 'usul': '🏛️',
+  'tafsir': '📿', 'coran': '📿',
+  'hadith': '📜', 'sira': '🕌',
+  'aqida': '☪️',
+  'pharmacologie': '💉', 'chimie': '⚗️', 'biochimie': '🧪',
+};
+function sectionIcon(name) {
+  const k = name.toLowerCase();
+  return Object.entries(SECTION_ICONS).find(([key]) => k.includes(key))?.[1] || '🗂️';
+}
+function subjectIcon(name) {
+  const k = name.toLowerCase();
+  return Object.entries(SUBJECT_ICONS).find(([key]) => k.includes(key))?.[1] || '📚';
+}
+
+function buildSubjectEl(subject) {
+  const sec = document.createElement('div');
+  sec.className = 'lib-subject';
+  sec.innerHTML = `
+    <div class="lib-subject-header">
+      <span class="lib-subject-icon">${subjectIcon(subject.name)}</span>
+      ${subject.name}
+      <span class="lib-subject-count">${subject.files.length} fichier${subject.files.length>1?'s':''}</span>
+    </div>
+    <div class="lib-files"></div>`;
+  const filesEl = sec.querySelector('.lib-files');
+  subject.files.forEach(f => {
+    const ext = f.name.split('.').pop().toUpperCase();
+    const row = document.createElement('label');
+    row.className = 'lib-file';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = f.id;
+    cb.dataset.name = f.name; cb.dataset.path = f.path;
+    cb.addEventListener('change', onLibraryChange);
+    const extSpan  = document.createElement('span');
+    extSpan.className = 'file-ext'; extSpan.textContent = ext;
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'lib-file-name'; nameSpan.textContent = f.name;
+    row.append(cb, extSpan, nameSpan);
+    filesEl.appendChild(row);
+  });
+  return sec;
+}
+
+async function loadLibrary() {
+  try {
+    const res  = await fetch('/api/library');
+    const data = await res.json();
+    libSubjects.innerHTML = '';
+
+    const total = (data.sections || []).reduce((a, s) =>
+      a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
+
+    if (!total) {
+      libSubjects.innerHTML = `<div class="lib-empty">Aucun cours dans la bibliothèque.<br>Déposez vos fichiers dans <code>courses/Section/Matière/</code></div>`;
+      libCount.textContent = '0 cours';
+      libPanel.classList.remove('hidden');
+      return;
+    }
+    libCount.textContent = `${total} cours`;
+
+    (data.sections || []).forEach(section => {
+      // Section header
+      const sectionEl = document.createElement('div');
+      sectionEl.className = 'lib-section';
+      const sFileCount = section.subjects.reduce((a, m) => a + m.files.length, 0);
+      sectionEl.innerHTML = `
+        <div class="lib-section-header">
+          <span class="lib-section-icon">${sectionIcon(section.name)}</span>
+          <span class="lib-section-name">${section.name}</span>
+          <span class="lib-subject-count">${sFileCount} fichier${sFileCount>1?'s':''}</span>
+        </div>`;
+      const subjectsEl = document.createElement('div');
+      subjectsEl.className = 'lib-section-subjects';
+      section.subjects.forEach(subject => {
+        if (subject.files.length) subjectsEl.appendChild(buildSubjectEl(subject));
+      });
+      sectionEl.appendChild(subjectsEl);
+      libSubjects.appendChild(sectionEl);
+    });
+
+    libPanel.classList.remove('hidden');
+  } catch(e) { console.warn('Library load failed', e); }
+}
+
+function onLibraryChange() {
+  const checked = document.querySelectorAll('#library-subjects input[type=checkbox]:checked').length;
+  libSelectionBar.classList.toggle('hidden', checked === 0);
+  libSelectionLbl.textContent = `${checked} cours sélectionné${checked>1?'s':''}`;
+  // Afficher la section d'actions dès qu'un fichier est coché
+  if (checked > 0) {
+    actionsSection.classList.remove('hidden');
+  } else if (!uploadedFilesMeta.length) {
+    actionsSection.classList.add('hidden');
+  }
+}
+
+libGoBtn.addEventListener('click', () =>
+  actionsSection.scrollIntoView({ behavior: 'smooth' })
+);
+
+loadLibrary();
+
+// ── SUMMARY ──────────────────────────────────────────────────────────────────
+const SVG = {
+  target:`<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2" fill="currentColor" stroke="none"/></svg>`,
+  bookmark:`<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M4 2h8a1 1 0 011 1v9.5l-5-3-5 3V3a1 1 0 011-1z"/></svg>`,
+  lines:`<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="5" x2="13" y2="5"/><line x1="3" y1="8.5" x2="13" y2="8.5"/><line x1="3" y1="12" x2="9" y2="12"/></svg>`,
+  key:`<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="7" r="3"/><path d="M9 9.5l4.5 4.5M11.5 11.5l1-1"/></svg>`,
+  star:`<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor"><path d="M8 1.5l1.8 3.65 4.03.59-2.92 2.84.69 4.01L8 10.52l-3.6 1.87.69-4.01L2.17 5.74l4.03-.59z"/></svg>`,
+  copy:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1 1 0 011-1h8"/></svg>`,
+  download:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3v7M5.5 8L8 10.5 10.5 8"/><path d="M3 13h10"/></svg>`,
+  pdf:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="2" width="10" height="12" rx="1.5"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="6" y1="9" x2="10" y2="9"/><line x1="6" y1="12" x2="8" y2="12"/></svg>`,
+};
+
+const SECTION_CONFIG = [
+  { match: /objectif/i,     icon: SVG.target,   cls: 'section-objectifs' },
+  { match: /points?\s*cl/i, icon: SVG.bookmark, cls: 'section-points'    },
+  { match: /r[eé]sum[eé]/i, icon: SVG.lines,    cls: 'section-resume'    },
+  { match: /concept/i,      icon: SVG.key,      cls: 'section-concepts'  },
+  { match: /retenir/i,      icon: SVG.star,     cls: 'section-retenir'   },
+];
+
+function buildSummarySections(md) {
+  const sections = []; let current = null;
+  for (const line of md.split('\n')) {
+    const h2 = line.match(/^##\s+(.*)/);
+    if (h2) {
+      if (current) sections.push(current);
+      const title = h2[1].trim();
+      const cfg = SECTION_CONFIG.find(c => c.match.test(title)) || { icon: '📄', cls: 'section-autre' };
+      current = { title, icon: cfg.icon, cls: cfg.cls, lines: [] };
+    } else if (current) current.lines.push(line);
+  }
+  if (current) sections.push(current);
+  return sections;
+}
+
+function renderSummaryItem(r) {
+  const ext      = r.name.split('.').pop().toUpperCase();
+  const baseName = r.name.replace(/\.[^.]+$/, '');
+  const sections = buildSummarySections(r.summary);
+  const encoded  = encodeURIComponent(r.summary);
+
+  const item = document.createElement('div');
+  item.className = 'summary-item';
+
+  // Accent bar + header
+  const accentBar = document.createElement('div');
+  accentBar.className = 'summary-item-accent';
+
+  const header = document.createElement('div');
+  header.className = 'summary-file-header';
+  header.innerHTML = `
+    <div class="summary-file-header-left">
+      <div class="summary-file-icon"><span class="file-ext">${ext}</span></div>
+      <div class="summary-file-info">
+        <strong title="${r.name}">${r.name}</strong>
+        <div class="summary-file-meta">${sections.length} section${sections.length>1?'s':''} · Résumé IA</div>
+      </div>
+    </div>
+    <div class="summary-file-actions">
+      <button class="summary-action-btn copy-btn" data-text="${encoded}">${SVG.copy} Copier</button>
+      <button class="summary-action-btn download-btn" data-name="${r.name}" data-text="${encoded}">${SVG.download} TXT</button>
+      <button class="summary-action-btn pdf pdf-btn" data-name="${r.name}">${SVG.pdf} PDF</button>
+    </div>`;
+
+  // Toolbar
+  const toolbar = document.createElement('div');
+  toolbar.className = 'summary-toolbar';
+  toolbar.innerHTML = `
+    <span class="summary-toolbar-left">${sections.length} sections</span>
+    <button class="summary-expand-btn">Tout réduire</button>`;
+
+  // Sections
+  const sectionsEl = document.createElement('div');
+  sectionsEl.className = 'summary-sections';
+
+  if (!sections.length) {
+    const fb = document.createElement('div');
+    fb.className = 'summary-section section-autre';
+    fb.innerHTML = `<div class="summary-section-body">${marked.parse(r.summary)}</div>`;
+    sectionsEl.appendChild(fb);
+  } else {
+    sections.forEach(s => {
+      const sec = document.createElement('div');
+      sec.className = `summary-section ${s.cls}`;
+      sec.innerHTML = `
+        <div class="summary-section-header">
+          <span class="section-icon">${s.icon}</span>
+          <span class="section-title">${s.title}</span>
+          <span class="section-chevron">▼</span>
+        </div>
+        <div class="summary-section-body">${marked.parse(s.lines.join('\n').trim())}</div>`;
+      sec.querySelector('.summary-section-header').addEventListener('click', () => {
+        sec.classList.toggle('collapsed');
+        updateExpandBtn(expandBtn, sectionsEl);
+      });
+      sectionsEl.appendChild(sec);
+    });
+  }
+
+  // Expand/collapse all
+  const expandBtn = toolbar.querySelector('.summary-expand-btn');
+  expandBtn.addEventListener('click', () => {
+    const allCollapsed = [...sectionsEl.querySelectorAll('.summary-section')].every(s => s.classList.contains('collapsed'));
+    sectionsEl.querySelectorAll('.summary-section').forEach(s =>
+      s.classList.toggle('collapsed', !allCollapsed)
+    );
+    updateExpandBtn(expandBtn, sectionsEl);
+  });
+
+  item.append(accentBar, header, toolbar, sectionsEl);
+
+  // Events
+  item.querySelector('.copy-btn').addEventListener('click', btn => {
+    const b = btn.currentTarget;
+    navigator.clipboard.writeText(decodeURIComponent(b.dataset.text)).then(() => {
+      b.innerHTML = `${SVG.copy} Copié ✓`; setTimeout(() => { b.innerHTML = `${SVG.copy} Copier`; }, 2000);
+    });
+  });
+  item.querySelector('.download-btn').addEventListener('click', btn => {
+    const b = btn.currentTarget;
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([decodeURIComponent(b.dataset.text)], { type:'text/plain' })),
+      download: baseName + '_résumé.txt'
+    });
+    a.click();
+  });
+  item.querySelector('.pdf-btn').addEventListener('click', () =>
+    exportSummaryToPDF(baseName, r.summary, sectionsEl)
+  );
+  return item;
+}
+
+function updateExpandBtn(btn, sectionsEl) {
+  const allCollapsed = [...sectionsEl.querySelectorAll('.summary-section')].every(s => s.classList.contains('collapsed'));
+  btn.textContent = allCollapsed ? 'Tout développer' : 'Tout réduire';
+}
+
+// Strip markdown inline syntax (bold, italic, code, links, emoji)
+function stripMd(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`(.+?)`/g, '$1')
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[🎯📌📖🔑💡✦●▶→•]/g, '')
+    .trim();
+}
+
+async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
+  const btn  = sectionsEl.closest('.summary-item').querySelector('.pdf-btn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳…'; btn.disabled = true;
+  try {
+    const { jsPDF } = window.jspdf;
+    const baseName = fileName.replace(/\.[^.]+$/, '');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+
+    const PW = pdf.internal.pageSize.getWidth();   // 210 mm
+    const PH = pdf.internal.pageSize.getHeight();  // 297 mm
+    const ML = 14, MR = 14;
+    const CW = PW - ML - MR;                       // ~182 mm
+    const LH = 5.5;                                // line height in mm
+
+    // Color palette [r,g,b]
+    const C = {
+      dark:   [15,  21,  36 ], text:  [26,  32,  53 ],
+      muted:  [100, 116, 139], border:[221, 227, 240],
+      bg:     [244, 246, 251], white: [255, 255, 255],
+      blue:   [61,  126, 255], purple:[167, 139, 250],
+      teal:   [29,  209, 161], emerald:[52, 211, 153],
+      gold:   [212, 169, 76 ],
+    };
+
+    const SEC_COL = {
+      'section-objectifs': C.blue,
+      'section-points':    C.purple,
+      'section-resume':    C.emerald,
+      'section-concepts':  C.gold,
+      'section-retenir':   C.teal,
+    };
+
+    let y = 0, pageNum = 1;
+
+    const setRgb  = c => pdf.setTextColor(c[0], c[1], c[2]);
+    const setFill = c => pdf.setFillColor(c[0], c[1], c[2]);
+    const setDraw = c => pdf.setDrawColor(c[0], c[1], c[2]);
+    const fillRect = (x, yy, w, h, c) => { setFill(c); pdf.rect(x, yy, w, h, 'F'); };
+    const hline = (x1, yy, x2, c, lw=0.3) => { setDraw(c); pdf.setLineWidth(lw); pdf.line(x1, yy, x2, yy); };
+    const wrap  = (text, maxW) => pdf.splitTextToSize(String(text), maxW);
+
+    function tint(col) {   // mix color with bg at 10%
+      return [
+        Math.round(col[0]*0.1 + C.bg[0]*0.9),
+        Math.round(col[1]*0.1 + C.bg[1]*0.9),
+        Math.round(col[2]*0.1 + C.bg[2]*0.9),
+      ];
+    }
+
+    // ── page header ──────────────────────────────────────────────────
+    function drawHeader(isFirst) {
+      const bandH = isFirst ? 40 : 13;
+      fillRect(0, 0, PW, bandH, C.dark);
+
+      // 3-segment accent bar
+      const seg = PW / 3;
+      fillRect(0,     bandH, seg, 1.5, C.blue);
+      fillRect(seg,   bandH, seg, 1.5, C.purple);
+      fillRect(seg*2, bandH, seg, 1.5, C.teal);
+
+      if (isFirst) {
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
+        setRgb([167,139,250]);
+        pdf.text('EDU AI', ML, 11, { charSpace:2.5 });
+
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+        setRgb([232,236,246]);
+        pdf.text(wrap(baseName, CW), ML, 24);
+
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(7.5);
+        setRgb([168,184,208]);
+        const d = new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+        pdf.text(d + '  ·  Résumé généré par EDU AI', ML, 36);
+      } else {
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
+        setRgb([200,210,230]);
+        pdf.text(baseName, ML, 9);
+      }
+
+      y = bandH + 1.5 + 7;
+    }
+
+    // ── page footer ──────────────────────────────────────────────────
+    function drawFooter() {
+      hline(ML, PH-11, PW-MR, C.border);
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(7);
+      setRgb(C.muted);
+      pdf.text('EDU AI', ML, PH-6.5);
+      pdf.text(`Page ${pageNum}`, PW-MR, PH-6.5, { align:'right' });
+    }
+
+    function newPage() {
+      drawFooter();
+      pdf.addPage(); pageNum++;
+      drawHeader(false);
+    }
+
+    function need(h) { if (y + h > PH - 16) newPage(); }
+
+    // ── render one section ───────────────────────────────────────────
+    function renderSection(section) {
+      const col  = SEC_COL[section.cls] || C.muted;
+      const PL   = ML + 5;
+      const bodW = CW - 5;
+
+      // section header row
+      need(12);
+      fillRect(ML, y, CW, 11, tint(col));
+      fillRect(ML, y,  3, 11, col);
+      const cleanTitle = section.title.replace(/[^\x00-\x7E]/g,'').trim();
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
+      setRgb(col);
+      pdf.text(cleanTitle, ML+6, y+7.5);
+      hline(ML, y+11, ML+CW, C.border);
+      y += 11 + 4;
+
+      // section body lines
+      for (const raw of section.lines) {
+        const line = raw.trimEnd();
+        if (!line) { y += 2; continue; }
+
+        // blockquote
+        if (line.startsWith('> ')) {
+          const text = stripMd(line.slice(2));
+          const lines = wrap(text, bodW - 8);
+          const bH = lines.length * LH + 5;
+          need(bH + 4);
+          fillRect(PL, y, bodW, bH, [235,252,248]);
+          fillRect(PL, y, 2.5, bH, C.teal);
+          pdf.setFont('helvetica','italic'); pdf.setFontSize(9);
+          setRgb(C.text);
+          pdf.text(lines, PL+5, y+LH);
+          y += bH + 5;
+          continue;
+        }
+
+        // sub-heading
+        if (/^#{2,3}\s/.test(line)) {
+          const text = stripMd(line.replace(/^#{2,3}\s/,''));
+          need(12);
+          pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
+          setRgb(C.text);
+          pdf.text(text, PL, y+LH);
+          hline(PL, y+LH+2, PL+bodW, C.border);
+          y += 12;
+          continue;
+        }
+
+        // bullet
+        if (/^[-*]\s/.test(line)) {
+          const text = stripMd(line.slice(2));
+          const lines = wrap(text, bodW - 7);
+          need(lines.length * LH + 2);
+          setFill(col); pdf.circle(PL+1.5, y+LH-1.2, 1, 'F');
+          pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+          setRgb(C.text);
+          pdf.text(lines, PL+5, y+LH);
+          y += lines.length * LH + 1.5;
+          continue;
+        }
+
+        // paragraph
+        const text = stripMd(line);
+        if (!text) continue;
+        const lines = wrap(text, bodW);
+        need(lines.length * LH + 2);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+        setRgb(C.text);
+        pdf.text(lines, PL, y+LH);
+        y += lines.length * LH + 2;
+      }
+
+      y += 7; // gap between sections
+    }
+
+    // ── render ───────────────────────────────────────────────────────
+    drawHeader(true);
+    buildSummarySections(summaryMd).forEach(renderSection);
+    drawFooter();
+
+    pdf.save(baseName + '_résumé.pdf');
+  } finally { btn.innerHTML = orig; btn.disabled = false; }
+}
+
+let summaryAllResults = [];
+let summaryActiveTab  = 0;
+
+function buildSummaryTabs() {
+  summaryTabs.innerHTML = '';
+  if (summaryAllResults.length <= 1) { summaryTabs.classList.add('hidden'); return; }
+  summaryTabs.classList.remove('hidden');
+  summaryAllResults.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'summary-tab' + (i === summaryActiveTab ? ' active' : '');
+    btn.textContent = r.name.replace(/\.[^.]+$/, '');
+    btn.title = r.name;
+    btn.addEventListener('click', () => switchSummaryTab(i));
+    summaryTabs.appendChild(btn);
+  });
+}
+
+function switchSummaryTab(idx) {
+  summaryActiveTab = idx;
+  summaryTabs.querySelectorAll('.summary-tab').forEach((btn, i) =>
+    btn.classList.toggle('active', i === idx)
+  );
+  summaryResults.querySelectorAll('.summary-item').forEach((el, i) =>
+    el.classList.toggle('hidden', i !== idx)
+  );
+}
+
+summarizeBtn.addEventListener('click', async () => {
+  const files = getSelectedUploadedFiles();
+  if (!files.length) return alert('Sélectionnez au moins un fichier.');
+  summarySection.classList.add('hidden');
+  summaryResults.innerHTML = '';
+  summaryTabs.innerHTML = '';
+  summaryTabs.classList.add('hidden');
+  summaryAllResults = [];
+  summaryActiveTab  = 0;
+  showLoader('Connexion…');
+
+  try {
+    const res = await fetch('/api/summarize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files })
+    });
+    if (!res.ok) throw new Error('Erreur serveur');
+    hideLoader();
+    summarySection.classList.remove('hidden');
+    summarySection.scrollIntoView({ behavior: 'smooth' });
+    refreshFloatNav();
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    const partials = {};
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
+
+        if (data.type === 'start') {
+          const el = createStreamingItem(data.name);
+          summaryResults.appendChild(el);
+          partials[data.name] = { text: '', el };
+        } else if (data.type === 'delta') {
+          partials[data.name].text += data.text;
+          updateStreamingItem(partials[data.name].el, partials[data.name].text);
+        } else if (data.type === 'done') {
+          const full = partials[data.name].text;
+          summaryAllResults.push({ name: data.name, summary: full });
+          const rendered = renderSummaryItem({ name: data.name, summary: full });
+          partials[data.name].el.replaceWith(rendered);
+          buildSummaryTabs();
+          // Keep only the active tab visible
+          summaryResults.querySelectorAll('.summary-item').forEach((el, i) =>
+            el.classList.toggle('hidden', summaryAllResults.length > 1 && i !== summaryActiveTab)
+          );
+        } else if (data.type === 'end') {
+          saveSession({ summaries: summaryAllResults });
+        } else if (data.type === 'error') {
+          throw new Error(data.message);
+        }
+      }
+    }
+  } catch (err) { alert('Erreur : ' + err.message); }
+  finally { hideLoader(); }
+});
+
+function createStreamingItem(name) {
+  const ext = name.split('.').pop().toUpperCase();
+  const el = document.createElement('div');
+  el.className = 'summary-item';
+  el.innerHTML = `
+    <div class="summary-file-header">
+      <div class="summary-file-header-left">
+        <span class="file-ext">${ext}</span>
+        <strong>${name}</strong>
+      </div>
+      <span class="streaming-badge">✦ Génération en cours…</span>
+    </div>
+    <div class="summary-stream-body"></div>`;
+  return el;
+}
+
+function updateStreamingItem(el, text) {
+  const body = el.querySelector('.summary-stream-body');
+  if (body) body.innerHTML = marked.parse(text);
+}
+
+copyAllBtn.addEventListener('click', () => {
+  const parts = Array.from(summaryResults.querySelectorAll('.download-btn'))
+    .map(btn => `=== ${btn.dataset.name} ===\n\n${decodeURIComponent(btn.dataset.text)}`);
+  navigator.clipboard.writeText(parts.join('\n\n---\n\n')).then(() => {
+    copyAllBtn.textContent = 'Copié ✓'; setTimeout(() => copyAllBtn.textContent = 'Copier tout', 2000);
+  });
+});
+
+// ── QUIZ ─────────────────────────────────────────────────────────────────────
+const quizStepHeader  = document.getElementById('quiz-step-header');
+const quizStepFill    = document.getElementById('quiz-step-fill');
+const quizStepLabel   = document.getElementById('quiz-step-label');
+const quizPrevBtn     = document.getElementById('quiz-prev-btn');
+const quizNextBtn     = document.getElementById('quiz-next-btn');
+
+let quizAllQ  = [];  // { sourceName, question, options, answer, explanation }
+let quizAns   = {};  // idx → letter
+let quizIdx   = 0;
+
+quizBtn.addEventListener('click', async () => {
+  const files = getSelectedUploadedFiles();
+  if (!files.length) return alert('Sélectionnez au moins un fichier.');
+  showLoader('Génération du test...');
+  quizSection.classList.add('hidden');
+  quizScore.classList.add('hidden'); quizFooter.classList.add('hidden');
+  try {
+    const difficulty = document.getElementById('quiz-difficulty').value;
+    const res  = await fetch('/api/quiz', { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ files, count: parseInt(quizCount.value)||5, difficulty }) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+
+    quizAllQ = [];
+    data.results.forEach(r => (r.quiz.questions||[]).forEach(q => quizAllQ.push({ ...q, sourceName: r.name })));
+    if (!quizAllQ.length) throw new Error('Aucune question générée');
+
+    quizAns = {}; quizIdx = 0;
+    quizProgressInfo.textContent = `${quizAllQ.length} question${quizAllQ.length>1?'s':''}`;
+    quizStepHeader.classList.remove('hidden');
+    quizSection.classList.remove('hidden');
+    quizSection.scrollIntoView({ behavior:'smooth' });
+    showQuizQuestion(0);
+    saveSession({ quiz: data.results });
+    refreshFloatNav();
+  } catch (err) { alert('Erreur : ' + err.message); }
+  finally { hideLoader(); }
+});
+
+function showQuizQuestion(idx) {
+  quizIdx = idx;
+  quizContainer.innerHTML = '';
+  const q     = quizAllQ[idx];
+  const total = quizAllQ.length;
+  const isLast= idx === total - 1;
+
+  // progress bar
+  quizStepFill.style.width = `${((idx + 1) / total) * 100}%`;
+  quizStepLabel.textContent = `${idx + 1} / ${total}`;
+  quizPrevBtn.disabled = idx === 0;
+  quizNextBtn.disabled = isLast;
+  quizFooter.classList.toggle('hidden', !isLast);
+
+  const div = document.createElement('div');
+  div.className = 'quiz-question';
+  div.innerHTML = `
+    <div class="quiz-file-title">${q.sourceName}</div>
+    <div class="question-num">Question ${idx + 1}<span style="color:var(--muted);font-weight:400"> / ${total}</span></div>
+    <div class="question-text">${q.question}</div>
+    <div class="options-grid"></div>`;
+  const grid = div.querySelector('.options-grid');
+  q.options.forEach(opt => {
+    const letter = opt.charAt(0);
+    const optDiv = document.createElement('div');
+    optDiv.className = 'option' + (quizAns[idx] === letter ? ' selected' : '');
+    optDiv.dataset.letter = letter;
+    optDiv.innerHTML = `<span class="option-letter">${letter}</span><span>${opt.slice(3)}</span>`;
+    optDiv.addEventListener('click', () => {
+      quizAns[idx] = letter;
+      grid.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
+      optDiv.classList.add('selected');
+    });
+    grid.appendChild(optDiv);
+  });
+  quizContainer.appendChild(div);
+}
+
+quizPrevBtn.addEventListener('click', () => { if (quizIdx > 0) showQuizQuestion(quizIdx - 1); });
+quizNextBtn.addEventListener('click', () => { if (quizIdx < quizAllQ.length - 1) showQuizQuestion(quizIdx + 1); });
+
+// Keyboard arrows
+document.addEventListener('keydown', e => {
+  if (quizSection.classList.contains('hidden') || quizScore.classList.contains('hidden') === false) return;
+  if (e.key === 'ArrowRight' && quizIdx < quizAllQ.length - 1) showQuizQuestion(quizIdx + 1);
+  if (e.key === 'ArrowLeft'  && quizIdx > 0) showQuizQuestion(quizIdx - 1);
+});
+
+submitQuiz.addEventListener('click', () => {
+  quizStepHeader.classList.add('hidden');
+  quizFooter.classList.add('hidden');
+  quizContainer.innerHTML = '';
+  let correct = 0;
+  quizAllQ.forEach((q, idx) => {
+    const userLetter = quizAns[idx];
+    const isCorrect  = userLetter === q.answer;
+    if (isCorrect) correct++;
+    const div = document.createElement('div');
+    div.className = 'quiz-question';
+    div.innerHTML = `
+      <div class="quiz-file-title">${q.sourceName}</div>
+      <div class="question-num">Question ${idx + 1}</div>
+      <div class="question-text">${q.question}</div>
+      <div class="options-grid"></div>
+      ${q.explanation ? `<div class="explanation">💡 ${q.explanation}</div>` : ''}`;
+    const grid = div.querySelector('.options-grid');
+    q.options.forEach(opt => {
+      const letter = opt.charAt(0);
+      const optDiv = document.createElement('div');
+      let cls = 'option';
+      if (letter === q.answer) cls += ' correct';
+      else if (letter === userLetter) cls += ' wrong';
+      optDiv.className = cls; optDiv.dataset.letter = letter;
+      optDiv.innerHTML = `<span class="option-letter">${letter}</span><span>${opt.slice(3)}</span>`;
+      grid.appendChild(optDiv);
+    });
+    quizContainer.appendChild(div);
+  });
+  const pct = Math.round(correct / quizAllQ.length * 100);
+  const msg = pct>=80 ? '// Excellent travail' : pct>=60 ? '// Bien, continuez ainsi' : '// Révisez encore un peu';
+  quizScore.innerHTML = `<div class="score-number">${correct}/${quizAllQ.length}</div><div class="score-label">${pct}% de bonnes réponses</div><div class="score-msg">${msg}</div>`;
+  quizScore.classList.remove('hidden');
+  quizScore.scrollIntoView({ behavior:'smooth' });
+});
+
+// ── FLASHCARDS ───────────────────────────────────────────────────────────────
+const flashcardBtn    = document.getElementById('flashcard-btn');
+const fcSection       = document.getElementById('flashcard-section');
+const fcFileTabs      = document.getElementById('fc-file-tabs');
+const fcViewer        = document.getElementById('fc-viewer');
+const fcDone          = document.getElementById('fc-done');
+const fcBar           = document.getElementById('fc-bar');
+const fcShuffle       = document.getElementById('fc-shuffle');
+const fcRestart       = document.getElementById('fc-restart');
+const fcKnownCount    = document.getElementById('fc-known-count');
+const fcReviewCount   = document.getElementById('fc-review-count');
+const fcRemainingCount= document.getElementById('fc-remaining-count');
+const fcRedoWrong     = document.getElementById('fc-redo-wrong');
+const fcRedoAll       = document.getElementById('fc-redo-all');
+const fcProgressInfo  = document.getElementById('fc-progress-info');
+const fcGrid          = document.getElementById('fc-grid');
+const srsModeBtn      = document.getElementById('srs-mode-btn');
+const fcSrsBar        = document.getElementById('fc-srs-bar');
+const srsDueLabel     = document.getElementById('srs-due-label');
+
+let allDecks     = [];
+let currentDeckIdx = 0;
+let currentCards = [];
+let cardStates   = {};
+let srsOnlyDue   = false;
+
+// SM-2
+const SRS_KEY = 'edu-ai-srs';
+function cardHash(front) {
+  let h = 0; for (let i=0;i<front.length;i++) h = Math.imul(31,h)+front.charCodeAt(i)|0; return h.toString(36);
+}
+function getSRSData() { return JSON.parse(localStorage.getItem(SRS_KEY)||'{}'); }
+function setSRSData(d) { localStorage.setItem(SRS_KEY, JSON.stringify(d)); }
+function sm2Update(key, quality) {
+  const data = getSRSData();
+  const c = data[key] || { interval:1, easeFactor:2.5, repetitions:0 };
+  if (quality >= 3) {
+    c.interval = c.repetitions===0 ? 1 : c.repetitions===1 ? 6 : Math.round(c.interval*c.easeFactor);
+    c.repetitions++;
+  } else { c.interval=1; c.repetitions=0; }
+  c.easeFactor = Math.max(1.3, c.easeFactor+0.1-(5-quality)*(0.08+(5-quality)*0.02));
+  c.nextReview = Date.now() + c.interval*86400000;
+  data[key] = c; setSRSData(data); return c;
+}
+function getSRSStatus(key) {
+  const c = getSRSData()[key]; if (!c) return null;
+  if (c.nextReview <= Date.now()) return 'due';
+  return (c.nextReview - Date.now()) < 86400000 ? 'soon' : 'learned';
+}
+function getSRSLabel(key) {
+  const c = getSRSData()[key]; if (!c) return '';
+  if (c.nextReview <= Date.now()) return '● dû';
+  const h = Math.round((c.nextReview-Date.now())/3600000);
+  return h<24 ? `● ${h}h` : `● ${Math.round(h/24)}j`;
+}
+function updateSRSDueCount() {
+  const due = currentCards.filter(c => getSRSStatus(cardHash(c.front))==='due').length;
+  srsDueLabel.textContent = `${due} carte${due!==1?'s':''} due${due!==1?'s':''}`;
+  fcSrsBar.classList.toggle('hidden', !srsOnlyDue);
+}
+
+srsModeBtn.addEventListener('click', () => {
+  srsOnlyDue = !srsOnlyDue;
+  srsModeBtn.classList.toggle('active', srsOnlyDue);
+  srsModeBtn.textContent = srsOnlyDue ? '📋 Toutes les cartes' : '🧠 Révision spacée';
+  updateSRSDueCount();
+  renderGrid();
+});
+
+flashcardBtn.addEventListener('click', async () => {
+  const files = getSelectedUploadedFiles();
+  if (!files.length) return alert('Sélectionnez au moins un fichier.');
+  showLoader('Génération des flashcards...');
+  fcSection.classList.add('hidden');
+  try {
+    const res  = await fetch('/api/flashcards', { method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ files, count: parseInt(document.getElementById('fc-count').value)||10 }) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    allDecks = data.results.map(r => ({ name:r.name, cards:r.flashcards }));
+    buildFcTabs(); loadDeck(0);
+    fcSection.classList.remove('hidden');
+    fcSection.scrollIntoView({ behavior:'smooth' });
+    saveSession({ flashcards: data.results });
+    refreshFloatNav();
+  } catch (err) { alert('Erreur : ' + err.message); }
+  finally { hideLoader(); }
+});
+
+function buildFcTabs() {
+  fcFileTabs.innerHTML = '';
+  if (allDecks.length <= 1) return;
+  allDecks.forEach((d, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'fc-tab' + (i===0?' active':'');
+    btn.textContent = d.name;
+    btn.addEventListener('click', () => { document.querySelectorAll('.fc-tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); loadDeck(i); });
+    fcFileTabs.appendChild(btn);
+  });
+}
+
+function loadDeck(idx) {
+  currentDeckIdx = idx; currentCards = [...allDecks[idx].cards]; cardStates = {};
+  fcDone.classList.add('hidden'); fcViewer.classList.remove('hidden');
+  fcProgressInfo.textContent = `${currentCards.length} carte${currentCards.length>1?'s':''}`;
+  updateSRSDueCount(); renderGrid(); updateStats();
+}
+
+function renderGrid() {
+  fcGrid.innerHTML = '';
+  let cards = [...currentCards];
+
+  if (srsOnlyDue) {
+    cards = cards.filter(c => getSRSStatus(cardHash(c.front))==='due');
+    if (!cards.length) {
+      fcGrid.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-family:'DM Mono',monospace;font-size:.8rem;">Aucune carte due pour aujourd'hui ✓</div>`;
+      return;
+    }
+  }
+
+  // Sort: due first, then soon, then learned, then new
+  const order = { due:0, soon:1, learned:2, null:3 };
+  cards.sort((a,b) => (order[getSRSStatus(cardHash(a.front))]??3) - (order[getSRSStatus(cardHash(b.front))]??3));
+
+  const group = document.createElement('div'); group.className = 'fc-cat-group';
+  const titleEl = document.createElement('div'); titleEl.className = 'fc-cat-title';
+  titleEl.innerHTML = `${allDecks[currentDeckIdx].name} <span class="fc-cat-count">${cards.length} cartes</span>`;
+  group.appendChild(titleEl);
+  const grid = document.createElement('div'); grid.className = 'fc-cards-grid';
+  cards.forEach((card, i) => grid.appendChild(createCardEl(card, currentCards.indexOf(card))));
+  group.appendChild(grid); fcGrid.appendChild(group);
+}
+
+function createCardEl(card, i) {
+  const key    = cardHash(card.front);
+  const status = getSRSStatus(key);
+  const label  = getSRSLabel(key);
+  const el     = document.createElement('div');
+  el.className = 'fc-card';
+  el.dataset.idx = i;
+  if (cardStates[i]==='known')  el.classList.add('fc-known');
+  if (cardStates[i]==='review') el.classList.add('fc-review');
+
+  el.innerHTML = `
+    ${label ? `<div class="fc-card-srs-badge ${status||''}">${label}</div>` : ''}
+    <div class="fc-card-inner">
+      <div class="fc-card-front">
+        <div class="fc-card-lbl">Question</div>
+        <div class="fc-card-q">${card.front}</div>
+        <div class="fc-card-hint">Cliquez pour voir la réponse</div>
+      </div>
+      <div class="fc-card-back">
+        <div class="fc-card-lbl">Réponse</div>
+        <div class="fc-card-a">${card.back}</div>
+        <div class="fc-card-btns">
+          <button class="fc-card-no-btn">✗ À revoir</button>
+          <button class="fc-card-yes-btn">✓ Je sais</button>
+        </div>
+      </div>
+    </div>`;
+
+  el.addEventListener('click', e => {
+    if (e.target.classList.contains('fc-card-no-btn')||e.target.classList.contains('fc-card-yes-btn')) return;
+    el.classList.toggle('flipped');
+  });
+  el.querySelector('.fc-card-no-btn').addEventListener('click', () => {
+    cardStates[i]='review'; el.classList.add('fc-review'); el.classList.remove('fc-known');
+    sm2Update(key, 1); updateStats(); updateSRSDueCount();
+  });
+  el.querySelector('.fc-card-yes-btn').addEventListener('click', () => {
+    cardStates[i]='known'; el.classList.add('fc-known'); el.classList.remove('fc-review');
+    sm2Update(key, 4); updateStats(); updateSRSDueCount();
+    setTimeout(() => el.classList.remove('flipped'), 300);
+  });
+  return el;
+}
+
+function updateStats() {
+  const known   = Object.values(cardStates).filter(s=>s==='known').length;
+  const review  = Object.values(cardStates).filter(s=>s==='review').length;
+  const remaining = currentCards.length - known - review;
+  fcKnownCount.textContent    = known;
+  fcReviewCount.textContent   = review;
+  fcRemainingCount.textContent= remaining;
+  fcBar.style.width = `${(known/currentCards.length)*100}%`;
+}
+
+fcShuffle.addEventListener('click', () => {
+  for (let i=currentCards.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [currentCards[i],currentCards[j]]=[currentCards[j],currentCards[i]]; }
+  cardStates={}; renderGrid(); updateStats();
+});
+fcRestart.addEventListener('click', () => { cardStates={}; document.querySelectorAll('.fc-card').forEach(el=>el.classList.remove('fc-known','fc-review','flipped')); updateStats(); });
+fcRedoAll.addEventListener('click', () => loadDeck(currentDeckIdx));
+fcRedoWrong.addEventListener('click', () => {
+  const wrongIdxs = Object.entries(cardStates).filter(([,s])=>s==='review').map(([i])=>+i);
+  if (!wrongIdxs.length) return alert('Aucune carte à revoir !');
+  currentCards = wrongIdxs.map(i => currentCards[i]); cardStates={};
+  fcDone.classList.add('hidden'); fcViewer.classList.remove('hidden'); renderGrid(); updateStats();
+});
+
+// ── CHAT ─────────────────────────────────────────────────────────────────────
+const chatOpenBtn      = document.getElementById('chat-open-btn');
+const chatSection      = document.getElementById('chat-section');
+const chatMessages     = document.getElementById('chat-messages');
+const chatInput        = document.getElementById('chat-input');
+const chatSendBtn      = document.getElementById('chat-send-btn');
+const chatClearBtn     = document.getElementById('chat-clear-btn');
+const chatFileSelect   = document.getElementById('chat-file-select');
+const chatAttachBtn    = document.getElementById('chat-attach-btn');
+const chatFileInput    = document.getElementById('chat-file-input');
+const chatAttachBar    = document.getElementById('chat-attach-bar');
+const chatAttachName   = document.getElementById('chat-attach-name');
+const chatAttachRemove = document.getElementById('chat-attach-remove');
+let chatHistory     = [];
+let chatFiles       = [];
+let chatAttachedFile = null; // { id, name, path }
+
+// ── Chat attachment ───────────────────────────────────────────────────────────
+chatAttachBtn.addEventListener('click', () => chatFileInput.click());
+
+chatFileInput.addEventListener('change', async () => {
+  const file = chatFileInput.files[0];
+  if (!file) return;
+  chatFileInput.value = '';
+
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['pdf','ppt','pptx'].includes(ext)) return alert('Seuls PDF et PPT/PPTX sont acceptés.');
+
+  chatAttachBtn.disabled = true;
+  chatAttachBtn.style.opacity = '.4';
+  try {
+    const fd = new FormData();
+    fd.append('files', file);
+    const res  = await fetch('/api/upload', { method:'POST', body: fd });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    chatAttachedFile = data.files[0];
+    chatAttachName.textContent = file.name;
+    chatAttachBar.classList.remove('hidden');
+    chatAttachBtn.classList.add('active');
+  } catch (err) { alert('Erreur : ' + err.message); }
+  finally { chatAttachBtn.disabled = false; chatAttachBtn.style.opacity = ''; }
+});
+
+chatAttachRemove.addEventListener('click', () => {
+  chatAttachedFile = null;
+  chatAttachBar.classList.add('hidden');
+  chatAttachBtn.classList.remove('active');
+});
+
+chatOpenBtn.addEventListener('click', () => {
+  chatFiles = getSelectedUploadedFiles();
+  if (!chatFiles.length) return alert('Chargez d\'abord des fichiers.');
+  buildChatChips();
+  chatSection.classList.remove('hidden');
+  chatSection.scrollIntoView({ behavior:'smooth' });
+  refreshFloatNav();
+});
+
+function buildChatChips() {
+  chatFileSelect.innerHTML = '';
+  chatFiles.forEach((f, i) => {
+    const chip = document.createElement('button');
+    chip.className = 'chat-file-chip' + (i===0?' active':'');
+    chip.textContent = f.name; chip.dataset.idx = i;
+    chip.addEventListener('click', () => { chip.classList.toggle('active'); });
+    chatFileSelect.appendChild(chip);
+  });
+  if (chatFiles.length > 1) {
+    const all = document.createElement('button');
+    all.className = 'chat-file-chip';
+    all.textContent = 'Tous';
+    all.addEventListener('click', () => chatFileSelect.querySelectorAll('.chat-file-chip').forEach(c=>c.classList.add('active')));
+    chatFileSelect.appendChild(all);
+  }
+}
+
+function getActiveChatFiles() {
+  const active = [...chatFileSelect.querySelectorAll('.chat-file-chip[data-idx].active')].map(c=>+c.dataset.idx);
+  return active.length ? active.map(i=>chatFiles[i]) : chatFiles;
+}
+
+document.querySelectorAll('.chat-sug').forEach(btn => btn.addEventListener('click', () => sendChat(btn.textContent)));
+chatSendBtn.addEventListener('click', () => sendChat(chatInput.value.trim()));
+chatInput.addEventListener('keydown', e => { if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); sendChat(chatInput.value.trim()); } });
+
+chatClearBtn.addEventListener('click', () => {
+  chatHistory = [];
+  chatMessages.innerHTML = `<div class="chat-welcome" id="chat-welcome">
+    <div class="chat-welcome-icon">💬</div>
+    <p>Posez une question sur vos cours chargés.</p>
+    <div class="chat-suggestions">
+      <button class="chat-sug">Quels sont les points clés ?</button>
+      <button class="chat-sug">Donne un exemple concret</button>
+      <button class="chat-sug">Explique le concept principal</button>
+      <button class="chat-sug">Quelles sont les définitions importantes ?</button>
+    </div>
+  </div>`;
+  chatMessages.querySelectorAll('.chat-sug').forEach(btn => btn.addEventListener('click', () => sendChat(btn.textContent)));
+});
+
+async function sendChat(text) {
+  if (!text && !chatAttachedFile) return;
+  const msgText = text || `Analyse et réponds au document joint : **${chatAttachedFile.name}**`;
+  chatInput.value = '';
+  document.getElementById('chat-welcome')?.remove();
+
+  // Build user message display (include attachment badge if any)
+  const attachedSnapshot = chatAttachedFile;
+  if (attachedSnapshot) {
+    appendMsgWithAttachment('user', msgText, attachedSnapshot.name);
+    // Clear attachment after sending
+    chatAttachedFile = null;
+    chatAttachBar.classList.add('hidden');
+    chatAttachBtn.classList.remove('active');
+  } else {
+    appendMsg('user', msgText);
+  }
+  chatHistory.push({ role:'user', content: msgText });
+
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg ai';
+  typing.innerHTML = `<div class="chat-bubble chat-typing"><div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div></div>`;
+  chatMessages.appendChild(typing);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  try {
+    const body = { files: getActiveChatFiles(), messages: chatHistory };
+    if (attachedSnapshot) body.attachedFile = attachedSnapshot;
+    const res  = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    typing.remove();
+    appendMsg('ai', data.response);
+    chatHistory.push({ role:'assistant', content: data.response });
+  } catch (err) { typing.remove(); appendMsg('ai', '❌ ' + err.message); }
+}
+
+function appendMsgWithAttachment(role, text, attachName) {
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  const time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  const ext  = attachName.split('.').pop().toUpperCase();
+  el.innerHTML = `
+    <div class="chat-attach-preview">
+      <span class="file-ext" style="font-size:.5rem;padding:.1rem .3rem">${ext}</span>
+      <span>${attachName}</span>
+    </div>
+    <div class="chat-bubble">${marked.parse(text)}</div>
+    <div class="chat-time">${time}</div>`;
+  chatMessages.appendChild(el);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendMsg(role, text) {
+  const el   = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  const time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  el.innerHTML = `<div class="chat-bubble">${marked.parse(text)}</div><div class="chat-time">${time}</div>`;
+  chatMessages.appendChild(el);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// ── SESSION HISTORY ──────────────────────────────────────────────────────────
+const HISTORY_KEY = 'edu-ai-sessions';
+
+function getSessions() { return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
+
+function saveSession(update) {
+  if (!uploadedFilesMeta.length) return;
+  let sessions = getSessions();
+  const fileKey = uploadedFilesMeta.map(f=>f.name).sort().join('|');
+  let idx = sessions.findIndex(s => s.fileKey === fileKey);
+  if (idx === -1) {
+    sessions.unshift({ id: Date.now(), fileKey, timestamp: Date.now(), files: uploadedFilesMeta.map(f=>f.name) });
+    idx = 0;
+  }
+  Object.assign(sessions[idx], update, { timestamp: Date.now() });
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
+  renderHistoryPanel();
+}
+
+function renderHistoryPanel() {
+  const sessions = getSessions();
+  const panel    = document.getElementById('history-panel');
+  const list     = document.getElementById('history-list');
+  if (!sessions.length) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  list.innerHTML = '';
+  sessions.forEach(s => {
+    const el   = document.createElement('div');
+    el.className = 'history-item';
+    const date = new Date(s.timestamp).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+    el.innerHTML = `
+      <div class="history-left">
+        <div class="history-files">${s.files.join(' · ')}</div>
+        <div class="history-meta">${date}</div>
+        <div class="history-tags">
+          ${s.summaries  ? '<span class="htag hs">Résumés</span>'    : ''}
+          ${s.quiz       ? '<span class="htag hq">Quiz</span>'       : ''}
+          ${s.flashcards ? '<span class="htag hf">Flashcards</span>' : ''}
+        </div>
+      </div>
+      <button class="history-del" data-id="${s.id}" title="Supprimer">✕</button>`;
+    el.addEventListener('click', e => { if (e.target.classList.contains('history-del')) return; restoreSession(s); });
+    el.querySelector('.history-del').addEventListener('click', e => {
+      e.stopPropagation();
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(getSessions().filter(x=>x.id!==s.id)));
+      renderHistoryPanel();
+    });
+    list.appendChild(el);
+  });
+}
+
+function restoreSession(s) {
+  if (s.summaries) {
+    summaryResults.innerHTML = '';
+    summaryAllResults = s.summaries;
+    summaryActiveTab  = 0;
+    s.summaries.forEach(r => summaryResults.appendChild(renderSummaryItem(r)));
+    buildSummaryTabs();
+    if (s.summaries.length > 1) switchSummaryTab(0);
+    summarySection.classList.remove('hidden');
+  }
+  if (s.quiz) {
+    quizContainer.innerHTML = '';
+    s.quiz.forEach(r => renderQuiz(r.name, r.quiz?.questions||[]));
+    const total = s.quiz.reduce((a,r)=>a+(r.quiz?.questions?.length||0),0);
+    quizProgressInfo.textContent = `${total} questions`;
+    quizSection.classList.remove('hidden'); quizFooter.classList.remove('hidden');
+    quizScore.classList.add('hidden');
+  }
+  if (s.flashcards) {
+    allDecks = s.flashcards.map(r=>({ name:r.name, cards:r.flashcards }));
+    buildFcTabs(); loadDeck(0);
+    fcSection.classList.remove('hidden');
+  }
+  refreshFloatNav();
+  document.getElementById('upload-section').scrollIntoView({ behavior:'smooth' });
+}
+
+document.getElementById('history-clear-all').addEventListener('click', () => {
+  localStorage.removeItem(HISTORY_KEY); renderHistoryPanel();
+});
+
+// ── FLOAT NAV ────────────────────────────────────────────────────────────────
+const floatNav     = document.getElementById('float-nav');
+const NAV_SECTIONS = ['summary-section','quiz-section','flashcard-section','chat-section'];
+
+function refreshFloatNav() {
+  const visible = NAV_SECTIONS.filter(id => !document.getElementById(id).classList.contains('hidden'));
+  floatNav.classList.toggle('hidden', visible.length === 0);
+  floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
+    btn.classList.toggle('active', !document.getElementById(btn.dataset.target).classList.contains('hidden'))
+  );
+}
+
+floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
+  btn.addEventListener('click', () =>
+    document.getElementById(btn.dataset.target).scrollIntoView({ behavior:'smooth', block:'start' })
+  )
+);
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function showLoader(text) { loaderText.textContent = text; loader.classList.remove('hidden'); }
+function hideLoader()     { loader.classList.add('hidden'); }
+
+// Init
+renderHistoryPanel();
