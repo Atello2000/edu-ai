@@ -11,6 +11,28 @@ const officeParser = require('officeparser');
 const app = express();
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Limites selon l'environnement (production = Railway)
+const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
+const LIMITS = IS_PROD ? {
+  fileSize:       10 * 1024 * 1024,  // 10 Mo
+  maxFiles:       3,
+  summaryChars:   30000,
+  quizChars:      20000,
+  quizMaxCount:   10,
+  flashChars:     15000,
+  flashMaxCount:  15,
+  chatChars:      4000,
+} : {
+  fileSize:       50 * 1024 * 1024,  // 50 Mo
+  maxFiles:       20,
+  summaryChars:   60000,
+  quizChars:      40000,
+  quizMaxCount:   999,
+  flashChars:     20000,
+  flashMaxCount:  999,
+  chatChars:      8000,
+};
+
 // Créer les dossiers nécessaires s'ils n'existent pas
 ['uploads', 'courses'].forEach(dir => {
   const p = path.join(__dirname, dir);
@@ -37,7 +59,7 @@ const upload = multer({
     if (allowed.includes(ext)) cb(null, true);
     else cb(new Error('Seuls les fichiers PDF et PPT/PPTX sont acceptés'));
   },
-  limits: { fileSize: 50 * 1024 * 1024 }
+  limits: { fileSize: LIMITS.fileSize }
 });
 
 async function extractText(filePath, originalName) {
@@ -94,7 +116,7 @@ app.get('/api/library', (req, res) => {
 
 // Upload multiple files
 app.post('/api/upload', (req, res, next) => {
-  upload.array('files', 20)(req, res, err => {
+  upload.array('files', LIMITS.maxFiles)(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     next();
   });
@@ -126,7 +148,7 @@ app.post('/api/summarize', async (req, res) => {
     const { files } = req.body;
     for (const file of files) {
       const text = await extractText(file.path, file.name);
-      const truncated = text.slice(0, 60000);
+      const truncated = text.slice(0, LIMITS.summaryChars);
       send({ type: 'start', name: file.name });
 
       const stream = client.messages.stream({
@@ -177,11 +199,12 @@ ${truncated}`
 // Générer un test — traitement parallèle
 app.post('/api/quiz', async (req, res) => {
   try {
-    const { files, count = 5, difficulty = 'moyen' } = req.body;
+    const { files, difficulty = 'moyen' } = req.body;
+    const count = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
 
     const results = await Promise.all(files.map(async file => {
       const text = await extractText(file.path, file.name);
-      const truncated = text.slice(0, 40000);
+      const truncated = text.slice(0, LIMITS.quizChars);
 
       const difficultyGuide = {
         facile:   'Privilégie les questions de définition et de reconnaissance (ex: "Qu\'est-ce que X ?").',
@@ -248,11 +271,12 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`
 // Générer des flashcards — traitement parallèle
 app.post('/api/flashcards', async (req, res) => {
   try {
-    const { files, count = 10 } = req.body;
+    const { files } = req.body;
+    const count = Math.min(parseInt(req.body.count) || 10, LIMITS.flashMaxCount);
 
     const results = await Promise.all(files.map(async file => {
       const text = await extractText(file.path, file.name);
-      const truncated = text.slice(0, 20000);
+      const truncated = text.slice(0, LIMITS.flashChars);
 
       const message = await client.messages.create({
         model: 'claude-sonnet-4-6',
@@ -303,7 +327,7 @@ app.post('/api/chat', async (req, res) => {
     let context = '';
     for (const file of files) {
       const text = await extractText(file.path, file.name);
-      context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, 8000)}`;
+      context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, LIMITS.chatChars)}`;
     }
 
     let attachedContext = '';
