@@ -1156,6 +1156,34 @@ kbd{
 [data-theme="light"] .chat-messages{background:#fafaf8}
 [data-theme="light"] .chat-sug{background:#fff}
 
+/* ── MODÈLE IA BADGE ── */
+.model-badge{
+  display:inline-flex;align-items:center;
+  font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.05em;
+  padding:.15rem .55rem;border-radius:99px;margin-left:.5rem;
+  vertical-align:middle;
+}
+.model-groq  { background:rgba(52,211,153,.12);color:var(--emerald);border:1px solid rgba(52,211,153,.25); }
+.model-claude{ background:var(--purple-bg);color:var(--purple);border:1px solid rgba(167,139,250,.25); }
+
+/* ── QUOTA BAR ── */
+.quota-bar{
+  display:flex;flex-wrap:wrap;gap:.4rem;
+  padding:.55rem .75rem;margin-bottom:1rem;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);font-size:.72rem;
+}
+.quota-item{
+  display:flex;align-items:center;gap:.3rem;
+  color:var(--muted);padding:.15rem .5rem;
+  border-radius:99px;background:var(--surface);
+  border:1px solid var(--border);
+}
+.quota-item strong{font-family:'DM Mono',monospace;font-size:.7rem}
+.quota-ok    strong{color:var(--teal)}
+.quota-low   strong{color:var(--gold)}
+.quota-empty strong{color:var(--rose)}
+
 /* ── AUDIO TTS ── */
 .speak-btn{color:var(--teal) !important;border-color:rgba(29,209,161,.3) !important}
 .speak-btn:hover{background:var(--teal-bg) !important}

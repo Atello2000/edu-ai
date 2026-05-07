@@ -1,0 +1,13 @@
+{
+  "name": "EDU AI",
+  "short_name": "EDU AI",
+  "description": "Résumés, quiz et flashcards générés par IA",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080c16",
+  "theme_color": "#080c16",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

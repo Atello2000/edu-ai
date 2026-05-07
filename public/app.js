@@ -410,15 +410,22 @@ function updateExpandBtn(btn, sectionsEl) {
   btn.textContent = allCollapsed ? 'Tout développer' : 'Tout réduire';
 }
 
-// Strip markdown inline syntax (bold, italic, code, links, emoji)
+// Strip ALL markdown syntax pour le PDF
 function stripMd(text) {
   return text
-    .replace(/\*\*(.+?)\*\*/g, '$1')
-    .replace(/\*(.+?)\*/g, '$1')
-    .replace(/`(.+?)`/g, '$1')
-    .replace(/\[(.+?)\]\(.+?\)/g, '$1')
-    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-    .replace(/[🎯📌📖🔑💡✦●▶→•]/g, '')
+    .replace(/^#{1,6}\s*/,'')
+    .replace(/^>\s*/,'')
+    .replace(/^[-*+]\s*/,'')
+    .replace(/^\d+\.\s*/,'')
+    .replace(/\*\*(.+?)\*\*/g,'$1')
+    .replace(/\*(.+?)\*/g,'$1')
+    .replace(/__(.+?)__/g,'$1')
+    .replace(/_(.+?)_/g,'$1')
+    .replace(/`(.+?)`/g,'$1')
+    .replace(/\[(.+?)\]\(.+?\)/g,'$1')
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu,'')
+    .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪]/g,'')
+    .replace(/\s+/g,' ')
     .trim();
 }
 
@@ -559,9 +566,9 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
           continue;
         }
 
-        // sub-heading
-        if (/^#{2,3}\s/.test(line)) {
-          const text = stripMd(line.replace(/^#{2,3}\s/,''));
+        // sub-heading (h1-h6)
+        if (/^#{1,6}\s/.test(line)) {
+          const text = stripMd(line);
           need(12);
           pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
           setRgb(C.text);
@@ -571,9 +578,9 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
           continue;
         }
 
-        // bullet
-        if (/^[-*]\s/.test(line)) {
-          const text = stripMd(line.slice(2));
+        // bullet (-, *, +) ou liste numérotée
+        if (/^[-*+]\s/.test(line) || /^\d+\.\s/.test(line)) {
+          const text = stripMd(line);
           const lines = wrap(text, bodW - 7);
           need(lines.length * LH + 2);
           setFill(col); pdf.circle(PL+1.5, y+LH-1.2, 1, 'F');
@@ -688,8 +695,11 @@ summarizeBtn.addEventListener('click', async () => {
           summaryResults.querySelectorAll('.summary-item').forEach((el, i) =>
             el.classList.toggle('hidden', summaryAllResults.length > 1 && i !== summaryActiveTab)
           );
+        } else if (data.type === 'model') {
+          setModelBadge('summary-section', data.name);
         } else if (data.type === 'end') {
           saveSession({ summaries: summaryAllResults });
+          fetchQuota();
         } else if (data.type === 'error') {
           throw new Error(data.message);
         }
@@ -987,6 +997,8 @@ quizBtn.addEventListener('click', async () => {
     quizSection.scrollIntoView({ behavior:'smooth' });
     showQuizQuestion(0);
     saveSession({ quiz: data.results });
+    if (data.model) setModelBadge('quiz-section', data.model);
+    fetchQuota();
     refreshFloatNav();
     if (examModeCb.checked) startExamTimer(parseInt(examDuration.value));
   } catch (err) { alert('Erreur : ' + err.message); }
@@ -1167,6 +1179,8 @@ flashcardBtn.addEventListener('click', async () => {
     fcSection.classList.remove('hidden');
     fcSection.scrollIntoView({ behavior:'smooth' });
     saveSession({ flashcards: data.results });
+    if (data.model) setModelBadge('flashcard-section', data.model);
+    fetchQuota();
     refreshFloatNav();
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
@@ -1630,6 +1644,53 @@ function renderStatsPanel() {
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function showLoader(text) { loaderText.textContent = text; loader.classList.remove('hidden'); }
 function hideLoader()     { loader.classList.add('hidden'); }
+
+// ── MODÈLE IA BADGE ──────────────────────────────────────────────────────────
+function setModelBadge(sectionId, modelName) {
+  const sec = document.getElementById(sectionId);
+  if (!sec) return;
+  let badge = sec.querySelector('.model-badge');
+  if (!badge) {
+    badge = document.createElement('span');
+    badge.className = 'model-badge';
+    const tag = sec.querySelector('.mono-tag, .panel-label');
+    if (tag) tag.parentNode.insertBefore(badge, tag.nextSibling);
+  }
+  const isGroq = modelName.toLowerCase().includes('groq') || modelName.toLowerCase().includes('llama');
+  badge.className = `model-badge ${isGroq ? 'model-groq' : 'model-claude'}`;
+  badge.textContent = modelName;
+}
+
+// ── QUOTA RESTANT ─────────────────────────────────────────────────────────────
+const quotaBar = document.getElementById('quota-bar');
+
+async function fetchQuota() {
+  try {
+    const res  = await fetch('/api/quota');
+    const data = await res.json();
+    if (!quotaBar) return;
+    if (data.unlimited) { quotaBar.classList.add('hidden'); return; }
+    quotaBar.classList.remove('hidden');
+    quotaBar.innerHTML = [
+      { k:'summarize', label:'Résumés' },
+      { k:'quiz',      label:'Quiz' },
+      { k:'flashcards',label:'Flashcards' },
+      { k:'chat',      label:'Chat' },
+    ].map(({ k, label }) => {
+      const { used, limit } = data[k];
+      const left = limit - used;
+      const cls  = left === 0 ? 'quota-empty' : left <= 2 ? 'quota-low' : 'quota-ok';
+      return `<span class="quota-item ${cls}">${label} <strong>${left}/${limit}</strong></span>`;
+    }).join('');
+  } catch {}
+}
+
+fetchQuota();
+
+// ── PWA SERVICE WORKER ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 
 // Init
 renderHistoryPanel();

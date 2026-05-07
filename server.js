@@ -21,7 +21,8 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const groq = IS_PROD && process.env.GROQ_API_KEY
   ? new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' })
   : null;
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL   = 'llama-3.3-70b-versatile';
+const MODEL_LABEL  = groq ? 'Groq · Llama 3.3' : 'Claude Sonnet 4.6';
 
 async function aiComplete(prompt, maxTokens = 3000) {
   if (groq) {
@@ -272,6 +273,7 @@ ${truncated}`;
 
       send({ type: 'done', name: file.name });
     }
+    send({ type: 'model', name: MODEL_LABEL });
     send({ type: 'end' });
   } catch (err) {
     send({ type: 'error', message: err.message });
@@ -340,7 +342,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`, 3000);
       return { name: file.name, quiz };
     }));
 
-    res.json({ success: true, results });
+    res.json({ success: true, results, model: MODEL_LABEL });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -386,7 +388,7 @@ ${truncated}`, 2048);
       return { name: file.name, flashcards: data.flashcards || [] };
     }));
 
-    res.json({ success: true, results });
+    res.json({ success: true, results, model: MODEL_LABEL });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -449,6 +451,21 @@ app.get('/api/users/count', (req, res) => {
   const cutoff = Date.now() - ONLINE_TIMEOUT;
   for (const [id, ts] of onlineUsers) if (ts < cutoff) onlineUsers.delete(id);
   res.json({ online: onlineUsers.size });
+});
+
+app.get('/api/quota', (req, res) => {
+  if (!IS_PROD) return res.json({ unlimited: true });
+  const ip = getClientIP(req);
+  if (isLocalIP(ip)) return res.json({ unlimited: true });
+  const today = new Date().toDateString();
+  const q = ipQuotaMap.get(ip) || { date: today, summarize: 0, quiz: 0, flashcards: 0, chat: 0 };
+  res.json({
+    unlimited: false,
+    summarize:  { used: q.summarize  || 0, limit: QUOTA_DAILY.summarize  },
+    quiz:       { used: q.quiz       || 0, limit: QUOTA_DAILY.quiz       },
+    flashcards: { used: q.flashcards || 0, limit: QUOTA_DAILY.flashcards },
+    chat:       { used: q.chat       || 0, limit: QUOTA_DAILY.chat       },
+  });
 });
 
 // Gestionnaire d'erreurs global — toujours renvoyer du JSON

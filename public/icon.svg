@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0f1524"/>
+  <rect width="512" height="6" y="506" rx="3" fill="#d4a94c"/>
+  <text x="256" y="200" font-family="Georgia,serif" font-size="140" font-weight="300" text-anchor="middle" fill="#d4a94c" letter-spacing="4">EDU</text>
+  <text x="256" y="360" font-family="Georgia,serif" font-size="140" font-style="italic" font-weight="400" text-anchor="middle" fill="#3d7eff" letter-spacing="2">AI</text>
+</svg>
