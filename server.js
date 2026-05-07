@@ -8,11 +8,57 @@ const Anthropic = require('@anthropic-ai/sdk');
 const pdfParse = require('pdf-parse');
 const officeParser = require('officeparser');
 
-const app = express();
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const { OpenAI } = require('openai');
 
 // Limites selon l'environnement (production = Railway)
 const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
+
+const app = express();
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// En production → Groq pour résumés/quiz/flashcards (gratuit)
+// En local     → Claude pour tout
+const groq = IS_PROD && process.env.GROQ_API_KEY
+  ? new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' })
+  : null;
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+async function aiComplete(prompt, maxTokens = 3000) {
+  if (groq) {
+    const r = await groq.chat.completions.create({
+      model: GROQ_MODEL, max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    return r.choices[0].message.content;
+  }
+  const r = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6', max_tokens: maxTokens,
+    messages: [{ role: 'user', content: prompt }]
+  });
+  return r.content[0].text;
+}
+
+async function* aiStream(prompt, maxTokens = 4096) {
+  if (groq) {
+    const stream = await groq.chat.completions.create({
+      model: GROQ_MODEL, max_tokens: maxTokens, stream: true,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || '';
+      if (text) yield text;
+    }
+  } else {
+    const stream = anthropic.messages.stream({
+      model: 'claude-sonnet-4-6', max_tokens: maxTokens,
+      messages: [{ role: 'user', content: prompt }]
+    });
+    for await (const event of stream) {
+      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta')
+        yield event.delta.text;
+    }
+  }
+}
 const LIMITS = IS_PROD ? {
   fileSize:       20 * 1024 * 1024,  // 20 Mo
   maxFiles:       3,
@@ -197,12 +243,7 @@ app.post('/api/summarize', async (req, res) => {
       const truncated = text.slice(0, LIMITS.summaryChars);
       send({ type: 'start', name: file.name });
 
-      const stream = client.messages.stream({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{
-          role: 'user',
-          content: `Tu es un assistant pédagogique expert. Voici le contenu complet d'un cours intitulé **"${file.name}"**.
+      const prompt = `Tu es un assistant pédagogique expert. Voici le contenu complet d'un cours intitulé **"${file.name}"**.
 
 Produis un résumé pédagogique complet en français, structuré en Markdown, avec exactement ce plan :
 
@@ -223,14 +264,10 @@ Produis un résumé pédagogique complet en français, structuré en Markdown, a
 
 ---
 Contenu du cours :
-${truncated}`
-        }]
-      });
+${truncated}`;
 
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-          send({ type: 'delta', name: file.name, text: event.delta.text });
-        }
+      for await (const text of aiStream(prompt, 4096)) {
+        send({ type: 'delta', name: file.name, text });
       }
 
       send({ type: 'done', name: file.name });
@@ -270,12 +307,7 @@ Varie obligatoirement les types de questions parmi :
 - Identification d'erreur (ex: "Laquelle de ces affirmations est incorrecte ?")
 N'utilise pas deux fois le même type de question consécutivement.`;
 
-      const message = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 3000,
-        messages: [{
-          role: 'user',
-          content: `Génère ${count} questions QCM de niveau ${difficulty} en français basées sur ce cours "${file.name}".
+      const rawQuiz = await aiComplete(`Génère ${count} questions QCM de niveau ${difficulty} en français basées sur ce cours "${file.name}".
 ${difficultyGuide}
 ${questionTypes}
 
@@ -294,13 +326,11 @@ Pour chaque question, donne exactement ce format JSON :
 Contenu du cours :
 ${truncated}
 
-Réponds UNIQUEMENT avec le JSON, sans texte autour.`
-        }]
-      });
+Réponds UNIQUEMENT avec le JSON, sans texte autour.`, 3000);
 
       let quiz;
       try {
-        const raw = message.content[0].text.trim();
+        const raw = rawQuiz.trim();
         const match = raw.match(/\{[\s\S]*\}/);
         quiz = JSON.parse(match ? match[0] : raw);
       } catch {
@@ -328,12 +358,7 @@ app.post('/api/flashcards', async (req, res) => {
       const text = await extractText(file.path, file.name);
       const truncated = text.slice(0, LIMITS.flashChars);
 
-      const message = await client.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 2048,
-        messages: [{
-          role: 'user',
-          content: `Tu es un assistant pédagogique. À partir du cours ci-dessous, génère ${count} flashcards en français pour aider à mémoriser les concepts essentiels.
+      const rawFlash = await aiComplete(`Tu es un assistant pédagogique. À partir du cours ci-dessous, génère ${count} flashcards en français pour aider à mémoriser les concepts essentiels.
 
 Chaque flashcard doit avoir :
 - Un RECTO : une question courte, un terme, ou un concept clé
@@ -347,13 +372,11 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
 }
 
 Contenu du cours "${file.name}" :
-${truncated}`
-        }]
-      });
+${truncated}`, 2048);
 
       let data;
       try {
-        const raw = message.content[0].text.trim();
+        const raw = rawFlash.trim();
         const match = raw.match(/\{[\s\S]*\}/);
         data = JSON.parse(match ? match[0] : raw);
       } catch {
