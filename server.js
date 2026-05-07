@@ -62,12 +62,12 @@ async function* aiStream(prompt, maxTokens = 4096) {
 const LIMITS = IS_PROD ? {
   fileSize:       20 * 1024 * 1024,  // 20 Mo
   maxFiles:       3,
-  summaryChars:   50000,
-  quizChars:      50000,
+  summaryChars:   80000,
+  quizChars:      80000,
   quizMaxCount:   20,
-  flashChars:     15000,
-  flashMaxCount:  15,
-  chatChars:      4000,
+  flashChars:     30000,
+  flashMaxCount:  30,
+  chatChars:      6000,
 } : {
   fileSize:       50 * 1024 * 1024,  // 50 Mo
   maxFiles:       20,
@@ -80,7 +80,7 @@ const LIMITS = IS_PROD ? {
 };
 
 // ── Quota par IP (production uniquement) ─────────────────────────────────────
-const QUOTA_DAILY = { summarize: 3, quiz: 10, flashcards: 10, chat: 10 };
+const QUOTA_DAILY = { summarize: 10, quiz: 20, flashcards: 20, chat: 15 };
 const ipQuotaMap  = new Map(); // ip → { date, summarize, quiz, flashcards, chat }
 
 function getClientIP(req) {
