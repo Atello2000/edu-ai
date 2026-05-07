@@ -24,10 +24,6 @@ const groq = IS_PROD && process.env.GROQ_API_KEY
 const GROQ_MODEL   = 'llama-3.3-70b-versatile';
 const MODEL_LABEL  = groq ? 'Groq · Llama 3.3' : 'Claude Sonnet 4.6';
 
-function isGroqRateLimit(err) {
-  return err?.status === 429 || err?.statusCode === 429 || String(err?.message).includes('429');
-}
-
 async function claudeComplete(prompt, maxTokens) {
   const r = await anthropic.messages.create({
     model: 'claude-sonnet-4-6', max_tokens: maxTokens,
@@ -45,12 +41,10 @@ async function aiComplete(prompt, maxTokens = 3000) {
       });
       return { text: r.choices[0].message.content, model: MODEL_LABEL };
     } catch (err) {
-      if (isGroqRateLimit(err)) {
-        console.warn('[Groq] rate limit → fallback Claude');
-        const text = await claudeComplete(prompt, maxTokens);
-        return { text, model: 'Claude Sonnet 4.6' };
-      }
-      throw err;
+      // Fallback sur Claude pour toute erreur Groq (429 quota, 413 payload, 500 infra…)
+      console.warn('[Groq] erreur', err?.status ?? err?.message, '→ fallback Claude');
+      const text = await claudeComplete(prompt, maxTokens);
+      return { text, model: 'Claude Sonnet 4.6' };
     }
   }
   const text = await claudeComplete(prompt, maxTokens);
@@ -70,12 +64,8 @@ async function* aiStream(prompt, maxTokens = 4096) {
       }
       return;
     } catch (err) {
-      if (isGroqRateLimit(err)) {
-        console.warn('[Groq] rate limit → fallback Claude (stream)');
-        // fall through to Claude stream below
-      } else {
-        throw err;
-      }
+      // Toute erreur Groq → fallback Claude stream
+      console.warn('[Groq] erreur stream', err?.status ?? err?.message, '→ fallback Claude');
     }
   }
   // Claude stream
