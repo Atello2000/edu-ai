@@ -54,10 +54,10 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowed = ['.pdf', '.ppt', '.pptx'];
+    const allowed = ['.pdf', '.ppt', '.pptx', '.docx'];
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.includes(ext)) cb(null, true);
-    else cb(new Error('Seuls les fichiers PDF et PPT/PPTX sont acceptés'));
+    else cb(new Error('Seuls les fichiers PDF, PPT/PPTX et DOCX sont acceptés'));
   },
   limits: { fileSize: LIMITS.fileSize }
 });

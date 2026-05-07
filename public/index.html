@@ -58,15 +58,15 @@
   <div class="panel" id="upload-section">
     <div class="panel-label">Étape 01</div>
     <h2 class="panel-title">Charger vos <em>fichiers</em></h2>
-    <p class="panel-desc">Importez vos cours en PDF, PPT ou PPTX — jusqu'à <span id="upload-size-hint">20 Mo</span> par fichier</p>
+    <p class="panel-desc">Importez vos cours en PDF, PPT, PPTX ou DOCX — jusqu'à <span id="upload-size-hint">20 Mo</span> par fichier</p>
 
     <div class="drop-zone" id="drop-zone">
       <div class="drop-icon">📂</div>
       <p class="drop-main">Glissez vos fichiers ici</p>
       <p class="drop-or">ou</p>
       <label class="dz-btn" for="file-input">Parcourir</label>
-      <input type="file" id="file-input" multiple accept=".pdf,.ppt,.pptx" hidden />
-      <p class="drop-hint">PDF · PPT · PPTX</p>
+      <input type="file" id="file-input" multiple accept=".pdf,.ppt,.pptx,.docx" hidden />
+      <p class="drop-hint">PDF · PPT · PPTX · DOCX</p>
     </div>
 
     <div id="file-list"></div>
@@ -263,7 +263,7 @@
     </div>
 
     <div class="chat-input-row">
-      <input type="file" id="chat-file-input" accept=".pdf,.ppt,.pptx" style="display:none"/>
+      <input type="file" id="chat-file-input" accept=".pdf,.ppt,.pptx,.docx" style="display:none"/>
       <button class="chat-attach-btn" id="chat-attach-btn" title="Joindre un devoir / document">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
       </button>
