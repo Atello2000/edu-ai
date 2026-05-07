@@ -175,6 +175,15 @@
       </div>
       <button class="ghost-btn" id="copy-all-btn">Copier tout</button>
     </div>
+    <div class="tts-bar hidden" id="tts-bar">
+      <span class="tts-bar-icon">🔊</span>
+      <select id="tts-voice-select" class="tts-select"></select>
+      <div class="tts-speed-wrap">
+        <span class="tts-speed-lbl">Vitesse</span>
+        <input type="range" id="tts-speed" min="0.5" max="2" step="0.1" value="0.9" class="tts-slider">
+        <span id="tts-speed-val">0.9×</span>
+      </div>
+    </div>
     <div class="summary-tabs hidden" id="summary-tabs"></div>
     <div id="summary-results"></div>
   </div>

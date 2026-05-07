@@ -1162,6 +1162,28 @@ kbd{
 .stop-btn{color:var(--rose) !important;border-color:rgba(255,107,129,.3) !important}
 .stop-btn:hover{background:rgba(255,107,129,.1) !important}
 
+.tts-bar{
+  display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  background:var(--teal-bg);border:1px solid rgba(29,209,161,.2);
+  border-radius:var(--radius-sm);padding:.6rem 1rem;
+  margin-bottom:.75rem;font-size:.8rem;
+}
+.tts-bar-icon{font-size:1rem}
+.tts-select{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:6px;padding:.25rem .5rem;
+  font-size:.75rem;font-family:'Outfit',sans-serif;
+  flex:1;min-width:140px;max-width:260px;cursor:pointer;
+}
+.tts-speed-wrap{display:flex;align-items:center;gap:.4rem;font-size:.75rem;color:var(--muted)}
+.tts-slider{
+  width:80px;accent-color:var(--teal);cursor:pointer;
+}
+#tts-speed-val{
+  font-family:'DM Mono',monospace;font-size:.72rem;
+  color:var(--teal);min-width:2.2rem;
+}
+
 /* ── MODE EXAMEN ── */
 .exam-toggle-label{
   display:flex;align-items:center;gap:.35rem;

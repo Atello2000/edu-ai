@@ -769,32 +769,116 @@ copyAllBtn.addEventListener('click', () => {
 });
 
 // ── TEXT-TO-SPEECH ───────────────────────────────────────────────────────────
+const TTS_SETTINGS_KEY = 'edu-ai-tts';
 let ttsActiveBtn  = null;
 let ttsActiveStop = null;
 let ttsKeepAlive  = null;
 let ttsVoices     = [];
 
-// Voix chargées de façon async sur mobile
-function loadTTSVoices() { ttsVoices = speechSynthesis.getVoices(); }
+const ttsBar        = document.getElementById('tts-bar');
+const ttsVoiceSel   = document.getElementById('tts-voice-select');
+const ttsSpeedEl    = document.getElementById('tts-speed');
+const ttsSpeedVal   = document.getElementById('tts-speed-val');
+
+// Charger réglages sauvegardés
+const ttsSaved = JSON.parse(localStorage.getItem(TTS_SETTINGS_KEY) || '{}');
+if (ttsSaved.rate) { ttsSpeedEl.value = ttsSaved.rate; ttsSpeedVal.textContent = ttsSaved.rate + '×'; }
+
+ttsSpeedEl.addEventListener('input', () => {
+  ttsSpeedVal.textContent = ttsSpeedEl.value + '×';
+  localStorage.setItem(TTS_SETTINGS_KEY, JSON.stringify({ ...ttsSaved, rate: ttsSpeedEl.value, voice: ttsVoiceSel.value }));
+  // Appliquer en direct si en cours de lecture (relance)
+  if (ttsActiveBtn && ttsActiveBtn.dataset.state === 'speaking') {
+    speechSynthesis.cancel();
+    setTimeout(() => ttsApply(), 100);
+  }
+});
+
+ttsVoiceSel.addEventListener('change', () => {
+  localStorage.setItem(TTS_SETTINGS_KEY, JSON.stringify({ rate: ttsSpeedEl.value, voice: ttsVoiceSel.value }));
+});
+
+function loadTTSVoices() {
+  ttsVoices = speechSynthesis.getVoices();
+  if (!ttsVoices.length) return;
+  const saved = JSON.parse(localStorage.getItem(TTS_SETTINGS_KEY) || '{}');
+  ttsVoiceSel.innerHTML = '';
+  // Voix françaises en premier, puis autres
+  const fr = ttsVoices.filter(v => v.lang.startsWith('fr'));
+  const others = ttsVoices.filter(v => !v.lang.startsWith('fr'));
+  [...fr, ...others].forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    if (v.name === saved.voice) opt.selected = true;
+    ttsVoiceSel.appendChild(opt);
+  });
+  // Sélectionner la première voix fr par défaut si rien de sauvegardé
+  if (!saved.voice && fr.length) ttsVoiceSel.value = fr[0].name;
+}
 loadTTSVoices();
 if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined)
   speechSynthesis.onvoiceschanged = loadTTSVoices;
 
-function ttsPlainText(summaryMd) {
-  return summaryMd.split('\n').map(line => {
-    const t = line.trim();
-    if (!t) return '';
-    return stripMd(t.replace(/^#+\s*/, '').replace(/^>\s*/, '').replace(/^[-*]\s*/, ''));
-  }).filter(Boolean).join('. ');
+function getSelectedVoice() {
+  return ttsVoices.find(v => v.name === ttsVoiceSel.value) || null;
 }
 
-function getFrenchVoice() {
-  return ttsVoices.find(v => v.lang === 'fr-FR') ||
-         ttsVoices.find(v => v.lang.startsWith('fr')) || null;
+// Preprocessing amélioré pour texte scientifique
+function ttsPlainText(summaryMd) {
+  const result = [];
+  for (const raw of summaryMd.split('\n')) {
+    let l = raw.trim();
+    if (!l) continue;
+    if (/^[-=*_]{3,}$/.test(l)) continue; // séparateurs
+    // Retirer structure markdown
+    l = l.replace(/^#{1,6}\s*/, '').replace(/^>\s*/, '').replace(/^[-*+]\s*/, '').replace(/^\d+\.\s*/, '');
+    // Retirer formatage inline
+    l = l.replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1').replace(/`(.+?)`/g,'$1').replace(/\[(.+?)\]\(.+?\)/g,'$1');
+    // Symboles scientifiques → mots lisibles
+    l = l
+      .replace(/°C/g,'degrés Celsius').replace(/°F/g,'degrés Fahrenheit')
+      .replace(/≤/g,'inférieur ou égal à').replace(/≥/g,'supérieur ou égal à')
+      .replace(/±/g,'plus ou moins').replace(/×/g,'fois')
+      .replace(/→/g,'donne').replace(/←/g,'provient de').replace(/↔/g,'est en équilibre avec')
+      .replace(/α/g,'alpha').replace(/β/g,'bêta').replace(/γ/g,'gamma')
+      .replace(/δ/g,'delta').replace(/λ/g,'lambda').replace(/σ/g,'sigma').replace(/μ/g,'micro')
+      .replace(/([A-Za-z])(\d+)/g,'$1 $2') // H2O → H 2 O
+      .replace(/(\d+)\s*mg\/kg/gi,'$1 milligrammes par kilogramme')
+      .replace(/(\d+)\s*mg\/L/gi,'$1 milligrammes par litre')
+      .replace(/(\d+)\s*µg/gi,'$1 microgrammes')
+      .replace(/(\d+)\s*mL/gi,'$1 millilitres')
+      .replace(/pH/g,'pH');
+    // Supprimer emojis et symboles résiduels
+    l = l.replace(/[\u{1F000}-\u{1FFFF}]/gu,'').replace(/[🎯📌📖🔑💡✦●▶•◆■□]/g,'')
+         .replace(/[^\w\sàâäéèêëîïôùûüçœæ.,;:!?()''\-\/°%+=/]/g,' ')
+         .replace(/\s+/g,' ').trim();
+    if (l.length > 3) result.push(l);
+  }
+  return result.join('. ');
+}
+
+let _ttsCurrentMd = '';
+function ttsApply() {
+  if (!_ttsCurrentMd || !ttsActiveBtn) return;
+  const text = ttsPlainText(_ttsCurrentMd);
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'fr-FR';
+  utter.rate = parseFloat(ttsSpeedEl.value);
+  const voice = getSelectedVoice();
+  if (voice) utter.voice = voice;
+  ttsActiveBtn.dataset.state = 'speaking';
+  ttsActiveBtn.innerHTML = `${SVG.pause} Pause`;
+  ttsKeepAlive = setInterval(() => {
+    if (speechSynthesis.speaking && !speechSynthesis.paused) { speechSynthesis.pause(); speechSynthesis.resume(); }
+  }, 9000);
+  utter.onend = utter.onerror = () => ttsStop(ttsActiveBtn, ttsActiveStop);
+  speechSynthesis.speak(utter);
 }
 
 function ttsStop(speakBtn, stopBtn) {
   speechSynthesis.cancel();
+  _ttsCurrentMd = '';
   if (ttsKeepAlive) { clearInterval(ttsKeepAlive); ttsKeepAlive = null; }
   if (speakBtn) { speakBtn.innerHTML = `${SVG.speaker} Écouter`; speakBtn.dataset.state = ''; }
   if (stopBtn)  stopBtn.classList.add('hidden');
@@ -808,7 +892,6 @@ function ttsToggle(summaryMd, speakBtn, stopBtn) {
     return;
   }
   const state = speakBtn.dataset.state || '';
-
   if (state === 'speaking') {
     speechSynthesis.pause();
     speakBtn.dataset.state = 'paused';
@@ -820,42 +903,20 @@ function ttsToggle(summaryMd, speakBtn, stopBtn) {
     speechSynthesis.resume();
     speakBtn.dataset.state = 'speaking';
     speakBtn.innerHTML = `${SVG.pause} Pause`;
-    // Relancer le keepalive iOS après reprise
     ttsKeepAlive = setInterval(() => {
-      if (speechSynthesis.speaking && !speechSynthesis.paused) {
-        speechSynthesis.pause(); speechSynthesis.resume();
-      }
+      if (speechSynthesis.speaking && !speechSynthesis.paused) { speechSynthesis.pause(); speechSynthesis.resume(); }
     }, 9000);
     return;
   }
-
   if (ttsActiveBtn && ttsActiveBtn !== speakBtn) ttsStop(ttsActiveBtn, ttsActiveStop);
   speechSynthesis.cancel();
-
-  const text = ttsPlainText(summaryMd);
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'fr-FR';
-  utter.rate = 0.92;
-  // Recharger les voix au dernier moment (mobile charge parfois après interaction)
   loadTTSVoices();
-  const voice = getFrenchVoice();
-  if (voice) utter.voice = voice;
-
-  speakBtn.dataset.state = 'speaking';
-  speakBtn.innerHTML = `${SVG.pause} Pause`;
-  stopBtn.classList.remove('hidden');
+  ttsBar.classList.remove('hidden');
+  _ttsCurrentMd = summaryMd;
   ttsActiveBtn  = speakBtn;
   ttsActiveStop = stopBtn;
-
-  // Keepalive iOS : évite l'arrêt automatique après ~15s
-  ttsKeepAlive = setInterval(() => {
-    if (speechSynthesis.speaking && !speechSynthesis.paused) {
-      speechSynthesis.pause(); speechSynthesis.resume();
-    }
-  }, 9000);
-
-  utter.onend = utter.onerror = () => ttsStop(speakBtn, stopBtn);
-  speechSynthesis.speak(utter);
+  stopBtn.classList.remove('hidden');
+  ttsApply();
 }
 
 // ── QUIZ ─────────────────────────────────────────────────────────────────────
