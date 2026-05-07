@@ -1155,6 +1155,61 @@ kbd{
 [data-theme="light"] .chat-messages{background:#fafaf8}
 [data-theme="light"] .chat-sug{background:#fff}
 
+/* ── STATS ── */
+.stats-toggle{
+  position:absolute;top:1.2rem;left:1.4rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:50%;width:38px;height:38px;
+  font-size:1rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;z-index:10;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+.stats-toggle:hover{border-color:var(--blue);transform:scale(1.08)}
+.stats-toggle.active{border-color:var(--blue);background:var(--blue-bg)}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+  gap:.6rem;margin-top:.75rem;
+}
+.stat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:1rem .75rem;text-align:center;
+}
+.stat-number{
+  font-size:1.8rem;font-weight:600;line-height:1;
+  font-family:'DM Mono',monospace;
+}
+.stat-label{font-size:.7rem;color:var(--muted);margin-top:.35rem}
+.stat-blue    {color:var(--blue)}
+.stat-purple  {color:var(--purple)}
+.stat-good    {color:var(--teal)}
+.stat-mid     {color:var(--gold)}
+.stat-low     {color:var(--rose)}
+.stat-muted-num{color:var(--muted)}
+.stats-section{margin-bottom:1.5rem}
+.stats-section-title{
+  font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--muted);border-bottom:1px solid var(--border);
+  padding-bottom:.4rem;margin-bottom:.75rem;font-family:'DM Mono',monospace;
+}
+.quiz-history{margin-top:.75rem}
+.quiz-history-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.45rem 0;border-bottom:1px solid var(--border);
+  font-size:.78rem;color:var(--muted);gap:.5rem;
+}
+.quiz-history-item:last-child{border-bottom:none}
+.quiz-score-badge{
+  font-size:.72rem;font-weight:600;
+  padding:.15rem .5rem;border-radius:99px;
+  font-family:'DM Mono',monospace;white-space:nowrap;
+}
+.quiz-score-good{background:var(--teal-bg);color:var(--teal)}
+.quiz-score-mid {background:var(--gold-bg);color:var(--gold)}
+.quiz-score-low {background:rgba(255,107,129,.1);color:var(--rose)}
+
 @media(max-width:640px){
   .action-trio{grid-template-columns:1fr}
   .act-card-wide{grid-column:span 1}

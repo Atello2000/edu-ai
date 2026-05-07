@@ -14,6 +14,7 @@
 
 <header>
   <button class="theme-toggle" id="theme-toggle" title="Changer de thème">🌙</button>
+  <button class="stats-toggle" id="stats-toggle" title="Mes statistiques">📊</button>
   <div class="badge">Plateforme IA · Résumés · Flashcards · Quiz · Chat · Export PDF</div>
   <div class="online-counter hidden" id="online-counter">
     <span class="online-dot"></span>
@@ -24,6 +25,18 @@
 </header>
 
 <main>
+
+  <!-- ── STATISTIQUES ── -->
+  <div class="panel hidden" id="stats-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Progression</div>
+        <h2 class="panel-title">Mes <em>statistiques</em></h2>
+      </div>
+      <button class="ghost-btn" id="stats-reset-btn">Réinitialiser quiz</button>
+    </div>
+    <div id="stats-content"></div>
+  </div>
 
   <!-- ── HISTORIQUE ── -->
   <div class="panel hidden" id="history-panel">
