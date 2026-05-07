@@ -723,15 +723,48 @@ const quizStepFill    = document.getElementById('quiz-step-fill');
 const quizStepLabel   = document.getElementById('quiz-step-label');
 const quizPrevBtn     = document.getElementById('quiz-prev-btn');
 const quizNextBtn     = document.getElementById('quiz-next-btn');
+const examModeCb      = document.getElementById('exam-mode-cb');
+const examDuration    = document.getElementById('exam-duration');
+const examTimerEl     = document.getElementById('exam-timer');
+const timerDisplay    = document.getElementById('timer-display');
 
-let quizAllQ  = [];  // { sourceName, question, options, answer, explanation }
-let quizAns   = {};  // idx → letter
-let quizIdx   = 0;
+let quizAllQ     = [];
+let quizAns      = {};
+let quizIdx      = 0;
+let examInterval = null;
+let examStartTs  = null;
+
+examModeCb.addEventListener('change', () =>
+  examDuration.classList.toggle('hidden', !examModeCb.checked)
+);
+
+function startExamTimer(minutes) {
+  let remaining = minutes * 60;
+  examStartTs = Date.now();
+  examTimerEl.classList.remove('hidden', 'timer-warning');
+  function tick() {
+    const m = Math.floor(remaining / 60);
+    const s = remaining % 60;
+    timerDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if (remaining <= 60) examTimerEl.classList.add('timer-warning');
+    if (remaining <= 0) { stopExamTimer(); submitQuiz.click(); return; }
+    remaining--;
+  }
+  tick();
+  examInterval = setInterval(tick, 1000);
+}
+
+function stopExamTimer() {
+  if (examInterval) { clearInterval(examInterval); examInterval = null; }
+  examTimerEl.classList.add('hidden');
+  examTimerEl.classList.remove('timer-warning');
+}
 
 quizBtn.addEventListener('click', async () => {
   const files = getSelectedUploadedFiles();
   if (!files.length) return alert('Sélectionnez au moins un fichier.');
   showLoader('Génération du test...');
+  stopExamTimer(); examStartTs = null;
   quizSection.classList.add('hidden');
   quizScore.classList.add('hidden'); quizFooter.classList.add('hidden');
   try {
@@ -753,6 +786,7 @@ quizBtn.addEventListener('click', async () => {
     showQuizQuestion(0);
     saveSession({ quiz: data.results });
     refreshFloatNav();
+    if (examModeCb.checked) startExamTimer(parseInt(examDuration.value));
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
 });
@@ -806,6 +840,9 @@ document.addEventListener('keydown', e => {
 });
 
 submitQuiz.addEventListener('click', () => {
+  const timeTaken = examStartTs ? Math.round((Date.now() - examStartTs) / 1000) : null;
+  stopExamTimer();
+  examStartTs = null;
   quizStepHeader.classList.add('hidden');
   quizFooter.classList.add('hidden');
   quizContainer.innerHTML = '';
@@ -837,7 +874,8 @@ submitQuiz.addEventListener('click', () => {
   });
   const pct = Math.round(correct / quizAllQ.length * 100);
   const msg = pct>=80 ? '// Excellent travail' : pct>=60 ? '// Bien, continuez ainsi' : '// Révisez encore un peu';
-  quizScore.innerHTML = `<div class="score-number">${correct}/${quizAllQ.length}</div><div class="score-label">${pct}% de bonnes réponses</div><div class="score-msg">${msg}</div>`;
+  const timeStr = timeTaken ? ` · ${Math.floor(timeTaken/60)}:${String(timeTaken%60).padStart(2,'0')} min` : '';
+  quizScore.innerHTML = `<div class="score-number">${correct}/${quizAllQ.length}</div><div class="score-label">${pct}% de bonnes réponses${timeStr}</div><div class="score-msg">${msg}</div>`;
   quizScore.classList.remove('hidden');
   quizScore.scrollIntoView({ behavior:'smooth' });
   saveQuizStat(pct, correct, quizAllQ.length);
