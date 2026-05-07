@@ -717,7 +717,28 @@ function createStreamingItem(name) {
 
 function updateStreamingItem(el, text) {
   const body = el.querySelector('.summary-stream-body');
-  if (body) body.innerHTML = marked.parse(text);
+  if (!body) return;
+
+  const sections = buildSummarySections(text);
+  if (!sections.length) { body.innerHTML = marked.parse(text); return; }
+
+  body.innerHTML = '';
+  sections.forEach((s, i) => {
+    const isLast = i === sections.length - 1;
+    const sec = document.createElement('div');
+    sec.className = `summary-section ${s.cls}`;
+    sec.innerHTML = `
+      <div class="summary-section-header">
+        <span class="section-icon">${s.icon}</span>
+        <span class="section-title">${s.title}</span>
+        ${isLast ? '<span class="streaming-badge">✦</span>' : '<span class="section-chevron">▼</span>'}
+      </div>
+      <div class="summary-section-body">${marked.parse(s.lines.join('\n').trim())}</div>`;
+    if (!isLast) {
+      sec.querySelector('.summary-section-header').addEventListener('click', () => sec.classList.toggle('collapsed'));
+    }
+    body.appendChild(sec);
+  });
 }
 
 copyAllBtn.addEventListener('click', () => {
