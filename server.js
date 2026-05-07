@@ -11,6 +11,12 @@ const officeParser = require('officeparser');
 const app = express();
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Créer les dossiers nécessaires s'ils n'existent pas
+['uploads', 'courses'].forEach(dir => {
+  const p = path.join(__dirname, dir);
+  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
