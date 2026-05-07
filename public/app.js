@@ -722,23 +722,42 @@ function updateStreamingItem(el, text) {
   const sections = buildSummarySections(text);
   if (!sections.length) { body.innerHTML = marked.parse(text); return; }
 
-  body.innerHTML = '';
-  sections.forEach((s, i) => {
-    const isLast = i === sections.length - 1;
+  const committed = parseInt(body.dataset.committed || '0');
+
+  // Ajouter les sections terminées (toutes sauf la dernière) une seule fois
+  for (let i = committed; i < sections.length - 1; i++) {
+    const s = sections[i];
     const sec = document.createElement('div');
     sec.className = `summary-section ${s.cls}`;
     sec.innerHTML = `
       <div class="summary-section-header">
         <span class="section-icon">${s.icon}</span>
         <span class="section-title">${s.title}</span>
-        ${isLast ? '<span class="streaming-badge">✦</span>' : '<span class="section-chevron">▼</span>'}
+        <span class="section-chevron">▼</span>
       </div>
       <div class="summary-section-body">${marked.parse(s.lines.join('\n').trim())}</div>`;
-    if (!isLast) {
-      sec.querySelector('.summary-section-header').addEventListener('click', () => sec.classList.toggle('collapsed'));
-    }
+    sec.querySelector('.summary-section-header').addEventListener('click', () => sec.classList.toggle('collapsed'));
     body.appendChild(sec);
-  });
+  }
+  body.dataset.committed = sections.length - 1;
+
+  // Mettre à jour uniquement la section en cours (dernière)
+  const last = sections[sections.length - 1];
+  let lastEl = body.querySelector('.streaming-section');
+  if (!lastEl) {
+    lastEl = document.createElement('div');
+    lastEl.className = `summary-section ${last.cls} streaming-section`;
+    body.appendChild(lastEl);
+  } else {
+    lastEl.className = `summary-section ${last.cls} streaming-section`;
+  }
+  lastEl.innerHTML = `
+    <div class="summary-section-header">
+      <span class="section-icon">${last.icon}</span>
+      <span class="section-title">${last.title}</span>
+      <span class="streaming-badge">✦</span>
+    </div>
+    <div class="summary-section-body">${marked.parse(last.lines.join('\n').trim())}</div>`;
 }
 
 copyAllBtn.addEventListener('click', () => {
