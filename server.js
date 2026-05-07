@@ -24,14 +24,11 @@ const groq = IS_PROD && process.env.GROQ_API_KEY
 const GROQ_MODEL   = 'llama-3.3-70b-versatile';
 const MODEL_LABEL  = groq ? 'Groq · Llama 3.3' : 'Claude Sonnet 4.6';
 
-async function aiComplete(prompt, maxTokens = 3000) {
-  if (groq) {
-    const r = await groq.chat.completions.create({
-      model: GROQ_MODEL, max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }]
-    });
-    return r.choices[0].message.content;
-  }
+function isGroqRateLimit(err) {
+  return err?.status === 429 || err?.statusCode === 429 || String(err?.message).includes('429');
+}
+
+async function claudeComplete(prompt, maxTokens) {
   const r = await anthropic.messages.create({
     model: 'claude-sonnet-4-6', max_tokens: maxTokens,
     messages: [{ role: 'user', content: prompt }]
@@ -39,25 +36,56 @@ async function aiComplete(prompt, maxTokens = 3000) {
   return r.content[0].text;
 }
 
+async function aiComplete(prompt, maxTokens = 3000) {
+  if (groq) {
+    try {
+      const r = await groq.chat.completions.create({
+        model: GROQ_MODEL, max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      return { text: r.choices[0].message.content, model: MODEL_LABEL };
+    } catch (err) {
+      if (isGroqRateLimit(err)) {
+        console.warn('[Groq] rate limit → fallback Claude');
+        const text = await claudeComplete(prompt, maxTokens);
+        return { text, model: 'Claude Sonnet 4.6' };
+      }
+      throw err;
+    }
+  }
+  const text = await claudeComplete(prompt, maxTokens);
+  return { text, model: 'Claude Sonnet 4.6' };
+}
+
 async function* aiStream(prompt, maxTokens = 4096) {
   if (groq) {
-    const stream = await groq.chat.completions.create({
-      model: GROQ_MODEL, max_tokens: maxTokens, stream: true,
-      messages: [{ role: 'user', content: prompt }]
-    });
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content || '';
-      if (text) yield text;
+    try {
+      const stream = await groq.chat.completions.create({
+        model: GROQ_MODEL, max_tokens: maxTokens, stream: true,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || '';
+        if (text) yield { text, model: MODEL_LABEL };
+      }
+      return;
+    } catch (err) {
+      if (isGroqRateLimit(err)) {
+        console.warn('[Groq] rate limit → fallback Claude (stream)');
+        // fall through to Claude stream below
+      } else {
+        throw err;
+      }
     }
-  } else {
-    const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-6', max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }]
-    });
-    for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta')
-        yield event.delta.text;
-    }
+  }
+  // Claude stream
+  const stream = anthropic.messages.stream({
+    model: 'claude-sonnet-4-6', max_tokens: maxTokens,
+    messages: [{ role: 'user', content: prompt }]
+  });
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta')
+      yield { text: event.delta.text, model: 'Claude Sonnet 4.6' };
   }
 }
 const LIMITS = IS_PROD ? {
@@ -267,13 +295,15 @@ Produis un résumé pédagogique complet en français, structuré en Markdown, a
 Contenu du cours :
 ${truncated}`;
 
-      for await (const text of aiStream(prompt, 4096)) {
-        send({ type: 'delta', name: file.name, text });
+      let streamModel = MODEL_LABEL;
+      for await (const chunk of aiStream(prompt, 4096)) {
+        send({ type: 'delta', name: file.name, text: chunk.text });
+        streamModel = chunk.model;
       }
 
       send({ type: 'done', name: file.name });
     }
-    send({ type: 'model', name: MODEL_LABEL });
+    send({ type: 'model', name: streamModel });
     send({ type: 'end' });
   } catch (err) {
     send({ type: 'error', message: err.message });
@@ -309,7 +339,7 @@ Varie obligatoirement les types de questions parmi :
 - Identification d'erreur (ex: "Laquelle de ces affirmations est incorrecte ?")
 N'utilise pas deux fois le même type de question consécutivement.`;
 
-      const rawQuiz = await aiComplete(`Génère ${count} questions QCM de niveau ${difficulty} en français basées sur ce cours "${file.name}".
+      const { text: rawQuizText, model: fileQuizModel } = await aiComplete(`Génère ${count} questions QCM de niveau ${difficulty} en français basées sur ce cours "${file.name}".
 ${difficultyGuide}
 ${questionTypes}
 
@@ -332,17 +362,19 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`, 3000);
 
       let quiz;
       try {
-        const raw = rawQuiz.trim();
+        const raw = rawQuizText.trim();
         const match = raw.match(/\{[\s\S]*\}/);
         quiz = JSON.parse(match ? match[0] : raw);
       } catch {
         quiz = { questions: [] };
       }
 
-      return { name: file.name, quiz };
+      return { name: file.name, quiz, _model: fileQuizModel };
     }));
 
-    res.json({ success: true, results, model: MODEL_LABEL });
+    const quizModel = results[results.length - 1]?._model || MODEL_LABEL;
+    results.forEach(r => delete r._model);
+    res.json({ success: true, results, model: quizModel });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -360,7 +392,7 @@ app.post('/api/flashcards', async (req, res) => {
       const text = await extractText(file.path, file.name);
       const truncated = text.slice(0, LIMITS.flashChars);
 
-      const rawFlash = await aiComplete(`Tu es un assistant pédagogique. À partir du cours ci-dessous, génère ${count} flashcards en français pour aider à mémoriser les concepts essentiels.
+      const { text: rawFlashText, model: fileFlashModel } = await aiComplete(`Tu es un assistant pédagogique. À partir du cours ci-dessous, génère ${count} flashcards en français pour aider à mémoriser les concepts essentiels.
 
 Chaque flashcard doit avoir :
 - Un RECTO : une question courte, un terme, ou un concept clé
@@ -378,17 +410,19 @@ ${truncated}`, 2048);
 
       let data;
       try {
-        const raw = rawFlash.trim();
+        const raw = rawFlashText.trim();
         const match = raw.match(/\{[\s\S]*\}/);
         data = JSON.parse(match ? match[0] : raw);
       } catch {
         data = { flashcards: [] };
       }
 
-      return { name: file.name, flashcards: data.flashcards || [] };
+      return { name: file.name, flashcards: data.flashcards || [], _model: fileFlashModel };
     }));
 
-    res.json({ success: true, results, model: MODEL_LABEL });
+    const flashModel = results[results.length - 1]?._model || MODEL_LABEL;
+    results.forEach(r => delete r._model);
+    res.json({ success: true, results, model: flashModel });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
