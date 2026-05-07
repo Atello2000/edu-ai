@@ -1155,6 +1155,12 @@ kbd{
 [data-theme="light"] .chat-messages{background:#fafaf8}
 [data-theme="light"] .chat-sug{background:#fff}
 
+/* ── AUDIO TTS ── */
+.speak-btn{color:var(--teal) !important;border-color:rgba(29,209,161,.3) !important}
+.speak-btn:hover{background:var(--teal-bg) !important}
+.stop-btn{color:var(--rose) !important;border-color:rgba(255,107,129,.3) !important}
+.stop-btn:hover{background:rgba(255,107,129,.1) !important}
+
 /* ── MODE EXAMEN ── */
 .exam-toggle-label{
   display:flex;align-items:center;gap:.35rem;

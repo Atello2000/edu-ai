@@ -272,6 +272,10 @@ const SVG = {
   copy:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1 1 0 011-1h8"/></svg>`,
   download:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3v7M5.5 8L8 10.5 10.5 8"/><path d="M3 13h10"/></svg>`,
   pdf:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="2" width="10" height="12" rx="1.5"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="6" y1="9" x2="10" y2="9"/><line x1="6" y1="12" x2="8" y2="12"/></svg>`,
+  speaker:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polygon points="2,5 6,5 10,2 10,14 6,11 2,11" fill="currentColor" stroke="none"/><path d="M12 5.5a4 4 0 0 1 0 5"/></svg>`,
+  pause:`<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>`,
+  resume:`<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><polygon points="3,2 13,8 3,14"/></svg>`,
+  stopIcon:`<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>`,
 };
 
 const SECTION_CONFIG = [
@@ -321,6 +325,8 @@ function renderSummaryItem(r) {
       </div>
     </div>
     <div class="summary-file-actions">
+      <button class="summary-action-btn speak-btn">${SVG.speaker} Écouter</button>
+      <button class="summary-action-btn stop-btn hidden">${SVG.stopIcon} Stop</button>
       <button class="summary-action-btn copy-btn" data-text="${encoded}">${SVG.copy} Copier</button>
       <button class="summary-action-btn download-btn" data-name="${r.name}" data-text="${encoded}">${SVG.download} TXT</button>
       <button class="summary-action-btn pdf pdf-btn" data-name="${r.name}">${SVG.pdf} PDF</button>
@@ -374,6 +380,11 @@ function renderSummaryItem(r) {
   item.append(accentBar, header, toolbar, sectionsEl);
 
   // Events
+  const speakBtn = item.querySelector('.speak-btn');
+  const stopBtn2 = item.querySelector('.stop-btn');
+  speakBtn.addEventListener('click', () => ttsToggle(r.summary, speakBtn, stopBtn2));
+  stopBtn2.addEventListener('click', () => ttsStop(speakBtn, stopBtn2));
+
   item.querySelector('.copy-btn').addEventListener('click', btn => {
     const b = btn.currentTarget;
     navigator.clipboard.writeText(decodeURIComponent(b.dataset.text)).then(() => {
@@ -716,6 +727,71 @@ copyAllBtn.addEventListener('click', () => {
     copyAllBtn.textContent = 'Copié ✓'; setTimeout(() => copyAllBtn.textContent = 'Copier tout', 2000);
   });
 });
+
+// ── TEXT-TO-SPEECH ───────────────────────────────────────────────────────────
+let ttsActiveBtn  = null;
+let ttsActiveStop = null;
+
+function ttsPlainText(summaryMd) {
+  return summaryMd.split('\n').map(line => {
+    const t = line.trim();
+    if (!t) return '';
+    return stripMd(t.replace(/^#+\s*/, '').replace(/^>\s*/, '').replace(/^[-*]\s*/, ''));
+  }).filter(Boolean).join('. ');
+}
+
+function getFrenchVoice() {
+  const voices = speechSynthesis.getVoices();
+  return voices.find(v => v.lang === 'fr-FR') ||
+         voices.find(v => v.lang.startsWith('fr')) || null;
+}
+
+function ttsStop(speakBtn, stopBtn) {
+  speechSynthesis.cancel();
+  if (speakBtn) { speakBtn.innerHTML = `${SVG.speaker} Écouter`; speakBtn.dataset.state = ''; }
+  if (stopBtn)  stopBtn.classList.add('hidden');
+  ttsActiveBtn  = null;
+  ttsActiveStop = null;
+}
+
+function ttsToggle(summaryMd, speakBtn, stopBtn) {
+  const state = speakBtn.dataset.state || '';
+
+  // Speaking → Pause
+  if (state === 'speaking') {
+    speechSynthesis.pause();
+    speakBtn.dataset.state = 'paused';
+    speakBtn.innerHTML = `${SVG.resume} Reprendre`;
+    return;
+  }
+  // Paused → Resume
+  if (state === 'paused') {
+    speechSynthesis.resume();
+    speakBtn.dataset.state = 'speaking';
+    speakBtn.innerHTML = `${SVG.pause} Pause`;
+    return;
+  }
+
+  // Stop any previous TTS
+  if (ttsActiveBtn && ttsActiveBtn !== speakBtn) ttsStop(ttsActiveBtn, ttsActiveStop);
+  speechSynthesis.cancel();
+
+  const text = ttsPlainText(summaryMd);
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'fr-FR';
+  utter.rate = 0.92;
+  const voice = getFrenchVoice();
+  if (voice) utter.voice = voice;
+
+  speakBtn.dataset.state = 'speaking';
+  speakBtn.innerHTML = `${SVG.pause} Pause`;
+  stopBtn.classList.remove('hidden');
+  ttsActiveBtn  = speakBtn;
+  ttsActiveStop = stopBtn;
+
+  utter.onend = utter.onerror = () => ttsStop(speakBtn, stopBtn);
+  speechSynthesis.speak(utter);
+}
 
 // ── QUIZ ─────────────────────────────────────────────────────────────────────
 const quizStepHeader  = document.getElementById('quiz-step-header');
