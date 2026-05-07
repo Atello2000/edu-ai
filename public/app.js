@@ -236,6 +236,9 @@ const isLocal = location.hostname === 'localhost' || location.hostname === '127.
 if (isLocal) loadLibrary();
 else libPanel.classList.add('hidden');
 
+const uploadSizeHint = document.getElementById('upload-size-hint');
+if (uploadSizeHint) uploadSizeHint.textContent = isLocal ? '50 Mo' : '20 Mo';
+
 // ── Compteur utilisateurs en ligne ───────────────────────────────────────────
 const onlineCounter = document.getElementById('online-counter');
 const onlineCountEl = document.getElementById('online-count');
