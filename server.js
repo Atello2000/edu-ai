@@ -88,6 +88,20 @@ async function* aiStream(prompt, maxTokens = 4096) {
       yield { text: event.delta.text, model: 'Claude Sonnet 4.6' };
   }
 }
+// Calcule le nombre de tokens de sortie nécessaires selon la tâche et la taille du contenu.
+// Évite de gaspiller la fenêtre de tokens/min Groq (6k/min) sur des requêtes inutilement grandes.
+function calcMaxTokens(type, textLen, count = 0) {
+  if (type === 'summary') {
+    if (textLen < 5000)  return 1200;
+    if (textLen < 15000) return 2000;
+    if (textLen < 40000) return 3000;
+    return 3500;
+  }
+  if (type === 'quiz')  return Math.min(count * 200 + 400, 3200);
+  if (type === 'flash') return Math.min(count * 100 + 300, 2200);
+  return 2048;
+}
+
 const LIMITS = IS_PROD ? {
   fileSize:       20 * 1024 * 1024,  // 20 Mo
   maxFiles:       3,
@@ -296,7 +310,7 @@ Contenu du cours :
 ${truncated}`;
 
       let streamModel = MODEL_LABEL;
-      for await (const chunk of aiStream(prompt, 4096)) {
+      for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length))) {
         send({ type: 'delta', name: file.name, text: chunk.text });
         streamModel = chunk.model;
       }
@@ -358,7 +372,7 @@ Pour chaque question, donne exactement ce format JSON :
 Contenu du cours :
 ${truncated}
 
-Réponds UNIQUEMENT avec le JSON, sans texte autour.`, 3000);
+Réponds UNIQUEMENT avec le JSON, sans texte autour.`, calcMaxTokens('quiz', truncated.length, count));
 
       let quiz;
       try {
@@ -406,7 +420,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
 }
 
 Contenu du cours "${file.name}" :
-${truncated}`, 2048);
+${truncated}`, calcMaxTokens('flash', truncated.length, count));
 
       let data;
       try {
