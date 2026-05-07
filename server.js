@@ -14,7 +14,7 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 // Limites selon l'environnement (production = Railway)
 const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
 const LIMITS = IS_PROD ? {
-  fileSize:       10 * 1024 * 1024,  // 10 Mo
+  fileSize:       20 * 1024 * 1024,  // 20 Mo
   maxFiles:       3,
   summaryChars:   30000,
   quizChars:      20000,
@@ -23,7 +23,7 @@ const LIMITS = IS_PROD ? {
   flashMaxCount:  15,
   chatChars:      4000,
 } : {
-  fileSize:       20 * 1024 * 1024,  // 20 Mo
+  fileSize:       50 * 1024 * 1024,  // 50 Mo
   maxFiles:       20,
   summaryChars:   60000,
   quizChars:      40000,
