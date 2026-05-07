@@ -34,7 +34,7 @@ const LIMITS = IS_PROD ? {
 };
 
 // ── Quota par IP (production uniquement) ─────────────────────────────────────
-const QUOTA_DAILY = { summarize: 3, quiz: 3, flashcards: 3, chat: 10 };
+const QUOTA_DAILY = { summarize: 3, quiz: 10, flashcards: 10, chat: 10 };
 const ipQuotaMap  = new Map(); // ip → { date, summarize, quiz, flashcards, chat }
 
 function getClientIP(req) {
