@@ -731,6 +731,14 @@ copyAllBtn.addEventListener('click', () => {
 // ── TEXT-TO-SPEECH ───────────────────────────────────────────────────────────
 let ttsActiveBtn  = null;
 let ttsActiveStop = null;
+let ttsKeepAlive  = null;
+let ttsVoices     = [];
+
+// Voix chargées de façon async sur mobile
+function loadTTSVoices() { ttsVoices = speechSynthesis.getVoices(); }
+loadTTSVoices();
+if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined)
+  speechSynthesis.onvoiceschanged = loadTTSVoices;
 
 function ttsPlainText(summaryMd) {
   return summaryMd.split('\n').map(line => {
@@ -741,13 +749,13 @@ function ttsPlainText(summaryMd) {
 }
 
 function getFrenchVoice() {
-  const voices = speechSynthesis.getVoices();
-  return voices.find(v => v.lang === 'fr-FR') ||
-         voices.find(v => v.lang.startsWith('fr')) || null;
+  return ttsVoices.find(v => v.lang === 'fr-FR') ||
+         ttsVoices.find(v => v.lang.startsWith('fr')) || null;
 }
 
 function ttsStop(speakBtn, stopBtn) {
   speechSynthesis.cancel();
+  if (ttsKeepAlive) { clearInterval(ttsKeepAlive); ttsKeepAlive = null; }
   if (speakBtn) { speakBtn.innerHTML = `${SVG.speaker} Écouter`; speakBtn.dataset.state = ''; }
   if (stopBtn)  stopBtn.classList.add('hidden');
   ttsActiveBtn  = null;
@@ -755,24 +763,32 @@ function ttsStop(speakBtn, stopBtn) {
 }
 
 function ttsToggle(summaryMd, speakBtn, stopBtn) {
+  if (typeof speechSynthesis === 'undefined') {
+    alert('La synthèse vocale n\'est pas supportée par ce navigateur.');
+    return;
+  }
   const state = speakBtn.dataset.state || '';
 
-  // Speaking → Pause
   if (state === 'speaking') {
     speechSynthesis.pause();
     speakBtn.dataset.state = 'paused';
     speakBtn.innerHTML = `${SVG.resume} Reprendre`;
+    if (ttsKeepAlive) { clearInterval(ttsKeepAlive); ttsKeepAlive = null; }
     return;
   }
-  // Paused → Resume
   if (state === 'paused') {
     speechSynthesis.resume();
     speakBtn.dataset.state = 'speaking';
     speakBtn.innerHTML = `${SVG.pause} Pause`;
+    // Relancer le keepalive iOS après reprise
+    ttsKeepAlive = setInterval(() => {
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        speechSynthesis.pause(); speechSynthesis.resume();
+      }
+    }, 9000);
     return;
   }
 
-  // Stop any previous TTS
   if (ttsActiveBtn && ttsActiveBtn !== speakBtn) ttsStop(ttsActiveBtn, ttsActiveStop);
   speechSynthesis.cancel();
 
@@ -780,6 +796,8 @@ function ttsToggle(summaryMd, speakBtn, stopBtn) {
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'fr-FR';
   utter.rate = 0.92;
+  // Recharger les voix au dernier moment (mobile charge parfois après interaction)
+  loadTTSVoices();
   const voice = getFrenchVoice();
   if (voice) utter.voice = voice;
 
@@ -788,6 +806,13 @@ function ttsToggle(summaryMd, speakBtn, stopBtn) {
   stopBtn.classList.remove('hidden');
   ttsActiveBtn  = speakBtn;
   ttsActiveStop = stopBtn;
+
+  // Keepalive iOS : évite l'arrêt automatique après ~15s
+  ttsKeepAlive = setInterval(() => {
+    if (speechSynthesis.speaking && !speechSynthesis.paused) {
+      speechSynthesis.pause(); speechSynthesis.resume();
+    }
+  }, 9000);
 
   utter.onend = utter.onerror = () => ttsStop(speakBtn, stopBtn);
   speechSynthesis.speak(utter);

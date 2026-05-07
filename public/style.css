@@ -343,7 +343,8 @@ main{
 }
 
 .summary-file-header{
-  display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:.75rem;
+  flex-wrap:wrap;
   padding:1.1rem 1.4rem 1rem;
   border-bottom:1px solid var(--border);
   background:rgba(255,255,255,.018);
@@ -366,7 +367,7 @@ main{
 .summary-file-meta{
   font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);margin-top:.18rem;
 }
-.summary-file-actions{display:flex;gap:.35rem;flex-shrink:0;align-items:center}
+.summary-file-actions{display:flex;gap:.35rem;flex-wrap:wrap;align-items:center}
 .summary-action-btn{
   display:flex;align-items:center;gap:.3rem;
   padding:.32rem .7rem;border-radius:7px;
