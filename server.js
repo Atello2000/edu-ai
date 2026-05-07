@@ -169,7 +169,7 @@ setInterval(() => {
 });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
 
 const storage = multer.diskStorage({
@@ -469,11 +469,14 @@ Cours de référence :${context}${attachedContext}`
 
 Cours disponibles :${context}`;
 
-    const message = await client.messages.create({
+    // Garde les 20 derniers échanges max pour éviter un body trop lourd
+    const trimmedMessages = messages.slice(-20);
+
+    const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
       max_tokens: attachedFile ? 3000 : 1024,
       system: systemPrompt,
-      messages
+      messages: trimmedMessages
     });
     res.json({ success: true, response: message.content[0].text });
   } catch (err) {
