@@ -93,8 +93,14 @@ app.get('/api/library', (req, res) => {
 });
 
 // Upload multiple files
-app.post('/api/upload', upload.array('files', 20), async (req, res) => {
+app.post('/api/upload', (req, res, next) => {
+  upload.array('files', 20)(req, res, err => {
+    if (err) return res.status(400).json({ error: err.message });
+    next();
+  });
+}, async (req, res) => {
   try {
+    if (!req.files || !req.files.length) return res.status(400).json({ error: 'Aucun fichier reçu' });
     const files = req.files.map(f => ({
       id: f.filename,
       name: f.originalname,
@@ -327,4 +333,10 @@ Cours disponibles :${context}`;
 });
 
 const PORT = process.env.PORT || 3000;
+// Gestionnaire d'erreurs global — toujours renvoyer du JSON
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: err.message || 'Erreur serveur' });
+});
+
 app.listen(PORT, () => console.log(`EDU AI démarré sur http://localhost:${PORT}`));
