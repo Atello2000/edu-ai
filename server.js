@@ -16,9 +16,9 @@ const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
 const LIMITS = IS_PROD ? {
   fileSize:       20 * 1024 * 1024,  // 20 Mo
   maxFiles:       3,
-  summaryChars:   30000,
-  quizChars:      20000,
-  quizMaxCount:   10,
+  summaryChars:   50000,
+  quizChars:      50000,
+  quizMaxCount:   20,
   flashChars:     15000,
   flashMaxCount:  15,
   chatChars:      4000,
