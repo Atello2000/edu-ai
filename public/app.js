@@ -232,7 +232,9 @@ libGoBtn.addEventListener('click', () =>
   actionsSection.scrollIntoView({ behavior: 'smooth' })
 );
 
-loadLibrary();
+const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+if (isLocal) loadLibrary();
+else libPanel.classList.add('hidden');
 
 // ── SUMMARY ──────────────────────────────────────────────────────────────────
 const SVG = {
