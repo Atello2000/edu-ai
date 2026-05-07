@@ -333,6 +333,25 @@ Cours disponibles :${context}`;
 });
 
 const PORT = process.env.PORT || 3000;
+// ── Compteur d'utilisateurs en ligne ─────────────────────────────────────────
+const onlineUsers = new Map(); // clientId → lastSeen timestamp
+const ONLINE_TIMEOUT = 90000; // 90 secondes sans ping = hors ligne
+
+app.post('/api/ping', (req, res) => {
+  const { clientId } = req.body;
+  if (clientId) onlineUsers.set(clientId, Date.now());
+  // Nettoyer les clients inactifs
+  const cutoff = Date.now() - ONLINE_TIMEOUT;
+  for (const [id, ts] of onlineUsers) if (ts < cutoff) onlineUsers.delete(id);
+  res.json({ online: onlineUsers.size });
+});
+
+app.get('/api/users/count', (req, res) => {
+  const cutoff = Date.now() - ONLINE_TIMEOUT;
+  for (const [id, ts] of onlineUsers) if (ts < cutoff) onlineUsers.delete(id);
+  res.json({ online: onlineUsers.size });
+});
+
 // Gestionnaire d'erreurs global — toujours renvoyer du JSON
 app.use((err, req, res, next) => {
   console.error(err);

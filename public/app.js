@@ -236,6 +236,29 @@ const isLocal = location.hostname === 'localhost' || location.hostname === '127.
 if (isLocal) loadLibrary();
 else libPanel.classList.add('hidden');
 
+// ── Compteur utilisateurs en ligne ───────────────────────────────────────────
+const onlineCounter = document.getElementById('online-counter');
+const onlineCountEl = document.getElementById('online-count');
+
+// ID unique par session navigateur
+if (!sessionStorage.getItem('edu-client-id'))
+  sessionStorage.setItem('edu-client-id', crypto.randomUUID());
+const clientId = sessionStorage.getItem('edu-client-id');
+
+async function pingServer() {
+  try {
+    const res  = await fetch('/api/ping', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ clientId }) });
+    const data = await res.json();
+    if (isLocal) {
+      onlineCountEl.textContent = data.online;
+      onlineCounter.classList.remove('hidden');
+    }
+  } catch {}
+}
+
+pingServer();
+setInterval(pingServer, 30000);
+
 // ── SUMMARY ──────────────────────────────────────────────────────────────────
 const SVG = {
   target:`<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="2" fill="currentColor" stroke="none"/></svg>`,
