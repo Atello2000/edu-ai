@@ -281,6 +281,7 @@ app.post('/api/summarize', async (req, res) => {
 
   try {
     const { files } = req.body;
+    let streamModel = MODEL_LABEL;
     for (const file of files) {
       const text = await extractText(file.path, file.name);
       const truncated = text.slice(0, LIMITS.summaryChars);
@@ -309,7 +310,6 @@ Produis un résumé pédagogique complet en français, structuré en Markdown, a
 Contenu du cours :
 ${truncated}`;
 
-      let streamModel = MODEL_LABEL;
       for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length))) {
         send({ type: 'delta', name: file.name, text: chunk.text });
         streamModel = chunk.model;

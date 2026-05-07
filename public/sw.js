@@ -1,4 +1,4 @@
-const CACHE = 'edu-ai-v1';
+const CACHE = 'edu-ai-v2';
 const ASSETS = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json', '/icon.svg',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap',
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
