@@ -23,7 +23,7 @@ const LIMITS = IS_PROD ? {
   flashMaxCount:  15,
   chatChars:      4000,
 } : {
-  fileSize:       50 * 1024 * 1024,  // 50 Mo
+  fileSize:       20 * 1024 * 1024,  // 20 Mo
   maxFiles:       20,
   summaryChars:   60000,
   quizChars:      40000,
