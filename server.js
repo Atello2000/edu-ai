@@ -33,6 +33,46 @@ const LIMITS = IS_PROD ? {
   chatChars:      8000,
 };
 
+// ── Quota par IP (production uniquement) ─────────────────────────────────────
+const QUOTA_DAILY = { summarize: 3, quiz: 3, flashcards: 3, chat: 10 };
+const ipQuotaMap  = new Map(); // ip → { date, summarize, quiz, flashcards, chat }
+
+function getClientIP(req) {
+  const fwd = req.headers['x-forwarded-for'];
+  return (fwd ? fwd.split(',')[0].trim() : null) || req.socket?.remoteAddress || 'unknown';
+}
+
+function isLocalIP(ip) {
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+}
+
+// Retourne true si l'action est autorisée et incrémente le compteur
+function checkQuota(req, action) {
+  if (!IS_PROD) return { ok: true };
+  const ip = getClientIP(req);
+  if (isLocalIP(ip)) return { ok: true };
+
+  const today = new Date().toDateString();
+  let q = ipQuotaMap.get(ip);
+  if (!q || q.date !== today) {
+    q = { date: today, summarize: 0, quiz: 0, flashcards: 0, chat: 0 };
+    ipQuotaMap.set(ip, q);
+  }
+
+  const limit = QUOTA_DAILY[action];
+  if (q[action] >= limit) {
+    return { ok: false, used: q[action], limit, action };
+  }
+  q[action]++;
+  return { ok: true, used: q[action], limit };
+}
+
+// Nettoyage nocturne des IPs obsolètes
+setInterval(() => {
+  const today = new Date().toDateString();
+  for (const [ip, q] of ipQuotaMap) if (q.date !== today) ipQuotaMap.delete(ip);
+}, 3600000); // toutes les heures
+
 // Créer les dossiers nécessaires s'ils n'existent pas
 ['uploads', 'courses'].forEach(dir => {
   const p = path.join(__dirname, dir);
@@ -144,6 +184,12 @@ app.post('/api/summarize', async (req, res) => {
 
   const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
+  const quota = checkQuota(req, 'summarize');
+  if (!quota.ok) {
+    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} résumés/jour). Revenez demain.` });
+    res.end(); return;
+  }
+
   try {
     const { files } = req.body;
     for (const file of files) {
@@ -198,6 +244,8 @@ ${truncated}`
 
 // Générer un test — traitement parallèle
 app.post('/api/quiz', async (req, res) => {
+  const quota = checkQuota(req, 'quiz');
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} quiz/jour). Revenez demain.` });
   try {
     const { files, difficulty = 'moyen' } = req.body;
     const count = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
@@ -270,6 +318,8 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`
 
 // Générer des flashcards — traitement parallèle
 app.post('/api/flashcards', async (req, res) => {
+  const quota = checkQuota(req, 'flashcards');
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} flashcards/jour). Revenez demain.` });
   try {
     const { files } = req.body;
     const count = Math.min(parseInt(req.body.count) || 10, LIMITS.flashMaxCount);
@@ -321,6 +371,8 @@ ${truncated}`
 
 // Chat avec le cours
 app.post('/api/chat', async (req, res) => {
+  const quota = checkQuota(req, 'chat');
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
   try {
     const { files, messages, attachedFile } = req.body;
 
