@@ -17,6 +17,8 @@
   --purple-bg:rgba(167,139,250,.08);
   --rose:#ff6b81;
   --emerald:#34d399;
+  --pharma:#22c55e;
+  --pharma-bg:rgba(34,197,94,.08);
   --text:#e8ecf6;
   --muted:#6b7fa3;
   --radius:12px;
@@ -48,6 +50,8 @@
   --purple-bg:rgba(124,58,237,.07);
   --rose:#e11d48;
   --emerald:#059669;
+  --pharma:#16a34a;
+  --pharma-bg:rgba(22,163,74,.07);
   --text:#1c1917;
   --muted:#78716c;
   --fc-front-bg:linear-gradient(135deg,#ede9fe,#f5f3ff);
@@ -200,6 +204,8 @@ main{
 .act-btn.teal:not(:disabled):hover{opacity:.88;transform:translateY(-1px)}
 .act-btn.full{width:100%;justify-content:center;padding:.75rem;font-size:.92rem;margin-top:1rem}
 .act-btn.large{padding:.75rem 2.5rem;font-size:.95rem}
+.act-btn.pharma{background:var(--pharma);color:#fff}
+.act-btn.pharma:not(:disabled):hover{opacity:.88;transform:translateY(-1px)}
 
 .ghost-btn{
   background:none;border:1px solid var(--border);
@@ -315,6 +321,7 @@ main{
 .act-card-icon.blue{background:linear-gradient(135deg,#1d4ed8,#3d7eff);box-shadow:0 4px 14px rgba(29,78,216,.35)}
 .act-card-icon.teal{background:linear-gradient(135deg,#0d9488,#1dd1a1);box-shadow:0 4px 14px rgba(13,148,136,.35)}
 .act-card-icon.gold{background:linear-gradient(135deg,#92400e,#d4a94c);box-shadow:0 4px 14px rgba(146,64,14,.3)}
+.act-card-icon.pharma{background:linear-gradient(135deg,#14532d,#22c55e);box-shadow:0 4px 14px rgba(20,83,45,.35)}
 .act-card-body{flex:1}
 .act-card-body strong{display:block;font-size:.88rem;font-weight:600;margin-bottom:.25rem}
 .act-card-body span,.act-card-body label{font-size:.78rem;color:var(--muted)}
@@ -1292,6 +1299,75 @@ kbd{
 .quiz-score-good{background:var(--teal-bg);color:var(--teal)}
 .quiz-score-mid {background:var(--gold-bg);color:var(--gold)}
 .quiz-score-low {background:rgba(255,107,129,.1);color:var(--rose)}
+
+/* ── PHARMA ── */
+.pharma-toggle{
+  position:absolute;top:1.2rem;left:4.5rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:50%;width:38px;height:38px;
+  font-size:.95rem;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;z-index:10;
+  box-shadow:0 2px 8px rgba(0,0,0,.15);
+}
+.pharma-toggle:hover{border-color:var(--pharma);transform:scale(1.08)}
+.pharma-toggle.active{border-color:var(--pharma);background:var(--pharma-bg)}
+
+.pharma-modes{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1.4rem}
+.pharma-mode-btn{
+  display:flex;align-items:center;gap:.4rem;
+  padding:.45rem 1rem;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--card);
+  color:var(--muted);font-size:.8rem;cursor:pointer;
+  transition:all .2s;font-family:'DM Mono',monospace;
+}
+.pharma-mode-btn.active{border-color:var(--pharma);color:var(--pharma);background:var(--pharma-bg)}
+.pharma-mode-btn:hover:not(.active){color:var(--text);background:var(--surface)}
+
+.pharma-config{
+  display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;
+  padding:1rem 1.2rem;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius-sm);margin-bottom:1.4rem;
+}
+.pharma-config label{font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.pharma-config select{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:var(--radius-sm);
+  padding:.4rem .7rem;font-size:.82rem;flex:1;min-width:180px;
+}
+.pharma-config input[type=number]{
+  width:52px;padding:.35rem .4rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);
+  font-size:.82rem;text-align:center;
+}
+
+.pharma-sub{display:flex;flex-direction:column;gap:0}
+
+#pharma-input:focus{border-color:var(--pharma)}
+
+.pharma-topic-badge{
+  display:inline-block;padding:.2rem .65rem;border-radius:99px;
+  font-size:.68rem;font-family:'DM Mono',monospace;
+  background:var(--pharma-bg);color:var(--pharma);margin-bottom:.5rem;
+}
+
+#pharma-fiche-result .summary-item{border-top:4px solid var(--pharma)}
+
+#pharma-quiz-score{
+  margin-top:1.2rem;padding:2rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);text-align:center;
+  animation:fadeUp .4s ease both;
+}
+#pharma-quiz-score .score-number{
+  font-family:'Cormorant Garamond',serif;
+  font-size:3.2rem;font-weight:300;color:var(--pharma);
+}
+#pharma-quiz-score .score-label{font-size:.85rem;color:var(--muted);margin-top:.3rem}
+#pharma-quiz-score .score-msg{font-family:'DM Mono',monospace;font-size:.78rem;letter-spacing:.03em;margin-top:.6rem}
+
+.fnav-pharma.active{background:var(--pharma-bg);color:var(--pharma)}
 
 @media(max-width:640px){
   .action-trio{grid-template-columns:1fr}

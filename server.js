@@ -509,6 +509,113 @@ app.get('/api/quota', (req, res) => {
   });
 });
 
+// ── RÉGULATION PHARMACEUTIQUE ─────────────────────────────────────────────────
+const PHARMA_SYSTEM = `Tu es un expert senior en régulation pharmaceutique avec 20 ans d'expérience. Tu maîtrises :
+- La réglementation européenne (EMA, directives, règlements)
+- La réglementation française (ANSM, AMM, ATU/AAP)
+- Les guidelines ICH (Q1-Q14, E1-E16, S1-S12, M1-M8)
+- Les Bonnes Pratiques de Fabrication (BPF/GMP) et toutes les annexes
+- Les essais cliniques (phases I-IV, ICH E6 BPC)
+- La pharmacovigilance (EudraVigilance, PSUR, SUSAR, PASS/PAES)
+- Le dossier CTD/eCTD et ses 5 modules
+- La bioéquivalence et les médicaments génériques
+- Les médicaments biologiques et biosimilaires
+- Les dispositifs médicaux (MDR 2017/745, IVDR 2017/746)
+
+Réponds toujours en français. Structure tes réponses avec Markdown (titres, listes, tableaux si utile). Cite les textes réglementaires précis (numéros de guidelines ICH, numéros d'articles de directives/règlements EU). Adapte le niveau à un étudiant de Master 1 en régulation pharmaceutique : rigoureux mais pédagogique.`;
+
+app.post('/api/pharma/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+    const trimmed = (messages || []).slice(-20);
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1500,
+      system: PHARMA_SYSTEM,
+      messages: trimmed
+    });
+    res.json({ success: true, response: message.content[0].text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/pharma/quiz', async (req, res) => {
+  try {
+    const { topic, difficulty = 'moyen' } = req.body;
+    const count = Math.min(parseInt(req.body.count) || 5, 15);
+
+    const diffGuide = {
+      facile:    'Privilégie les questions de définition et de reconnaissance basique.',
+      moyen:     'Mélange compréhension, application réglementaire et comparaison de procédures.',
+      difficile: 'Privilégie les cas pratiques, nuances réglementaires, erreurs courantes et scénarios multi-étapes.',
+    }[difficulty] || '';
+
+    const { text: raw, model } = await aiComplete(`Génère ${count} questions QCM de niveau ${difficulty} sur le thème "${topic}" en régulation pharmaceutique.
+${diffGuide}
+
+Varie les types de questions : définition réglementaire, identification de procédure, comparaison de guidelines, application dans un cas pratique, vrai/faux réglementaire, interprétation d'un texte.
+
+Pour chaque question, donne exactement ce format JSON :
+{
+  "questions": [
+    {
+      "question": "...",
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "answer": "A",
+      "explanation": "..."
+    }
+  ]
+}
+
+Réponds UNIQUEMENT avec le JSON, sans texte autour.`, calcMaxTokens('quiz', 3000, count));
+
+    let quiz;
+    try {
+      const match = raw.trim().match(/\{[\s\S]*\}/);
+      quiz = JSON.parse(match ? match[0] : raw);
+    } catch {
+      quiz = { questions: [] };
+    }
+    res.json({ success: true, questions: quiz.questions || [], model });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/pharma/fiche', async (req, res) => {
+  try {
+    const { topic } = req.body;
+    const { text, model } = await aiComplete(`Tu es un expert en régulation pharmaceutique. Génère une fiche de référence complète et synthétique pour un étudiant de Master 1 sur : "${topic}".
+
+Structure la fiche en Markdown avec exactement ce plan :
+
+## 🎯 Définition / Objectif
+(2-3 phrases claires)
+
+## 📌 Points essentiels
+(liste des 5-8 points clés à retenir)
+
+## ⚖️ Textes réglementaires applicables
+(liste des directives, règlements, guidelines pertinents avec leurs numéros exacts)
+
+## 🔑 Concepts clés
+(définitions brèves des termes fondamentaux du sujet)
+
+## ⚠️ Points d'attention
+(erreurs courantes, exceptions importantes, pièges réglementaires)
+
+## 💡 À retenir
+(1-2 phrases de synthèse essentielles)
+
+Réponds en français. Sois précis, cite les références exactes (ex : Règlement (CE) n°726/2004, ICH Q10, GMP Annexe 11...).`, 2200);
+
+    res.json({ success: true, content: text, model });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Gestionnaire d'erreurs global — toujours renvoyer du JSON
 app.use((err, req, res, next) => {
   console.error(err);
