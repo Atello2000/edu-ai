@@ -1697,6 +1697,8 @@ const pharmaSection   = document.getElementById('pharma-section');
 const pharmaToggleBtn = document.getElementById('pharma-toggle');
 const pharmaClearBtn  = document.getElementById('pharma-clear-btn');
 
+if (!isLocal) pharmaToggleBtn.classList.add('hidden');
+
 pharmaToggleBtn.addEventListener('click', () => {
   const isHidden = pharmaSection.classList.toggle('hidden');
   pharmaToggleBtn.classList.toggle('active', !isHidden);

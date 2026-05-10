@@ -524,7 +524,13 @@ const PHARMA_SYSTEM = `Tu es un expert senior en régulation pharmaceutique avec
 
 Réponds toujours en français. Structure tes réponses avec Markdown (titres, listes, tableaux si utile). Cite les textes réglementaires précis (numéros de guidelines ICH, numéros d'articles de directives/règlements EU). Adapte le niveau à un étudiant de Master 1 en régulation pharmaceutique : rigoureux mais pédagogique.`;
 
-app.post('/api/pharma/chat', async (req, res) => {
+function localOnly(req, res, next) {
+  if (IS_PROD && !isLocalIP(getClientIP(req)))
+    return res.status(403).json({ error: 'Fonctionnalité disponible uniquement en local.' });
+  next();
+}
+
+app.post('/api/pharma/chat', localOnly, async (req, res) => {
   try {
     const { messages } = req.body;
     const trimmed = (messages || []).slice(-20);
@@ -540,7 +546,7 @@ app.post('/api/pharma/chat', async (req, res) => {
   }
 });
 
-app.post('/api/pharma/quiz', async (req, res) => {
+app.post('/api/pharma/quiz', localOnly, async (req, res) => {
   try {
     const { topic, difficulty = 'moyen' } = req.body;
     const count = Math.min(parseInt(req.body.count) || 5, 15);
@@ -583,7 +589,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`, calcMaxTokens('quiz', 300
   }
 });
 
-app.post('/api/pharma/fiche', async (req, res) => {
+app.post('/api/pharma/fiche', localOnly, async (req, res) => {
   try {
     const { topic } = req.body;
     const { text, model } = await aiComplete(`Tu es un expert en régulation pharmaceutique. Génère une fiche de référence complète et synthétique pour un étudiant de Master 1 sur : "${topic}".
