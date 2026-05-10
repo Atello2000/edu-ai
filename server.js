@@ -562,26 +562,19 @@ ${diffGuide}
 
 Varie les types de questions : définition réglementaire, identification de procédure, comparaison de guidelines, application dans un cas pratique, vrai/faux réglementaire, interprétation d'un texte.
 
-Pour chaque question, donne exactement ce format JSON :
-{
-  "questions": [
-    {
-      "question": "...",
-      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
-      "answer": "A",
-      "explanation": "..."
-    }
-  ]
-}
+IMPORTANT : dans le texte des questions, options et explications, n'utilise PAS de guillemets doubles. Utilise uniquement des apostrophes ou reformule. Le JSON doit être strictement valide.
 
-Réponds UNIQUEMENT avec le JSON, sans texte autour.`, calcMaxTokens('quiz', 3000, count));
+Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autour :
+{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"..."}]}`, calcMaxTokens('quiz', 3000, count));
 
-    let quiz;
+    let quiz = { questions: [] };
     try {
-      const match = raw.trim().match(/\{[\s\S]*\}/);
-      quiz = JSON.parse(match ? match[0] : raw);
-    } catch {
-      quiz = { questions: [] };
+      const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/,'');
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      quiz = JSON.parse(match ? match[0] : cleaned);
+    } catch(e) {
+      const debugPath = require('os').tmpdir() + '/pharma_quiz_debug.txt';
+      fs.writeFileSync(debugPath, `ERR: ${e.message}\nRAW:\n${raw}`, 'utf8');
     }
     res.json({ success: true, questions: quiz.questions || [], model });
   } catch (err) {
