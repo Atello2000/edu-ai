@@ -534,7 +534,7 @@ app.post('/api/pharma/chat', async (req, res) => {
       system: PHARMA_SYSTEM,
       messages: trimmed
     });
-    res.json({ success: true, response: message.content[0].text });
+    res.json({ success: true, response: message.content[0].text, model: 'Claude Sonnet 4.6' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

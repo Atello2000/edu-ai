@@ -1768,6 +1768,7 @@ async function sendPharmaChat(text) {
     typing.remove();
     appendPharmaMsg('ai', data.response);
     pharmaHistory.push({ role: 'assistant', content: data.response });
+    if (data.model) setModelBadge('pharma-section', data.model);
   } catch (err) { typing.remove(); appendPharmaMsg('ai', '❌ ' + err.message); }
 }
 
