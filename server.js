@@ -565,16 +565,18 @@ Varie les types de questions : définition réglementaire, identification de pro
 IMPORTANT : dans le texte des questions, options et explications, n'utilise PAS de guillemets doubles. Utilise uniquement des apostrophes ou reformule. Le JSON doit être strictement valide.
 
 Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autour :
-{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"..."}]}`, calcMaxTokens('quiz', 3000, count));
+{"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"..."}]}`, Math.min(count * 500 + 800, 6000));
 
     let quiz = { questions: [] };
     try {
       const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/,'');
       const match = cleaned.match(/\{[\s\S]*\}/);
-      quiz = JSON.parse(match ? match[0] : cleaned);
+      let jsonStr = match ? match[0] : cleaned;
+      // Groq insère parfois des newlines littéraux dans les strings JSON — on les remplace
+      jsonStr = jsonStr.replace(/\r?\n/g, ' ').replace(/\r/g, ' ');
+      quiz = JSON.parse(jsonStr);
     } catch(e) {
-      const debugPath = require('os').tmpdir() + '/pharma_quiz_debug.txt';
-      fs.writeFileSync(debugPath, `ERR: ${e.message}\nRAW:\n${raw}`, 'utf8');
+      console.error('[pharma/quiz] JSON parse error:', e.message);
     }
     res.json({ success: true, questions: quiz.questions || [], model });
   } catch (err) {
