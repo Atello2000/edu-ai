@@ -14,7 +14,10 @@ const { OpenAI } = require('openai');
 const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
 
 const app = express();
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  ...(process.env.ANTHROPIC_BASE_URL && { baseURL: process.env.ANTHROPIC_BASE_URL }),
+});
 
 // En production → Groq pour résumés/quiz/flashcards (gratuit)
 // En local     → Claude pour tout
@@ -25,11 +28,13 @@ const GROQ_MODEL   = 'llama-3.3-70b-versatile';
 const MODEL_LABEL  = groq ? 'Groq · Llama 3.3' : 'Claude Sonnet 4.6';
 
 async function claudeComplete(prompt, maxTokens) {
-  const r = await anthropic.messages.create({
+  // Utilise .stream().finalMessage() pour compatibilité avec les proxies SSE-only (fcc-server)
+  const stream = anthropic.messages.stream({
     model: 'claude-sonnet-4-6', max_tokens: maxTokens,
     messages: [{ role: 'user', content: prompt }]
   });
-  return r.content[0].text;
+  const msg = await stream.finalMessage();
+  return msg.content[0].text;
 }
 
 async function aiComplete(prompt, maxTokens = 3000) {
@@ -534,12 +539,13 @@ app.post('/api/pharma/chat', localOnly, async (req, res) => {
   try {
     const { messages } = req.body;
     const trimmed = (messages || []).slice(-20);
-    const message = await anthropic.messages.create({
+    const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 1500,
       system: PHARMA_SYSTEM,
       messages: trimmed
     });
+    const message = await stream.finalMessage();
     res.json({ success: true, response: message.content[0].text, model: 'Claude Sonnet 4.6' });
   } catch (err) {
     res.status(500).json({ error: err.message });
