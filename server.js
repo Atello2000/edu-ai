@@ -474,7 +474,7 @@ Cours disponibles :${context}`;
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 // ── Compteur d'utilisateurs en ligne ─────────────────────────────────────────
 const onlineUsers = new Map(); // clientId → lastSeen timestamp
 const ONLINE_TIMEOUT = 90000; // 90 secondes sans ping = hors ligne
