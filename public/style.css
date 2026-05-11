@@ -1354,6 +1354,65 @@ kbd{
 
 #pharma-fiche-result .summary-item{border-top:4px solid var(--pharma)}
 
+/* ── Toolbar chat pharma ── */
+.pharma-chat-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:.6rem;padding:.4rem .6rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+}
+.pharma-ai-badge{
+  display:flex;align-items:center;gap:.4rem;
+  font-family:'DM Mono',monospace;font-size:.68rem;color:var(--pharma);
+  font-weight:500;letter-spacing:.02em;
+}
+.pharma-chat-actions{display:flex;gap:.35rem}
+
+/* ── Visuels scientifiques dans le chat pharma ── */
+#pharma-messages .chat-bubble h1,
+#pharma-messages .chat-bubble h2{
+  font-family:'Cormorant Garamond',serif;
+  font-size:1.05rem;font-weight:700;
+  color:var(--pharma);
+  border-left:3px solid var(--pharma);
+  padding-left:.65rem;margin:1rem 0 .45rem;
+}
+#pharma-messages .chat-bubble h3{
+  font-size:.9rem;font-weight:600;color:var(--text);
+  border-left:2px solid var(--border);
+  padding-left:.55rem;margin:.75rem 0 .3rem;
+}
+#pharma-messages .chat-bubble strong{color:var(--pharma);font-weight:600}
+#pharma-messages .chat-bubble em{color:var(--muted);font-style:italic}
+#pharma-messages .chat-bubble code{
+  font-family:'DM Mono',monospace;font-size:.78rem;
+  background:var(--pharma-bg);color:var(--pharma);
+  padding:.1rem .35rem;border-radius:4px;
+}
+#pharma-messages .chat-bubble blockquote{
+  border-left:3px solid var(--pharma);
+  background:var(--pharma-bg);
+  margin:.6rem 0;padding:.55rem .9rem;
+  border-radius:0 6px 6px 0;
+  font-style:normal;color:var(--text);font-size:.84rem;
+}
+#pharma-messages .chat-bubble table{
+  width:100%;border-collapse:collapse;margin:.7rem 0;font-size:.8rem;
+}
+#pharma-messages .chat-bubble th{
+  background:var(--pharma-bg);color:var(--pharma);
+  font-weight:600;text-align:left;
+  padding:.4rem .65rem;border-bottom:2px solid var(--pharma);
+}
+#pharma-messages .chat-bubble td{
+  padding:.35rem .65rem;border-bottom:1px solid var(--border);color:var(--text);
+}
+#pharma-messages .chat-bubble tr:nth-child(even) td{background:var(--surface)}
+#pharma-messages .chat-bubble ul{padding-left:1.1rem;margin:.3rem 0}
+#pharma-messages .chat-bubble ul li{margin:.2rem 0;line-height:1.6}
+#pharma-messages .chat-bubble ul li::marker{color:var(--pharma)}
+#pharma-messages .chat-bubble ol li{margin:.2rem 0;line-height:1.6;color:var(--text)}
+
 /* Conteneurs de résultats : scroll interne, page ne grandit plus */
 #summary-results{max-height:75vh;overflow-y:auto;border-radius:var(--radius)}
 #pharma-fiche-result{max-height:72vh;overflow-y:auto;border-radius:var(--radius)}

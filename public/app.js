@@ -1696,6 +1696,7 @@ if ('serviceWorker' in navigator) {
 const pharmaSection   = document.getElementById('pharma-section');
 const pharmaToggleBtn = document.getElementById('pharma-toggle');
 const pharmaClearBtn  = document.getElementById('pharma-clear-btn');
+const pharmaExportBtn = document.getElementById('pharma-export-btn');
 
 if (!isLocal) pharmaToggleBtn.classList.add('hidden');
 
@@ -1747,6 +1748,24 @@ pharmaClearBtn.addEventListener('click', () => {
   pharmaMessages.querySelectorAll('.pharma-sug').forEach(btn =>
     btn.addEventListener('click', () => sendPharmaChat(btn.textContent))
   );
+});
+
+pharmaExportBtn.addEventListener('click', () => {
+  if (!pharmaHistory.length) return;
+  const date = new Date().toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' });
+  let md = `# Conversation — Assistant Régulation Pharmaceutique\n`;
+  md += `**Modèle :** Claude Sonnet 4.6  |  **Date :** ${date}\n\n---\n\n`;
+  pharmaHistory.forEach(m => {
+    md += m.role === 'user'
+      ? `## Question\n${m.content}\n\n`
+      : `## Réponse\n${m.content}\n\n---\n\n`;
+  });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([md], { type: 'text/markdown' })),
+    download: `pharma_chat_${date.replace(/\//g,'-')}.md`
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
 });
 
 async function sendPharmaChat(text) {
