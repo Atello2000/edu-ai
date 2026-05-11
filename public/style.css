@@ -1354,6 +1354,12 @@ kbd{
 
 #pharma-fiche-result .summary-item{border-top:4px solid var(--pharma)}
 
+/* Conteneurs de résultats : scroll interne, page ne grandit plus */
+#summary-results{max-height:75vh;overflow-y:auto;border-radius:var(--radius)}
+#pharma-fiche-result{max-height:72vh;overflow-y:auto;border-radius:var(--radius)}
+#pharma-quiz-container{max-height:72vh;overflow-y:auto}
+#quiz-container{max-height:72vh;overflow-y:auto}
+
 #pharma-quiz-score{
   margin-top:1.2rem;padding:2rem;
   background:var(--surface);border:1px solid var(--border);
