@@ -83,8 +83,9 @@ async function* aiStream(prompt, maxTokens = 4096) {
       yield { text: event.delta.text, model: 'Claude Sonnet 4.6' };
   }
 }
-async function aiChat(systemPrompt, messages, maxTokens = 1024) {
-  if (groq) {
+async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false) {
+  // Images → Claude uniquement (vision)
+  if (!hasImage && groq) {
     try {
       const r = await groq.chat.completions.create({
         model: GROQ_MODEL, max_tokens: maxTokens,
@@ -462,7 +463,7 @@ app.post('/api/chat', async (req, res) => {
   const quota = checkQuota(req, 'chat');
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
   try {
-    const { files, messages, attachedFile } = req.body;
+    const { files, messages, attachedFile, attachedImage } = req.body;
 
     let context = '';
     for (const file of files) {
@@ -476,18 +477,33 @@ app.post('/api/chat', async (req, res) => {
       attachedContext = `\n\n=== DOCUMENT SOUMIS PAR L'ÉTUDIANT : ${attachedFile.name} ===\n${text.slice(0, 12000)}`;
     }
 
+    const imageNote = attachedImage ? `\n\nL'étudiant a également joint une image. Analyse-la en lien avec les cours.` : '';
+
     const systemPrompt = attachedFile
       ? `Tu es un assistant pédagogique expert. L'étudiant a joint un document (devoir, QCM, liste de questions, exercices…). Réponds à chaque question ou exercice de ce document en t'appuyant UNIQUEMENT sur les cours fournis. Structure ta réponse clairement (une section par question si possible), explique ton raisonnement, cite les notions du cours. Réponds toujours en français. Utilise du markdown (titres, gras, listes).
 
-Cours de référence :${context}${attachedContext}`
+Cours de référence :${context}${attachedContext}${imageNote}`
       : `Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
 
-Cours disponibles :${context}`;
+Cours disponibles :${context}${imageNote}`;
 
     // Garde les 10 derniers échanges max pour éviter un body trop lourd
-    const trimmedMessages = messages.slice(-10);
+    let finalMessages = messages.slice(-10);
 
-    const { text, model } = await aiChat(systemPrompt, trimmedMessages, attachedFile ? 3000 : 1024);
+    // Injecter l'image dans le dernier message utilisateur (vision Claude)
+    if (attachedImage && finalMessages.length > 0) {
+      const last = finalMessages[finalMessages.length - 1];
+      finalMessages[finalMessages.length - 1] = {
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: attachedImage.mimeType, data: attachedImage.base64 } },
+          { type: 'text', text: typeof last.content === 'string' ? last.content : '' }
+        ]
+      };
+    }
+
+    const maxTok = attachedFile ? 3000 : attachedImage ? 2000 : 1024;
+    const { text, model } = await aiChat(systemPrompt, finalMessages, maxTok, !!attachedImage);
     res.json({ success: true, response: text, model });
   } catch (err) {
     res.status(500).json({ error: err.message });

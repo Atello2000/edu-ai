@@ -1310,9 +1310,16 @@ const chatFileInput    = document.getElementById('chat-file-input');
 const chatAttachBar    = document.getElementById('chat-attach-bar');
 const chatAttachName   = document.getElementById('chat-attach-name');
 const chatAttachRemove = document.getElementById('chat-attach-remove');
-let chatHistory     = [];
-let chatFiles       = [];
-let chatAttachedFile = null; // { id, name, path }
+const chatImageBtn     = document.getElementById('chat-image-btn');
+const chatImageInput   = document.getElementById('chat-image-input');
+const chatImageBar     = document.getElementById('chat-image-bar');
+const chatImageThumb   = document.getElementById('chat-image-thumb');
+const chatImageNameEl  = document.getElementById('chat-image-name');
+const chatImageRemove  = document.getElementById('chat-image-remove');
+let chatHistory      = [];
+let chatFiles        = [];
+let chatAttachedFile  = null; // { id, name, path }
+let chatAttachedImage = null; // { name, base64, mimeType }
 
 // ── Chat attachment ───────────────────────────────────────────────────────────
 chatAttachBtn.addEventListener('click', () => chatFileInput.click());
@@ -1345,6 +1352,31 @@ chatAttachRemove.addEventListener('click', () => {
   chatAttachedFile = null;
   chatAttachBar.classList.add('hidden');
   chatAttachBtn.classList.remove('active');
+});
+
+// ── Image attachment ──────────────────────────────────────────────────────────
+chatImageBtn.addEventListener('click', () => chatImageInput.click());
+
+chatImageInput.addEventListener('change', () => {
+  const file = chatImageInput.files[0];
+  if (!file) return;
+  chatImageInput.value = '';
+  if (file.size > 4 * 1024 * 1024) return alert('Image trop lourde (max 4 Mo).');
+  const reader = new FileReader();
+  reader.onload = () => {
+    chatAttachedImage = { name: file.name, base64: reader.result.split(',')[1], mimeType: file.type };
+    chatImageThumb.src = reader.result;
+    chatImageNameEl.textContent = file.name;
+    chatImageBar.classList.remove('hidden');
+    chatImageBtn.classList.add('active');
+  };
+  reader.readAsDataURL(file);
+});
+
+chatImageRemove.addEventListener('click', () => {
+  chatAttachedImage = null;
+  chatImageBar.classList.add('hidden');
+  chatImageBtn.classList.remove('active');
 });
 
 chatOpenBtn.addEventListener('click', () => {
@@ -1385,6 +1417,9 @@ chatInput.addEventListener('keydown', e => { if (e.key==='Enter'&&!e.shiftKey) {
 
 chatClearBtn.addEventListener('click', () => {
   chatHistory = [];
+  chatAttachedImage = null;
+  chatImageBar.classList.add('hidden');
+  chatImageBtn.classList.remove('active');
   chatMessages.innerHTML = `<div class="chat-welcome" id="chat-welcome">
     <div class="chat-welcome-icon">💬</div>
     <p>Posez une question sur vos cours chargés.</p>
@@ -1399,19 +1434,24 @@ chatClearBtn.addEventListener('click', () => {
 });
 
 async function sendChat(text) {
-  if (!text && !chatAttachedFile) return;
-  const msgText = text || `Analyse et réponds au document joint : **${chatAttachedFile.name}**`;
+  if (!text && !chatAttachedFile && !chatAttachedImage) return;
+  const msgText = text || `Analyse et réponds au document joint : **${chatAttachedFile?.name || chatAttachedImage?.name}**`;
   chatInput.value = '';
   document.getElementById('chat-welcome')?.remove();
 
-  // Build user message display (include attachment badge if any)
   const attachedSnapshot = chatAttachedFile;
+  const imageSnapshot    = chatAttachedImage;
+
   if (attachedSnapshot) {
     appendMsgWithAttachment('user', msgText, attachedSnapshot.name);
-    // Clear attachment after sending
     chatAttachedFile = null;
     chatAttachBar.classList.add('hidden');
     chatAttachBtn.classList.remove('active');
+  } else if (imageSnapshot) {
+    appendMsgWithImage('user', msgText, imageSnapshot);
+    chatAttachedImage = null;
+    chatImageBar.classList.add('hidden');
+    chatImageBtn.classList.remove('active');
   } else {
     appendMsg('user', msgText);
   }
@@ -1426,12 +1466,13 @@ async function sendChat(text) {
   try {
     const body = { files: getActiveChatFiles(), messages: chatHistory };
     if (attachedSnapshot) body.attachedFile = attachedSnapshot;
+    if (imageSnapshot)    body.attachedImage = imageSnapshot;
     const res  = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body) });
     const data = await res.json();
     if (!data.success) throw new Error(data.error);
     typing.remove();
-    appendMsg('ai', data.response);
+    appendMsg('ai', data.response, data.model);
     chatHistory.push({ role:'assistant', content: data.response });
   } catch (err) { typing.remove(); appendMsg('ai', '❌ ' + err.message); }
 }
@@ -1452,11 +1493,34 @@ function appendMsgWithAttachment(role, text, attachName) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function appendMsg(role, text) {
-  const el   = document.createElement('div');
+function appendMsg(role, text, model = null) {
+  const el = document.createElement('div');
   el.className = `chat-msg ${role}`;
   const time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-  el.innerHTML = `<div class="chat-bubble">${marked.parse(text)}</div><div class="chat-time">${time}</div>`;
+  if (role === 'ai') {
+    const isGroq = model && model.toLowerCase().includes('groq');
+    const badge = model ? `<span class="chat-model-badge ${isGroq ? 'groq' : 'claude'}">${model}</span>` : '';
+    el.innerHTML = `<div class="chat-bubble">${marked.parse(text)}</div><div class="chat-meta">${badge}<button class="chat-copy-btn" title="Copier">⎘</button><span class="chat-time">${time}</span></div>`;
+    el.querySelector('.chat-copy-btn').addEventListener('click', function() {
+      navigator.clipboard.writeText(text).then(() => {
+        this.textContent = '✓'; setTimeout(() => this.textContent = '⎘', 1500);
+      });
+    });
+  } else {
+    el.innerHTML = `<div class="chat-bubble">${marked.parse(text)}</div><div class="chat-time">${time}</div>`;
+  }
+  chatMessages.appendChild(el);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendMsgWithImage(role, text, img) {
+  const el = document.createElement('div');
+  el.className = `chat-msg ${role}`;
+  const time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+  el.innerHTML = `
+    <div class="chat-image-preview"><img src="data:${img.mimeType};base64,${img.base64}" alt="${img.name}"/></div>
+    <div class="chat-bubble">${marked.parse(text)}</div>
+    <div class="chat-time">${time}</div>`;
   chatMessages.appendChild(el);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
