@@ -83,6 +83,26 @@ async function* aiStream(prompt, maxTokens = 4096) {
       yield { text: event.delta.text, model: 'Claude Sonnet 4.6' };
   }
 }
+async function aiChat(systemPrompt, messages, maxTokens = 1024) {
+  if (groq) {
+    try {
+      const r = await groq.chat.completions.create({
+        model: GROQ_MODEL, max_tokens: maxTokens,
+        messages: [{ role: 'system', content: systemPrompt }, ...messages]
+      });
+      return { text: r.choices[0].message.content, model: MODEL_LABEL };
+    } catch (err) {
+      console.warn('[Groq] erreur chat', err?.status ?? err?.message, '→ fallback Claude');
+    }
+  }
+  const msg = await anthropic.messages.create({
+    model: 'claude-sonnet-4-6', max_tokens: maxTokens,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+    messages
+  });
+  return { text: msg.content[0].text, model: 'Claude Sonnet 4.6' };
+}
+
 // Calcule le nombre de tokens de sortie nécessaires selon la tâche et la taille du contenu.
 // Évite de gaspiller la fenêtre de tokens/min Groq (6k/min) sur des requêtes inutilement grandes.
 function calcMaxTokens(type, textLen, count = 0) {
@@ -464,16 +484,11 @@ Cours de référence :${context}${attachedContext}`
 
 Cours disponibles :${context}`;
 
-    // Garde les 20 derniers échanges max pour éviter un body trop lourd
-    const trimmedMessages = messages.slice(-20);
+    // Garde les 10 derniers échanges max pour éviter un body trop lourd
+    const trimmedMessages = messages.slice(-10);
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: attachedFile ? 3000 : 1024,
-      system: systemPrompt,
-      messages: trimmedMessages
-    });
-    res.json({ success: true, response: message.content[0].text });
+    const { text, model } = await aiChat(systemPrompt, trimmedMessages, attachedFile ? 3000 : 1024);
+    res.json({ success: true, response: text, model });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -538,11 +553,11 @@ function localOnly(req, res, next) {
 app.post('/api/pharma/chat', localOnly, async (req, res) => {
   try {
     const { messages } = req.body;
-    const trimmed = (messages || []).slice(-20);
+    const trimmed = (messages || []).slice(-10);
     const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 1500,
-      system: PHARMA_SYSTEM,
+      system: [{ type: 'text', text: PHARMA_SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages: trimmed
     });
     const message = await stream.finalMessage();
