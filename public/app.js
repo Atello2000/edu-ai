@@ -111,8 +111,10 @@ selectAll.addEventListener('change', () =>
 function getSelectedUploadedFiles() {
   const uploaded = Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'))
     .map(c => ({ id: c.value, name: c.dataset.name, path: c.dataset.path }));
-  const library = Array.from(document.querySelectorAll('#library-subjects input[type=checkbox]:checked'))
-    .map(c => ({ id: c.value, name: c.dataset.name, path: c.dataset.path }));
+  const library = [];
+  libAllSections.forEach(section => section.subjects.forEach(subject =>
+    subject.files.forEach(f => { if (libSelectedIds.has(f.id)) library.push(f); })
+  ));
   return [...library, ...uploaded];
 }
 
@@ -123,6 +125,10 @@ const libCount        = document.getElementById('lib-count');
 const libSelectionBar = document.getElementById('lib-selection-bar');
 const libSelectionLbl = document.getElementById('lib-selection-label');
 const libGoBtn        = document.getElementById('lib-go-btn');
+const libSearch       = document.getElementById('library-search');
+const libClearSearch  = document.getElementById('library-clear-search');
+let libAllSections    = [];
+let libSelectedIds    = new Set();
 
 const SECTION_ICONS = {
   'pharmacie': '💊', 'sciences islamiques': '🕌', 'biologie': '🧬',
@@ -146,6 +152,13 @@ function subjectIcon(name) {
   return Object.entries(SUBJECT_ICONS).find(([key]) => k.includes(key))?.[1] || '📚';
 }
 
+function normalizeSearch(text) {
+  return String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 function buildSubjectEl(subject) {
   const sec = document.createElement('div');
   sec.className = 'lib-subject';
@@ -163,6 +176,7 @@ function buildSubjectEl(subject) {
     row.className = 'lib-file';
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.value = f.id;
+    cb.checked = libSelectedIds.has(f.id);
     cb.dataset.name = f.name; cb.dataset.path = f.path;
     cb.addEventListener('change', onLibraryChange);
     const extSpan  = document.createElement('span');
@@ -179,45 +193,78 @@ async function loadLibrary() {
   try {
     const res  = await fetch('/api/library');
     const data = await res.json();
-    libSubjects.innerHTML = '';
-
-    const total = (data.sections || []).reduce((a, s) =>
-      a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
-
-    if (!total) {
-      libSubjects.innerHTML = `<div class="lib-empty">Aucun cours dans la bibliothèque.<br>Déposez vos fichiers dans <code>courses/Section/Matière/</code></div>`;
-      libCount.textContent = '0 cours';
-      libPanel.classList.remove('hidden');
-      return;
-    }
-    libCount.textContent = `${total} cours`;
-
-    (data.sections || []).forEach(section => {
-      // Section header
-      const sectionEl = document.createElement('div');
-      sectionEl.className = 'lib-section';
-      const sFileCount = section.subjects.reduce((a, m) => a + m.files.length, 0);
-      sectionEl.innerHTML = `
-        <div class="lib-section-header">
-          <span class="lib-section-icon">${sectionIcon(section.name)}</span>
-          <span class="lib-section-name">${section.name}</span>
-          <span class="lib-subject-count">${sFileCount} fichier${sFileCount>1?'s':''}</span>
-        </div>`;
-      const subjectsEl = document.createElement('div');
-      subjectsEl.className = 'lib-section-subjects';
-      section.subjects.forEach(subject => {
-        if (subject.files.length) subjectsEl.appendChild(buildSubjectEl(subject));
-      });
-      sectionEl.appendChild(subjectsEl);
-      libSubjects.appendChild(sectionEl);
-    });
-
-    libPanel.classList.remove('hidden');
+    libAllSections = data.sections || [];
+    renderLibrary();
   } catch(e) { console.warn('Library load failed', e); }
 }
 
+function renderLibrary() {
+  libSubjects.innerHTML = '';
+  const query = normalizeSearch(libSearch?.value || '');
+  const filteredSections = libAllSections.map(section => {
+    const sectionMatch = normalizeSearch(section.name).includes(query);
+    const subjects = section.subjects.map(subject => {
+      const subjectMatch = normalizeSearch(subject.name).includes(query);
+      const files = subject.files.filter(f =>
+        !query ||
+        sectionMatch ||
+        subjectMatch ||
+        normalizeSearch(f.name).includes(query)
+      );
+      return { ...subject, files };
+    }).filter(subject => subject.files.length);
+    return { ...section, subjects };
+  }).filter(section => section.subjects.length);
+
+  const total = libAllSections.reduce((a, s) =>
+      a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
+  const shown = filteredSections.reduce((a, s) =>
+    a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
+
+  if (!total) {
+    libSubjects.innerHTML = `<div class="lib-empty">Aucun cours dans la bibliothèque.<br>Déposez vos fichiers dans <code>courses/Section/Matière/</code></div>`;
+    libCount.textContent = '0 cours';
+    libPanel.classList.remove('hidden');
+    renderDashboard();
+    return;
+  }
+
+  libCount.textContent = query ? `${shown}/${total} cours` : `${total} cours`;
+  if (query && !shown) {
+    libSubjects.innerHTML = `<div class="lib-empty">Aucun cours ne correspond à “${libSearch.value}”.</div>`;
+    libPanel.classList.remove('hidden');
+    renderDashboard();
+    return;
+  }
+
+  filteredSections.forEach(section => {
+    const sectionEl = document.createElement('div');
+    sectionEl.className = 'lib-section';
+    const sFileCount = section.subjects.reduce((a, m) => a + m.files.length, 0);
+    sectionEl.innerHTML = `
+      <div class="lib-section-header">
+        <span class="lib-section-icon">${sectionIcon(section.name)}</span>
+        <span class="lib-section-name">${section.name}</span>
+        <span class="lib-subject-count">${sFileCount} fichier${sFileCount>1?'s':''}</span>
+      </div>`;
+    const subjectsEl = document.createElement('div');
+    subjectsEl.className = 'lib-section-subjects';
+    section.subjects.forEach(subject => subjectsEl.appendChild(buildSubjectEl(subject)));
+    sectionEl.appendChild(subjectsEl);
+    libSubjects.appendChild(sectionEl);
+  });
+
+  onLibraryChange();
+  libPanel.classList.remove('hidden');
+  renderDashboard();
+}
+
 function onLibraryChange() {
-  const checked = document.querySelectorAll('#library-subjects input[type=checkbox]:checked').length;
+  libSubjects.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    if (cb.checked) libSelectedIds.add(cb.value);
+    else libSelectedIds.delete(cb.value);
+  });
+  const checked = libSelectedIds.size;
   libSelectionBar.classList.toggle('hidden', checked === 0);
   libSelectionLbl.textContent = `${checked} cours sélectionné${checked>1?'s':''}`;
   // Afficher la section d'actions dès qu'un fichier est coché
@@ -231,6 +278,13 @@ function onLibraryChange() {
 libGoBtn.addEventListener('click', () =>
   actionsSection.scrollIntoView({ behavior: 'smooth' })
 );
+
+libSearch?.addEventListener('input', renderLibrary);
+libClearSearch?.addEventListener('click', () => {
+  libSearch.value = '';
+  renderLibrary();
+  libSearch.focus();
+});
 
 const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 if (isLocal) loadLibrary();
@@ -1072,7 +1126,14 @@ submitQuiz.addEventListener('click', () => {
       <div class="question-num">Question ${idx + 1}</div>
       <div class="question-text">${q.question}</div>
       <div class="options-grid"></div>
-      ${q.explanation ? `<div class="explanation">💡 ${q.explanation}</div>` : ''}`;
+      <div class="quiz-review-card">
+        <div class="quiz-review-title">${isCorrect ? '✓ Bonne réponse' : 'À revoir'}</div>
+        <div class="quiz-review-line"><strong>Votre réponse :</strong> ${userLetter || 'Non répondu'}</div>
+        <div class="quiz-review-line"><strong>Réponse attendue :</strong> ${q.answer}</div>
+        ${q.explanation ? `<div class="explanation">💡 ${marked.parseInline(q.explanation)}</div>` : ''}
+        ${q.whyWrong && userLetter && !isCorrect && q.whyWrong[userLetter] ? `<div class="quiz-why-wrong"><strong>Pourquoi ce choix bloque :</strong> ${marked.parseInline(q.whyWrong[userLetter])}</div>` : ''}
+        ${q.sourceHint ? `<div class="quiz-source-hint"><strong>À revoir :</strong> ${marked.parseInline(q.sourceHint)}</div>` : ''}
+      </div>`;
     const grid = div.querySelector('.options-grid');
     q.options.forEach(opt => {
       const letter = opt.charAt(0);
@@ -1093,6 +1154,48 @@ submitQuiz.addEventListener('click', () => {
   quizScore.classList.remove('hidden');
   quizScore.scrollIntoView({ behavior:'smooth' });
   saveQuizStat(pct, correct, quizAllQ.length);
+});
+
+// ── FICHE D'EXAMEN ────────────────────────────────────────────────────────────
+const examSheetBtn     = document.getElementById('exam-sheet-btn');
+const examSheetSection = document.getElementById('exam-sheet-section');
+const examSheetResult  = document.getElementById('exam-sheet-result');
+const examSheetCopyBtn = document.getElementById('exam-sheet-copy-btn');
+let examSheetMd = '';
+
+examSheetBtn.addEventListener('click', async () => {
+  const files = getSelectedUploadedFiles();
+  if (!files.length) return alert('Sélectionnez au moins un fichier.');
+  showLoader("Création de la fiche d'examen...");
+  examSheetSection.classList.add('hidden');
+  examSheetResult.innerHTML = '';
+  try {
+    const res = await fetch('/api/exam-sheet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error);
+    examSheetMd = data.sheet || '';
+    examSheetResult.innerHTML = `<div class="exam-sheet-card">${marked.parse(examSheetMd)}</div>`;
+    examSheetSection.classList.remove('hidden');
+    examSheetSection.scrollIntoView({ behavior: 'smooth' });
+    if (data.model) setModelBadge('exam-sheet-section', data.model);
+    saveSession({ examSheet: { files: files.map(f => f.name), sheet: examSheetMd } });
+    fetchQuota();
+    refreshFloatNav();
+    renderDashboard();
+  } catch (err) { alert('Erreur : ' + err.message); }
+  finally { hideLoader(); }
+});
+
+examSheetCopyBtn.addEventListener('click', () => {
+  if (!examSheetMd) return;
+  navigator.clipboard.writeText(examSheetMd).then(() => {
+    examSheetCopyBtn.textContent = 'Copié ✓';
+    setTimeout(() => examSheetCopyBtn.textContent = 'Copier', 1600);
+  });
 });
 
 // ── FLASHCARDS ───────────────────────────────────────────────────────────────
@@ -1542,6 +1645,7 @@ function saveSession(update) {
   Object.assign(sessions[idx], update, { timestamp: Date.now() });
   localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
   renderHistoryPanel();
+  renderDashboard();
 }
 
 function renderHistoryPanel() {
@@ -1571,6 +1675,7 @@ function renderHistoryPanel() {
       e.stopPropagation();
       localStorage.setItem(HISTORY_KEY, JSON.stringify(getSessions().filter(x=>x.id!==s.id)));
       renderHistoryPanel();
+      renderDashboard();
     });
     list.appendChild(el);
   });
@@ -1588,10 +1693,15 @@ function restoreSession(s) {
   }
   if (s.quiz) {
     quizContainer.innerHTML = '';
-    s.quiz.forEach(r => renderQuiz(r.name, r.quiz?.questions||[]));
-    const total = s.quiz.reduce((a,r)=>a+(r.quiz?.questions?.length||0),0);
-    quizProgressInfo.textContent = `${total} questions`;
-    quizSection.classList.remove('hidden'); quizFooter.classList.remove('hidden');
+    quizAllQ = [];
+    s.quiz.forEach(r => (r.quiz?.questions||[]).forEach(q => quizAllQ.push({ ...q, sourceName: r.name })));
+    quizAns = {}; quizIdx = 0;
+    quizProgressInfo.textContent = `${quizAllQ.length} questions`;
+    if (quizAllQ.length) {
+      quizStepHeader.classList.remove('hidden');
+      showQuizQuestion(0);
+    }
+    quizSection.classList.remove('hidden');
     quizScore.classList.add('hidden');
   }
   if (s.flashcards) {
@@ -1599,17 +1709,22 @@ function restoreSession(s) {
     buildFcTabs(); loadDeck(0);
     fcSection.classList.remove('hidden');
   }
+  if (s.examSheet) {
+    examSheetMd = s.examSheet.sheet || '';
+    examSheetResult.innerHTML = `<div class="exam-sheet-card">${marked.parse(examSheetMd)}</div>`;
+    examSheetSection.classList.remove('hidden');
+  }
   refreshFloatNav();
   document.getElementById('upload-section').scrollIntoView({ behavior:'smooth' });
 }
 
 document.getElementById('history-clear-all').addEventListener('click', () => {
-  localStorage.removeItem(HISTORY_KEY); renderHistoryPanel();
+  localStorage.removeItem(HISTORY_KEY); renderHistoryPanel(); renderDashboard();
 });
 
 // ── FLOAT NAV ────────────────────────────────────────────────────────────────
 const floatNav     = document.getElementById('float-nav');
-const NAV_SECTIONS = ['summary-section','quiz-section','flashcard-section','chat-section','pharma-section'];
+const NAV_SECTIONS = ['summary-section','quiz-section','flashcard-section','chat-section','exam-sheet-section','pharma-section'];
 
 function refreshFloatNav() {
   const visible = NAV_SECTIONS.filter(id => !document.getElementById(id).classList.contains('hidden'));
@@ -1641,6 +1756,7 @@ document.getElementById('stats-reset-btn').addEventListener('click', () => {
   if (!confirm('Réinitialiser l\'historique des quiz ?')) return;
   localStorage.removeItem(QUIZ_STATS_KEY);
   renderStatsPanel();
+  renderDashboard();
 });
 
 function saveQuizStat(pct, correct, total) {
@@ -1648,6 +1764,7 @@ function saveQuizStat(pct, correct, total) {
   stats.unshift({ date: Date.now(), pct, correct, total });
   localStorage.setItem(QUIZ_STATS_KEY, JSON.stringify(stats.slice(0, 50)));
   renderStatsPanel();
+  renderDashboard();
 }
 
 function renderStatsPanel() {
@@ -1704,6 +1821,84 @@ function renderStatsPanel() {
       </div>
     </div>`;
 }
+
+// ── DASHBOARD ────────────────────────────────────────────────────────────────
+const dashboardGrid       = document.getElementById('dashboard-grid');
+const dashboardRefreshBtn = document.getElementById('dashboard-refresh-btn');
+const dashContinueBtn     = document.getElementById('dash-continue-btn');
+const dashUploadBtn       = document.getElementById('dash-upload-btn');
+const dashLibraryBtn      = document.getElementById('dash-library-btn');
+const dashStatsBtn        = document.getElementById('dash-stats-btn');
+
+function renderDashboard() {
+  if (!dashboardGrid) return;
+  const sessions = getSessions();
+  const quizStats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
+  const srsData = Object.values(getSRSData());
+  const dueCards = srsData.filter(c => c.nextReview <= Date.now()).length;
+  const avgPct = quizStats.length ? Math.round(quizStats.reduce((sum, s) => sum + s.pct, 0) / quizStats.length) : null;
+  const lastSession = sessions[0];
+  const libraryCount = libAllSections.reduce((a, s) => a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
+
+  const cards = [
+    {
+      label: 'Dernière session',
+      value: lastSession ? lastSession.files.slice(0, 2).join(' · ') : 'Aucune',
+      note: lastSession ? new Date(lastSession.timestamp).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Charge un cours pour commencer',
+      cls: 'blue'
+    },
+    {
+      label: 'Quiz',
+      value: avgPct !== null ? `${avgPct}%` : '—',
+      note: `${quizStats.length} quiz complété${quizStats.length>1?'s':''}`,
+      cls: avgPct === null ? 'muted' : avgPct >= 80 ? 'green' : avgPct >= 60 ? 'gold' : 'rose'
+    },
+    {
+      label: 'Révision espacée',
+      value: dueCards,
+      note: dueCards ? "cartes dues aujourd'hui" : 'aucune carte due',
+      cls: dueCards ? 'rose' : 'green'
+    },
+    {
+      label: 'Bibliothèque',
+      value: libraryCount,
+      note: `cours disponible${libraryCount>1?'s':''} en local`,
+      cls: 'purple'
+    }
+  ];
+
+  dashboardGrid.innerHTML = cards.map(c => `
+    <div class="dash-card dash-${c.cls}">
+      <div class="dash-label">${c.label}</div>
+      <div class="dash-value" title="${c.value}">${c.value}</div>
+      <div class="dash-note">${c.note}</div>
+    </div>
+  `).join('');
+  if (dashContinueBtn) {
+    dashContinueBtn.disabled = !lastSession;
+    dashContinueBtn.textContent = lastSession ? 'Continuer la session' : 'Aucune session';
+  }
+}
+
+dashboardRefreshBtn?.addEventListener('click', renderDashboard);
+dashContinueBtn?.addEventListener('click', () => {
+  const lastSession = getSessions()[0];
+  if (lastSession) restoreSession(lastSession);
+});
+dashUploadBtn?.addEventListener('click', () =>
+  document.getElementById('upload-section').scrollIntoView({ behavior: 'smooth' })
+);
+dashLibraryBtn?.addEventListener('click', () =>
+  libPanel.scrollIntoView({ behavior: 'smooth' })
+);
+dashStatsBtn?.addEventListener('click', () => {
+  statsPanel.classList.remove('hidden');
+  statsToggle.classList.add('active');
+  renderStatsPanel();
+  statsPanel.scrollIntoView({ behavior: 'smooth' });
+});
+
+renderDashboard();
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function showLoader(text) { loaderText.textContent = text; loader.classList.remove('hidden'); }

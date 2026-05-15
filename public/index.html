@@ -20,8 +20,12 @@
 
 <header>
   <div class="header-actions header-actions-left">
-    <button class="stats-toggle" id="stats-toggle" title="Mes statistiques">📊</button>
-    <button class="pharma-toggle" id="pharma-toggle" title="Régulation Pharmaceutique">⚕</button>
+    <button class="stats-toggle" id="stats-toggle" title="Mes statistiques" aria-label="Mes statistiques">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg>
+    </button>
+    <button class="pharma-toggle" id="pharma-toggle" title="Régulation Pharmaceutique" aria-label="Régulation Pharmaceutique">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/><rect x="3" y="3" width="18" height="18" rx="5"/></svg>
+    </button>
   </div>
   <div class="header-actions header-actions-right">
     <button class="theme-toggle" id="theme-toggle" title="Changer de thème">🌙</button>
@@ -38,6 +42,24 @@
 </header>
 
 <main>
+
+  <!-- ── DASHBOARD ── -->
+  <div class="panel dashboard-panel" id="dashboard-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Accueil</div>
+        <h2 class="panel-title">Tableau de <em>bord</em></h2>
+      </div>
+      <button class="ghost-btn" id="dashboard-refresh-btn">Actualiser</button>
+    </div>
+    <div class="dashboard-grid" id="dashboard-grid"></div>
+    <div class="dashboard-actions">
+      <button class="dash-action dash-action-primary" id="dash-continue-btn">Continuer</button>
+      <button class="dash-action" id="dash-upload-btn">Charger un cours</button>
+      <button class="dash-action" id="dash-library-btn">Explorer la bibliothèque</button>
+      <button class="dash-action" id="dash-stats-btn">Voir mes stats</button>
+    </div>
+  </div>
 
   <!-- ── STATISTIQUES ── -->
   <div class="panel hidden" id="stats-panel">
@@ -73,6 +95,10 @@
       <span class="mono-tag" id="lib-count"></span>
     </div>
     <p class="panel-desc">Cochez les cours à utiliser — ils sont immédiatement disponibles pour les résumés, quiz et flashcards</p>
+    <div class="library-search-row">
+      <input class="library-search" id="library-search" type="search" placeholder="Rechercher un cours, une matière, une section..." />
+      <button class="ghost-btn" id="library-clear-search">Effacer</button>
+    </div>
     <div id="library-subjects"></div>
     <div class="lib-selection-bar hidden" id="lib-selection-bar">
       <span id="lib-selection-label">0 cours sélectionné</span>
@@ -177,6 +203,17 @@
         </div>
         <button class="act-btn gold" id="chat-open-btn">Ouvrir</button>
       </div>
+
+      <div class="act-card act-card-wide" data-color="purple">
+        <div class="act-card-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="act-card-body">
+          <strong>Fiche d'examen</strong>
+          <span>Définitions, pièges, tableaux et questions probables</span>
+        </div>
+        <button class="act-btn purple" id="exam-sheet-btn">Créer</button>
+      </div>
     </div>
   </div>
 
@@ -200,6 +237,18 @@
     </div>
     <div class="summary-tabs hidden" id="summary-tabs"></div>
     <div id="summary-results"></div>
+  </div>
+
+  <!-- ── FICHE D'EXAMEN ── -->
+  <div class="panel hidden" id="exam-sheet-section">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Révision ciblée</div>
+        <h2 class="panel-title">Fiche <em>d'examen</em></h2>
+      </div>
+      <button class="ghost-btn" id="exam-sheet-copy-btn">Copier</button>
+    </div>
+    <div id="exam-sheet-result"></div>
   </div>
 
   <!-- ── QUIZ ── -->
@@ -491,6 +540,10 @@
   <button class="fnav-btn" data-target="chat-section">
     <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
     <span class="fnav-label">Chat</span>
+  </button>
+  <button class="fnav-btn" data-target="exam-sheet-section">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+    <span class="fnav-label">Fiche</span>
   </button>
   <button class="fnav-btn fnav-pharma" data-target="pharma-section">
     <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
