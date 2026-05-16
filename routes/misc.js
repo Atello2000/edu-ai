@@ -3,7 +3,8 @@ const router   = express.Router();
 const path     = require('path');
 const fs       = require('fs');
 const multer   = require('multer');
-const { IS_PROD, LIMITS, QUOTA_DAILY, ipQuotaMap, getClientIP, isLocalIP } = require('../middleware/quota');
+const { IS_PROD, LIMITS, getQuotaStatus } = require('../middleware/quota');
+const { requireAuth } = require('../middleware/auth');
 
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
 const uploadsDir  = path.join(__dirname, '..', 'uploads');
@@ -98,19 +99,11 @@ router.get('/users/count', (req, res) => {
   res.json({ online: onlineUsers.size });
 });
 
-router.get('/quota', (req, res) => {
+router.get('/quota', requireAuth, (req, res) => {
   if (!IS_PROD) return res.json({ unlimited: true });
-  const ip = getClientIP(req);
-  if (isLocalIP(ip)) return res.json({ unlimited: true });
-  const today = new Date().toDateString();
-  const q = ipQuotaMap.get(ip) || { date: today, summarize: 0, quiz: 0, flashcards: 0, chat: 0 };
-  res.json({
-    unlimited:  false,
-    summarize:  { used: q.summarize  || 0, limit: QUOTA_DAILY.summarize  },
-    quiz:       { used: q.quiz       || 0, limit: QUOTA_DAILY.quiz       },
-    flashcards: { used: q.flashcards || 0, limit: QUOTA_DAILY.flashcards },
-    chat:       { used: q.chat       || 0, limit: QUOTA_DAILY.chat       },
-  });
+  const status = getQuotaStatus(req);
+  if (!status) return res.json({ unlimited: true });
+  res.json({ unlimited: false, ...status });
 });
 
 module.exports = router;

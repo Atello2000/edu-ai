@@ -1,7 +1,6 @@
 const express = require('express');
 const router  = express.Router();
 const { anthropic, aiComplete } = require('../services/ai');
-const { localOnly } = require('../middleware/quota');
 
 const PHARMA_SYSTEM = `Tu es un expert senior en régulation pharmaceutique avec 20 ans d'expérience. Tu maîtrises :
 - La réglementation européenne (EMA, directives, règlements)
@@ -17,7 +16,7 @@ const PHARMA_SYSTEM = `Tu es un expert senior en régulation pharmaceutique avec
 
 Réponds toujours en français. Structure tes réponses avec Markdown (titres, listes, tableaux si utile). Cite les textes réglementaires précis (numéros de guidelines ICH, numéros d'articles de directives/règlements EU). Adapte le niveau à un étudiant de Master 1 en régulation pharmaceutique : rigoureux mais pédagogique.`;
 
-router.post('/chat', localOnly, async (req, res) => {
+router.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
     const stream = anthropic.messages.stream({
@@ -33,7 +32,7 @@ router.post('/chat', localOnly, async (req, res) => {
   }
 });
 
-router.post('/quiz', localOnly, async (req, res) => {
+router.post('/quiz', async (req, res) => {
   try {
     const { topic } = req.body;
     const VALID_DIFF = ['facile', 'moyen', 'difficile'];
@@ -76,7 +75,7 @@ Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autou
   }
 });
 
-router.post('/fiche', localOnly, async (req, res) => {
+router.post('/fiche', async (req, res) => {
   try {
     const { topic } = req.body;
     const { text, model } = await aiComplete(

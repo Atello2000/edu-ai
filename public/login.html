@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDU AI — Connexion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+
+    .auth-card {
+      width: 100%; max-width: 420px; margin: 2rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2.5rem 2.25rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .auth-logo {
+      text-align: center; margin-bottom: 2rem;
+    }
+    .auth-logo h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.2rem; font-weight: 300; letter-spacing: .04em;
+      color: var(--text);
+    }
+    .auth-logo h1 em { color: var(--blue); font-style: italic; }
+    .auth-logo p { color: var(--muted); font-size: .85rem; margin-top: .3rem; }
+
+    .auth-tabs {
+      display: flex; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 1.75rem;
+    }
+    .auth-tab {
+      flex: 1; padding: .65rem;
+      background: transparent; border: none; cursor: pointer;
+      font-family: 'Outfit', sans-serif; font-size: .88rem; font-weight: 500;
+      color: var(--muted); transition: all .2s;
+    }
+    .auth-tab.active { background: var(--blue); color: #fff; }
+
+    .auth-form { display: flex; flex-direction: column; gap: 1rem; }
+
+    .form-group { display: flex; flex-direction: column; gap: .4rem; }
+    .form-group label { font-size: .8rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+    .form-group input {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-xs); padding: .7rem 1rem;
+      font-family: 'Outfit', sans-serif; font-size: .95rem; color: var(--text);
+      outline: none; transition: border-color .2s;
+    }
+    .form-group input:focus { border-color: var(--blue); }
+
+    .auth-btn {
+      margin-top: .5rem;
+      background: var(--blue); color: #fff; border: none;
+      border-radius: var(--radius-xs); padding: .8rem;
+      font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: opacity .2s;
+    }
+    .auth-btn:hover { opacity: .88; }
+    .auth-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .auth-error {
+      background: rgba(255,107,129,.12); border: 1px solid rgba(255,107,129,.3);
+      border-radius: var(--radius-xs); padding: .65rem 1rem;
+      font-size: .85rem; color: var(--rose); display: none;
+    }
+    .auth-error.show { display: block; }
+
+    .theme-btn {
+      position: fixed; top: 1rem; right: 1rem;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 50%; width: 2.2rem; height: 2.2rem;
+      cursor: pointer; font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+  </style>
+</head>
+<body>
+
+<button class="theme-btn" id="theme-toggle" title="Changer de thème">🌙</button>
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <h1>EDU <em>AI</em></h1>
+    <p>Plateforme IA pour vos cours</p>
+  </div>
+
+  <div class="auth-tabs">
+    <button class="auth-tab active" id="tab-login">Connexion</button>
+    <button class="auth-tab" id="tab-register">Inscription</button>
+  </div>
+
+  <div id="error-msg" class="auth-error"></div>
+
+  <!-- Login form -->
+  <form class="auth-form" id="login-form">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="vous@email.com" required autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password"/>
+    </div>
+    <button type="submit" class="auth-btn" id="login-btn">Se connecter</button>
+  </form>
+
+  <!-- Register form -->
+  <form class="auth-form" id="register-form" style="display:none">
+    <div class="form-group">
+      <label>Prénom / Nom</label>
+      <input type="text" id="reg-name" placeholder="Abdoul Sakho" required/>
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="reg-email" placeholder="vous@email.com" required autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="reg-password" placeholder="8 caractères minimum" required autocomplete="new-password" minlength="8"/>
+    </div>
+    <button type="submit" class="auth-btn" id="register-btn">Créer mon compte</button>
+  </form>
+</div>
+
+<script>
+  // ── Thème ──
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  const themeBtn = document.getElementById('theme-toggle');
+  themeBtn.textContent = saved === 'dark' ? '🌙' : '☀️';
+  themeBtn.onclick = () => {
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    themeBtn.textContent = next === 'dark' ? '🌙' : '☀️';
+  };
+
+  // ── Tabs ──
+  const tabLogin    = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const loginForm   = document.getElementById('login-form');
+  const regForm     = document.getElementById('register-form');
+  const errMsg      = document.getElementById('error-msg');
+
+  function showTab(tab) {
+    errMsg.classList.remove('show');
+    if (tab === 'login') {
+      tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+      loginForm.style.display = 'flex'; regForm.style.display = 'none';
+    } else {
+      tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+      regForm.style.display = 'flex'; loginForm.style.display = 'none';
+    }
+  }
+  tabLogin.onclick    = () => showTab('login');
+  tabRegister.onclick = () => showTab('register');
+
+  function showError(msg) {
+    errMsg.textContent = msg;
+    errMsg.classList.add('show');
+  }
+
+  async function post(url, body) {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return r.json();
+  }
+
+  // ── Login ──
+  loginForm.onsubmit = async e => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Connexion…';
+    errMsg.classList.remove('show');
+    const data = await post('/api/auth/login', {
+      email:    document.getElementById('login-email').value,
+      password: document.getElementById('login-password').value,
+    });
+    if (data.error) { showError(data.error); btn.disabled = false; btn.textContent = 'Se connecter'; }
+    else window.location.href = '/';
+  };
+
+  // ── Register ──
+  regForm.onsubmit = async e => {
+    e.preventDefault();
+    const btn = document.getElementById('register-btn');
+    btn.disabled = true; btn.textContent = 'Création…';
+    errMsg.classList.remove('show');
+    const data = await post('/api/auth/register', {
+      name:     document.getElementById('reg-name').value,
+      email:    document.getElementById('reg-email').value,
+      password: document.getElementById('reg-password').value,
+    });
+    if (data.error) { showError(data.error); btn.disabled = false; btn.textContent = 'Créer mon compte'; }
+    else window.location.href = '/';
+  };
+
+  // Si déjà connecté → rediriger
+  fetch('/api/auth/me').then(r => r.json()).then(d => {
+    if (d.user) window.location.href = '/';
+  });
+</script>
+</body>
+</html>

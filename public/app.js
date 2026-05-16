@@ -1,3 +1,53 @@
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+let currentUser = null;
+
+async function initAuth() {
+  try {
+    const res  = await fetch('/api/auth/me');
+    const data = await res.json();
+    if (!data.user) { window.location.href = '/login.html'; return false; }
+    currentUser = data.user;
+    renderUserMenu();
+    return true;
+  } catch {
+    window.location.href = '/login.html';
+    return false;
+  }
+}
+
+function renderUserMenu() {
+  const actionsRight = document.querySelector('.header-actions-right');
+  if (!actionsRight || !currentUser) return;
+
+  const menu = document.createElement('div');
+  menu.className = 'user-menu';
+  menu.innerHTML = `
+    <button class="user-menu-btn" id="user-menu-btn" title="${currentUser.name}">
+      <span class="user-avatar">${currentUser.name.charAt(0).toUpperCase()}</span>
+      <span class="user-name-short">${currentUser.name.split(' ')[0]}</span>
+    </button>
+    <div class="user-dropdown" id="user-dropdown">
+      <div class="user-info">
+        <strong>${currentUser.name}</strong>
+        <span>${currentUser.email}</span>
+        <span class="user-plan plan-${currentUser.plan}">${currentUser.plan === 'pro' ? '✦ Pro' : 'Gratuit'}</span>
+      </div>
+      <hr class="dropdown-sep"/>
+      <button class="dropdown-item" id="logout-btn">Se déconnecter</button>
+    </div>`;
+  actionsRight.prepend(menu);
+
+  document.getElementById('user-menu-btn').onclick = (e) => {
+    e.stopPropagation();
+    document.getElementById('user-dropdown').classList.toggle('open');
+  };
+  document.addEventListener('click', () => document.getElementById('user-dropdown')?.classList.remove('open'));
+  document.getElementById('logout-btn').onclick = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login.html';
+  };
+}
+
 // ── REFS ────────────────────────────────────────────────────────────────────
 const fileInput       = document.getElementById('file-input');
 const dropZone        = document.getElementById('drop-zone');
@@ -2236,4 +2286,8 @@ pharmaFicheGen.addEventListener('click', async () => {
 });
 
 // Init
-renderHistoryPanel();
+(async () => {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderHistoryPanel();
+})();
