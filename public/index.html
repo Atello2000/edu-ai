@@ -23,9 +23,6 @@
     <button class="stats-toggle" id="stats-toggle" title="Mes statistiques" aria-label="Mes statistiques">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg>
     </button>
-    <button class="pharma-toggle" id="pharma-toggle" title="Régulation Pharmaceutique" aria-label="Régulation Pharmaceutique">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/><rect x="3" y="3" width="18" height="18" rx="5"/></svg>
-    </button>
   </div>
   <div class="header-actions header-actions-right">
     <button class="theme-toggle" id="theme-toggle" title="Changer de thème">🌙</button>
@@ -383,143 +380,6 @@
   </div>
 
 
-  <!-- ── RÉGULATION PHARMACEUTIQUE ── -->
-  <div class="panel hidden" id="pharma-section">
-    <div class="panel-header">
-      <div>
-        <div class="panel-label">Master Régulation</div>
-        <h2 class="panel-title">Régulation <em>Pharmaceutique</em></h2>
-      </div>
-      <button class="ghost-btn" id="pharma-clear-btn">Effacer</button>
-    </div>
-
-    <div class="pharma-modes">
-      <button class="pharma-mode-btn active" data-mode="assistant">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Assistant
-      </button>
-      <button class="pharma-mode-btn" data-mode="quiz">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        Quiz rapide
-      </button>
-      <button class="pharma-mode-btn" data-mode="fiche">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Fiches
-      </button>
-    </div>
-
-    <!-- MODE : ASSISTANT -->
-    <div class="pharma-sub" id="pharma-assistant-sub">
-      <div class="pharma-chat-toolbar">
-        <div class="pharma-ai-badge" id="pharma-ai-badge" style="display:none">
-          <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#22c55e"/></svg>
-          Claude Haiku 4.5
-        </div>
-        <div class="pharma-chat-actions">
-          <button class="summary-action-btn" id="pharma-export-btn" title="Exporter la conversation">
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 3v7M5.5 8L8 10.5 10.5 8"/><path d="M3 13h10"/></svg>
-            Exporter
-          </button>
-          <button class="summary-action-btn" id="pharma-clear-btn" title="Effacer la conversation">
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3,4 13,4"/><path d="M5 4V3h6v1"/><path d="M6 7v5M10 7v5"/><rect x="4" y="4" width="8" height="9" rx="1"/></svg>
-            Effacer
-          </button>
-        </div>
-      </div>
-      <div class="chat-messages" id="pharma-messages">
-        <div class="chat-welcome" id="pharma-welcome">
-          <div class="chat-welcome-icon">⚕️</div>
-          <p>Assistant expert en régulation pharmaceutique — AMM, ICH, GMP, pharmacovigilance, essais cliniques, CTD…</p>
-          <div class="chat-suggestions">
-            <button class="chat-sug pharma-sug">Qu'est-ce que le dossier CTD ?</button>
-            <button class="chat-sug pharma-sug">Expliquer la procédure centralisée EMA</button>
-            <button class="chat-sug pharma-sug">Différence AMM et ATU/AAP</button>
-            <button class="chat-sug pharma-sug">Quelles sont les guidelines ICH qualité ?</button>
-          </div>
-        </div>
-      </div>
-      <div class="chat-input-row">
-        <input class="chat-input" id="pharma-input" placeholder="Question en régulation pharmaceutique…" />
-        <button class="act-btn pharma" id="pharma-send-btn">↑</button>
-      </div>
-    </div>
-
-    <!-- MODE : QUIZ RAPIDE -->
-    <div class="pharma-sub hidden" id="pharma-quiz-sub">
-      <div class="pharma-config">
-        <label>Thème
-          <select id="pharma-quiz-topic">
-            <option>Autorisation de Mise sur le Marché (AMM)</option>
-            <option>Bonnes Pratiques de Fabrication (BPF/GMP)</option>
-            <option>Essais cliniques (phases I-IV)</option>
-            <option>Pharmacovigilance européenne</option>
-            <option>Dossier CTD / eCTD</option>
-            <option>Guidelines ICH qualité (Q1-Q12)</option>
-            <option>Guidelines ICH efficacité (E1-E16)</option>
-            <option>Réglementation européenne (EMA)</option>
-            <option>Réglementation française (ANSM)</option>
-            <option>Bioéquivalence &amp; médicaments génériques</option>
-            <option>Médicaments biologiques &amp; biosimilaires</option>
-            <option>Dispositifs médicaux (MDR 2017/745)</option>
-          </select>
-        </label>
-        <label>Questions <input type="number" id="pharma-quiz-count" value="5" min="3" max="15" /></label>
-        <select id="pharma-quiz-diff">
-          <option value="moyen">Moyen</option>
-          <option value="facile">Facile</option>
-          <option value="difficile">Difficile</option>
-        </select>
-        <button class="act-btn pharma" id="pharma-quiz-gen">Générer</button>
-      </div>
-      <div class="quiz-step-header hidden" id="pharma-step-header">
-        <div class="quiz-step-track"><div class="quiz-step-fill" id="pharma-step-fill"></div></div>
-        <div class="quiz-step-nav">
-          <button class="quiz-nav-btn" id="pharma-prev-btn" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Précédent
-          </button>
-          <span class="quiz-step-label" id="pharma-step-label">1 / 5</span>
-          <button class="quiz-nav-btn" id="pharma-next-btn">
-            Suivant
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      </div>
-      <div id="pharma-quiz-container"></div>
-      <div class="quiz-footer hidden" id="pharma-quiz-footer">
-        <button class="act-btn pharma large" id="pharma-submit-quiz">Valider mes réponses</button>
-      </div>
-      <div id="pharma-quiz-score" class="hidden"></div>
-    </div>
-
-    <!-- MODE : FICHES -->
-    <div class="pharma-sub hidden" id="pharma-fiche-sub">
-      <div class="pharma-config">
-        <label>Thème
-          <select id="pharma-fiche-topic">
-            <option>AMM - Procédure centralisée EMA</option>
-            <option>AMM - Procédure nationale ANSM</option>
-            <option>AMM - Reconnaissance mutuelle &amp; décentralisée</option>
-            <option>GMP Annexe 1 - Médicaments stériles</option>
-            <option>GMP Annexe 11 - Systèmes informatisés</option>
-            <option>ICH Q1 - Stabilité des médicaments</option>
-            <option>ICH Q8 - Développement pharmaceutique</option>
-            <option>ICH Q9 - Gestion des risques qualité</option>
-            <option>ICH Q10 - Système qualité pharmaceutique</option>
-            <option>ICH E6 - Bonnes Pratiques Cliniques (BPC)</option>
-            <option>Dossier CTD - Structure et modules 1-5</option>
-            <option>Phases des essais cliniques (I-IV)</option>
-            <option>Pharmacovigilance européenne (PSUR, SUSAR, EudraVigilance)</option>
-            <option>Bioéquivalence et médicaments génériques</option>
-            <option>Médicaments biologiques et biosimilaires</option>
-            <option>Dispositifs médicaux - MDR 2017/745</option>
-          </select>
-        </label>
-        <button class="act-btn pharma" id="pharma-fiche-gen">Générer la fiche</button>
-      </div>
-      <div id="pharma-fiche-result"></div>
-    </div>
-  </div>
 
 </main>
 
@@ -544,10 +404,6 @@
   <button class="fnav-btn" data-target="exam-sheet-section">
     <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
     <span class="fnav-label">Fiche</span>
-  </button>
-  <button class="fnav-btn fnav-pharma" data-target="pharma-section">
-    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
-    <span class="fnav-label">Régulation</span>
   </button>
 </nav>
 
