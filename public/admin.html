@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDU AI — Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { min-height:100vh; background:var(--bg); font-family:'Outfit',sans-serif; color:var(--text); padding:2rem; }
+
+    .admin-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:2rem; flex-wrap:wrap; gap:1rem;
+    }
+    .admin-header h1 { font-size:1.5rem; font-weight:600; }
+    .admin-header h1 span { color:var(--blue); }
+
+    .stats-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; margin-bottom:2rem; }
+    .stat-card {
+      background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm);
+      padding:1rem 1.25rem;
+    }
+    .stat-card .stat-val { font-size:1.9rem; font-weight:700; }
+    .stat-card .stat-lbl { font-size:.78rem; color:var(--muted); margin-top:.2rem; }
+    .stat-card.blue  .stat-val { color:var(--blue); }
+    .stat-card.gold  .stat-val { color:var(--gold); }
+    .stat-card.teal  .stat-val { color:var(--teal); }
+    .stat-card.muted .stat-val { color:var(--muted); }
+
+    .table-wrap {
+      background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+      overflow:auto;
+    }
+    table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    th {
+      text-align:left; padding:.75rem 1rem; font-size:.72rem; font-weight:600;
+      text-transform:uppercase; letter-spacing:.05em; color:var(--muted);
+      border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    td { padding:.75rem 1rem; border-bottom:1px solid var(--border-sub); vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:rgba(255,255,255,.025); }
+
+    .plan-badge {
+      display:inline-block; padding:.2rem .55rem; border-radius:99px;
+      font-size:.72rem; font-weight:600;
+    }
+    .plan-free { background:var(--border); color:var(--muted); }
+    .plan-pro  { background:var(--gold-bg); color:var(--gold); border:1px solid var(--gold-dim); }
+
+    .quota-mini { font-size:.75rem; color:var(--muted); line-height:1.6; }
+
+    .btn-sm {
+      padding:.3rem .7rem; border-radius:var(--radius-xs); border:1px solid var(--border);
+      font-family:'Outfit',sans-serif; font-size:.78rem; cursor:pointer;
+      background:var(--surface); color:var(--text); transition:all .15s;
+    }
+    .btn-sm:hover { border-color:var(--blue); color:var(--blue); }
+    .btn-sm.danger:hover { border-color:var(--rose); color:var(--rose); background:var(--rose-bg); }
+    .btn-sm.promote { border-color:var(--gold-dim); color:var(--gold); }
+    .btn-sm.demote  { border-color:var(--border); color:var(--muted); }
+
+    .empty { text-align:center; padding:3rem; color:var(--muted); }
+
+    .top-actions { display:flex; gap:.75rem; align-items:center; }
+    .back-btn {
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-xs);
+      padding:.4rem .9rem; color:var(--text); font-family:'Outfit',sans-serif;
+      font-size:.85rem; cursor:pointer; text-decoration:none;
+      display:inline-flex; align-items:center; gap:.4rem;
+    }
+    .back-btn:hover { border-color:var(--blue); }
+
+    .search-input {
+      background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-xs);
+      padding:.45rem .9rem; color:var(--text); font-family:'Outfit',sans-serif;
+      font-size:.88rem; outline:none; width:220px;
+    }
+    .search-input:focus { border-color:var(--blue); }
+
+    .tag-admin { font-size:.7rem; background:var(--blue-bg); color:var(--blue); padding:.1rem .4rem; border-radius:4px; margin-left:.4rem; }
+  </style>
+</head>
+<body>
+
+<div class="admin-header">
+  <h1>EDU <span>AI</span> — Admin</h1>
+  <div class="top-actions">
+    <input class="search-input" type="text" id="search" placeholder="Rechercher un utilisateur…"/>
+    <a href="/" class="back-btn">← App</a>
+  </div>
+</div>
+
+<div class="stats-row" id="stats-row">
+  <div class="stat-card blue"><div class="stat-val" id="s-total">—</div><div class="stat-lbl">Inscrits total</div></div>
+  <div class="stat-card gold"><div class="stat-val" id="s-pro">—</div><div class="stat-lbl">Comptes Pro</div></div>
+  <div class="stat-card muted"><div class="stat-val" id="s-free">—</div><div class="stat-lbl">Comptes Gratuit</div></div>
+  <div class="stat-card teal"><div class="stat-val" id="s-active">—</div><div class="stat-lbl">Actifs aujourd'hui</div></div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Plan</th>
+        <th>Quota aujourd'hui</th>
+        <th>Inscrit le</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="users-tbody">
+      <tr><td colspan="7" class="empty">Chargement…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let allUsers = [];
+  const ADMIN_EMAIL = '';
+
+  // ── Thème ──
+  const saved = localStorage.getItem('edu-ai-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+
+  async function checkAdmin() {
+    const r = await fetch('/api/auth/me');
+    const d = await r.json();
+    if (!d.user) { window.location.href = '/login.html'; return false; }
+    const check = await fetch('/api/admin/stats');
+    if (check.status === 403) { window.location.href = '/'; return false; }
+    return true;
+  }
+
+  async function loadStats() {
+    const r = await fetch('/api/admin/stats');
+    const d = await r.json();
+    document.getElementById('s-total').textContent  = d.total;
+    document.getElementById('s-pro').textContent    = d.pro;
+    document.getElementById('s-free').textContent   = d.free;
+    document.getElementById('s-active').textContent = d.active_today;
+  }
+
+  async function loadUsers() {
+    const r = await fetch('/api/admin/users');
+    const d = await r.json();
+    allUsers = d.users || [];
+    renderUsers(allUsers);
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('users-tbody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="empty">Aucun utilisateur.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => {
+      const date = new Date(u.created_at).toLocaleDateString('fr-FR');
+      const isPro = u.plan === 'pro';
+      return `<tr data-id="${u.id}">
+        <td style="color:var(--muted);font-size:.8rem">${u.id}</td>
+        <td><strong>${esc(u.name)}</strong></td>
+        <td style="color:var(--muted);font-size:.83rem">${esc(u.email)}</td>
+        <td><span class="plan-badge plan-${u.plan}">${isPro ? '✦ Pro' : 'Gratuit'}</span></td>
+        <td class="quota-mini">
+          📄 ${u.q_summarize} résumés &nbsp;
+          ❓ ${u.q_quiz} quiz &nbsp;
+          🃏 ${u.q_flashcards} flashcards &nbsp;
+          💬 ${u.q_chat} chat
+        </td>
+        <td style="color:var(--muted);font-size:.82rem">${date}</td>
+        <td style="display:flex;gap:.4rem;flex-wrap:wrap">
+          <button class="btn-sm ${isPro ? 'demote' : 'promote'}" onclick="setPlan(${u.id}, '${isPro ? 'free' : 'pro'}')">
+            ${isPro ? '↓ Gratuit' : '↑ Pro'}
+          </button>
+          <button class="btn-sm danger" onclick="deleteUser(${u.id}, '${esc(u.name)}')">Supprimer</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function setPlan(id, plan) {
+    await fetch(`/api/admin/users/${id}/plan`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ plan })
+    });
+    await loadUsers();
+    await loadStats();
+  }
+
+  async function deleteUser(id, name) {
+    if (!confirm(`Supprimer le compte de "${name}" ? Cette action est irréversible.`)) return;
+    await fetch(`/api/admin/users/${id}`, { method:'DELETE' });
+    await loadUsers();
+    await loadStats();
+  }
+
+  document.getElementById('search').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    renderUsers(allUsers.filter(u =>
+      u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    ));
+  });
+
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  (async () => {
+    const ok = await checkAdmin();
+    if (!ok) return;
+    await Promise.all([loadStats(), loadUsers()]);
+  })();
+</script>
+</body>
+</html>

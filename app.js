@@ -42,6 +42,7 @@ app.use('/api',      require('./routes/misc'));
 // ── Routes protégées (auth requise) ──────────────────────────────────────────
 app.use('/api',        requireAuth, aiLimiter, require('./routes/ai'));
 app.use('/api/pharma', requireAuth, aiLimiter, require('./routes/pharma'));
+app.use('/api/admin',  require('./routes/admin'));
 
 app.use((err, req, res, next) => {
   console.error(err);
