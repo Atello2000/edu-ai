@@ -2,7 +2,7 @@
   "name": "EDU AI",
   "short_name": "EDU AI",
   "description": "Résumés, quiz et flashcards générés par IA",
-  "start_url": "/",
+  "start_url": "/app.html",
   "display": "standalone",
   "background_color": "#080c16",
   "theme_color": "#080c16",

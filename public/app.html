@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDU AI</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#080c16">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="EDU AI">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="header-actions header-actions-left">
+    <button class="stats-toggle" id="stats-toggle" title="Mes statistiques" aria-label="Mes statistiques">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg>
+    </button>
+  </div>
+  <div class="header-actions header-actions-right">
+    <button class="theme-toggle" id="theme-toggle" title="Changer de thème">🌙</button>
+  </div>
+  <div class="header-content">
+    <div class="badge">Plateforme IA · Résumés · Flashcards · Quiz · Chat · Export PDF</div>
+    <div class="online-counter hidden" id="online-counter">
+      <span class="online-dot"></span>
+      <span id="online-count">0</span> en ligne
+    </div>
+    <h1>EDU <em>AI</em></h1>
+    <p class="sub">Chargez vos cours PDF ou PowerPoint — résumés structurés, flashcards intelligentes & évaluations générées par IA</p>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── DASHBOARD ── -->
+  <div class="panel dashboard-panel" id="dashboard-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Accueil</div>
+        <h2 class="panel-title">Tableau de <em>bord</em></h2>
+      </div>
+      <button class="ghost-btn" id="dashboard-refresh-btn">Actualiser</button>
+    </div>
+    <div class="dashboard-grid" id="dashboard-grid"></div>
+    <div class="dashboard-actions">
+      <button class="dash-action dash-action-primary" id="dash-continue-btn">Continuer</button>
+      <button class="dash-action" id="dash-upload-btn">Charger un cours</button>
+      <button class="dash-action" id="dash-library-btn">Explorer la bibliothèque</button>
+      <button class="dash-action" id="dash-stats-btn">Voir mes stats</button>
+    </div>
+  </div>
+
+  <!-- ── STATISTIQUES ── -->
+  <div class="panel hidden" id="stats-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Progression</div>
+        <h2 class="panel-title">Mes <em>statistiques</em></h2>
+      </div>
+      <button class="ghost-btn" id="stats-reset-btn">Réinitialiser quiz</button>
+    </div>
+    <div id="stats-content"></div>
+  </div>
+
+  <!-- ── HISTORIQUE ── -->
+  <div class="panel hidden" id="history-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Sessions récentes</div>
+        <h2 class="panel-title">Mes <em>cours</em></h2>
+      </div>
+      <button class="ghost-btn" id="history-clear-all">Tout effacer</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+  <!-- ── BIBLIOTHÈQUE ── -->
+  <div class="panel hidden" id="library-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Bibliothèque</div>
+        <h2 class="panel-title">Cours <em>disponibles</em></h2>
+      </div>
+      <span class="mono-tag" id="lib-count"></span>
+    </div>
+    <p class="panel-desc">Cochez les cours à utiliser — ils sont immédiatement disponibles pour les résumés, quiz et flashcards</p>
+    <div class="library-search-row">
+      <input class="library-search" id="library-search" type="search" placeholder="Rechercher un cours, une matière, une section..." />
+      <button class="ghost-btn" id="library-clear-search">Effacer</button>
+    </div>
+    <div id="library-subjects"></div>
+    <div class="lib-selection-bar hidden" id="lib-selection-bar">
+      <span id="lib-selection-label">0 cours sélectionné</span>
+      <button class="act-btn gold" id="lib-go-btn">Utiliser ↓</button>
+    </div>
+  </div>
+
+  <!-- ── ÉTAPE 1 : UPLOAD ── -->
+  <div class="panel" id="upload-section">
+    <div class="panel-label">Étape 01</div>
+    <h2 class="panel-title">Charger vos <em>fichiers</em></h2>
+    <p class="panel-desc">Importez vos cours en PDF, PPT, PPTX ou DOCX — jusqu'à <span id="upload-size-hint">20 Mo</span> par fichier</p>
+
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon">📂</div>
+      <p class="drop-main">Glissez vos fichiers ici</p>
+      <p class="drop-or">ou</p>
+      <label class="dz-btn" for="file-input">Parcourir</label>
+      <input type="file" id="file-input" multiple accept=".pdf,.ppt,.pptx,.docx" hidden />
+      <p class="drop-hint">PDF · PPT · PPTX · DOCX</p>
+    </div>
+
+    <div id="file-list"></div>
+
+    <button class="act-btn gold full" id="upload-btn" disabled>
+      <span>⬆</span> Charger les fichiers
+    </button>
+  </div>
+
+  <!-- ── ÉTAPE 2 : ACTIONS ── -->
+  <div class="panel hidden" id="actions-section">
+    <div class="panel-label">Étape 02</div>
+    <h2 class="panel-title">Choisir une <em>action</em></h2>
+    <div class="quota-bar hidden" id="quota-bar"></div>
+
+    <div class="file-select-area">
+      <div class="fsa-header">
+        <span>Fichiers chargés</span>
+        <label class="sel-all"><input type="checkbox" id="select-all" /> Tout sélectionner</label>
+      </div>
+      <div id="uploaded-files"></div>
+    </div>
+
+    <div class="action-trio">
+      <div class="act-card" data-color="purple">
+        <div class="act-card-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="act-card-body">
+          <strong>Résumer</strong>
+          <span>Résumé structuré en 5 sections</span>
+        </div>
+        <button class="act-btn purple" id="summarize-btn">Lancer</button>
+      </div>
+
+      <div class="act-card" data-color="blue">
+        <div class="act-card-icon blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
+        </div>
+        <div class="act-card-body">
+          <strong>Quiz QCM</strong>
+          <label>
+            <input type="number" id="quiz-count" value="5" min="1" max="20" /> questions ·
+            <select id="quiz-difficulty">
+              <option value="moyen">Moyen</option>
+              <option value="facile">Facile</option>
+              <option value="difficile">Difficile</option>
+            </select>
+          </label>
+          <label class="exam-toggle-label">
+            <input type="checkbox" id="exam-mode-cb"> ⏱ Mode examen
+            <select id="exam-duration" class="hidden">
+              <option value="5">5 min</option>
+              <option value="10" selected>10 min</option>
+              <option value="15">15 min</option>
+              <option value="20">20 min</option>
+              <option value="30">30 min</option>
+            </select>
+          </label>
+        </div>
+        <button class="act-btn blue" id="quiz-btn">Lancer</button>
+      </div>
+
+      <div class="act-card" data-color="teal">
+        <div class="act-card-icon teal">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
+        </div>
+        <div class="act-card-body">
+          <strong>Flashcards</strong>
+          <label><input type="number" id="fc-count" value="10" min="3" max="30" /> cartes</label>
+        </div>
+        <button class="act-btn teal" id="flashcard-btn">Lancer</button>
+      </div>
+
+      <div class="act-card act-card-wide" data-color="gold">
+        <div class="act-card-icon gold">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r=".6" fill="currentColor"/><circle cx="12" cy="11" r=".6" fill="currentColor"/><circle cx="15" cy="11" r=".6" fill="currentColor"/></svg>
+        </div>
+        <div class="act-card-body">
+          <strong>Chat avec le cours</strong>
+          <span>Posez n'importe quelle question sur vos fichiers chargés</span>
+        </div>
+        <button class="act-btn gold" id="chat-open-btn">Ouvrir</button>
+      </div>
+
+      <div class="act-card act-card-wide" data-color="purple">
+        <div class="act-card-icon purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        </div>
+        <div class="act-card-body">
+          <strong>Fiche d'examen</strong>
+          <span>Définitions, pièges, tableaux et questions probables</span>
+        </div>
+        <button class="act-btn purple" id="exam-sheet-btn">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RÉSUMÉS ── -->
+  <div class="panel hidden" id="summary-section">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Résultats</div>
+        <h2 class="panel-title">Résumés <em>générés</em></h2>
+      </div>
+      <button class="ghost-btn" id="copy-all-btn">Copier tout</button>
+    </div>
+    <div class="tts-bar hidden" id="tts-bar">
+      <span class="tts-bar-icon">🔊</span>
+      <select id="tts-voice-select" class="tts-select"></select>
+      <div class="tts-speed-wrap">
+        <span class="tts-speed-lbl">Vitesse</span>
+        <input type="range" id="tts-speed" min="0.5" max="2" step="0.1" value="0.9" class="tts-slider">
+        <span id="tts-speed-val">0.9×</span>
+      </div>
+    </div>
+    <div class="summary-tabs hidden" id="summary-tabs"></div>
+    <div id="summary-results"></div>
+  </div>
+
+  <!-- ── FICHE D'EXAMEN ── -->
+  <div class="panel hidden" id="exam-sheet-section">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Révision ciblée</div>
+        <h2 class="panel-title">Fiche <em>d'examen</em></h2>
+      </div>
+      <button class="ghost-btn" id="exam-sheet-copy-btn">Copier</button>
+    </div>
+    <div id="exam-sheet-result"></div>
+  </div>
+
+  <!-- ── QUIZ ── -->
+  <div class="panel hidden" id="quiz-section">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Évaluation</div>
+        <h2 class="panel-title">Quiz <em>QCM</em></h2>
+      </div>
+      <span class="mono-tag" id="quiz-progress-info"></span>
+    </div>
+    <div class="quiz-step-header hidden" id="quiz-step-header">
+      <div class="exam-timer hidden" id="exam-timer">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="timer-display">00:00</span>
+      </div>
+      <div class="quiz-step-track"><div class="quiz-step-fill" id="quiz-step-fill"></div></div>
+      <div class="quiz-step-nav">
+        <button class="quiz-nav-btn" id="quiz-prev-btn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Précédent
+        </button>
+        <span class="quiz-step-label" id="quiz-step-label">1 / 5</span>
+        <button class="quiz-nav-btn" id="quiz-next-btn">
+          Suivant
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="quiz-container"></div>
+    <div class="quiz-footer hidden" id="quiz-footer">
+      <button class="act-btn blue large" id="submit-quiz">Valider mes réponses</button>
+    </div>
+    <div id="quiz-score" class="hidden"></div>
+  </div>
+
+  <!-- ── FLASHCARDS ── -->
+  <div class="panel hidden" id="flashcard-section">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Mémorisation</div>
+        <h2 class="panel-title">Flash<em>cards</em></h2>
+      </div>
+      <span class="mono-tag" id="fc-progress-info"></span>
+    </div>
+
+    <div id="fc-viewer">
+      <div class="fc-topbar">
+        <div class="fc-stats" id="fc-stats">
+          <div class="fc-stat green"><span id="fc-known-count">0</span><small>Acquises</small></div>
+          <div class="fc-stat red"><span id="fc-review-count">0</span><small>À revoir</small></div>
+          <div class="fc-stat grey"><span id="fc-remaining-count">0</span><small>Non évaluées</small></div>
+        </div>
+        <div class="fc-top-actions">
+          <button class="ghost-btn srs-mode-btn" id="srs-mode-btn">🧠 Révision spacée</button>
+          <button class="ghost-btn" id="fc-shuffle">🔀 Mélanger</button>
+          <button class="ghost-btn" id="fc-restart">↺ Réinitialiser</button>
+        </div>
+      </div>
+
+      <div class="fc-srs-bar hidden" id="fc-srs-bar">
+        <span id="srs-due-label" class="srs-due-label"></span>
+        <span class="srs-hint">Cartes dues pour révision aujourd'hui</span>
+      </div>
+
+      <div class="fc-progress-bar"><div id="fc-bar"></div></div>
+
+      <div id="fc-file-tabs"></div>
+      <div id="fc-grid"></div>
+    </div>
+
+    <div class="fc-done hidden" id="fc-done">
+      <div class="fc-done-icon">🎉</div>
+      <h3>Session terminée !</h3>
+      <div id="fc-done-stats"></div>
+      <div class="fc-done-btns">
+        <button class="act-btn purple" id="fc-redo-wrong">Revoir les cartes ratées</button>
+        <button class="act-btn teal" id="fc-redo-all">Tout réinitialiser</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHAT ── -->
+  <div class="panel hidden" id="chat-section">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Assistant IA</div>
+        <h2 class="panel-title">Chat avec le <em>cours</em></h2>
+      </div>
+      <button class="ghost-btn" id="chat-clear-btn">Effacer</button>
+    </div>
+    <div class="chat-file-select" id="chat-file-select"></div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-welcome" id="chat-welcome">
+        <div class="chat-welcome-icon">💬</div>
+        <p>Posez une question ou joignez un devoir / QCM à corriger.</p>
+        <div class="chat-suggestions">
+          <button class="chat-sug">Quels sont les points clés ?</button>
+          <button class="chat-sug">Donne un exemple concret</button>
+          <button class="chat-sug">Explique le concept principal</button>
+          <button class="chat-sug">Quelles sont les définitions importantes ?</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Attached document chip -->
+    <div class="chat-attach-bar hidden" id="chat-attach-bar">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      <span id="chat-attach-name"></span>
+      <button class="chat-attach-remove" id="chat-attach-remove" title="Retirer">✕</button>
+    </div>
+
+    <!-- Attached image chip -->
+    <div class="chat-image-bar hidden" id="chat-image-bar">
+      <img id="chat-image-thumb" class="chat-image-thumb" src="" alt=""/>
+      <span id="chat-image-name"></span>
+      <button class="chat-attach-remove" id="chat-image-remove" title="Retirer">✕</button>
+    </div>
+
+    <div class="chat-input-row">
+      <input type="file" id="chat-file-input" accept=".pdf,.ppt,.pptx,.docx" style="display:none"/>
+      <input type="file" id="chat-image-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none"/>
+      <button class="chat-attach-btn" id="chat-attach-btn" title="Joindre un devoir / document">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+      </button>
+      <button class="chat-attach-btn" id="chat-image-btn" title="Joindre une image">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </button>
+      <input class="chat-input" id="chat-input" placeholder="Posez une question, joignez un devoir ou une image…" />
+      <button class="act-btn gold" id="chat-send-btn">↑</button>
+    </div>
+  </div>
+
+
+
+</main>
+
+<!-- Float Nav -->
+<nav class="float-nav hidden" id="float-nav">
+  <button class="fnav-btn" data-target="summary-section">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+    <span class="fnav-label">Résumés</span>
+  </button>
+  <button class="fnav-btn" data-target="quiz-section">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></span>
+    <span class="fnav-label">Quiz</span>
+  </button>
+  <button class="fnav-btn" data-target="flashcard-section">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg></span>
+    <span class="fnav-label">Flashcards</span>
+  </button>
+  <button class="fnav-btn" data-target="chat-section">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+    <span class="fnav-label">Chat</span>
+  </button>
+  <button class="fnav-btn" data-target="exam-sheet-section">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+    <span class="fnav-label">Fiche</span>
+  </button>
+</nav>
+
+<!-- Loader -->
+<div class="loader hidden" id="loader">
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <p id="loader-text">Traitement en cours…</p>
+    <span class="loader-hint">Cela peut prendre quelques secondes</span>
+  </div>
+</div>
+
+<!-- ── ONBOARDING MODAL ── -->
+<div class="modal-overlay hidden" id="onboarding-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Bienvenue sur EDU <em>AI</em> 👋</h2>
+      <p>Voici comment tirer le meilleur parti de la plateforme</p>
+    </div>
+    <div class="onboarding-steps">
+      <div class="ob-step">
+        <div class="ob-icon purple">📂</div>
+        <div><strong>1. Chargez vos cours</strong><br><span>PDF, PowerPoint ou Word — jusqu'à 20 Mo</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-icon blue">⚡</div>
+        <div><strong>2. Choisissez une action</strong><br><span>Résumé, Quiz, Flashcards ou Chat avec le cours</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-icon teal">🧠</div>
+        <div><strong>3. Révisez intelligemment</strong><br><span>Les flashcards utilisent la révision espacée (SM-2) pour mémoriser durablement</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-icon gold">📊</div>
+        <div><strong>4. Suivez votre progression</strong><br><span>Consultez vos stats depuis le bouton 📊 en haut à gauche</span></div>
+      </div>
+    </div>
+    <button class="act-btn blue full" id="onboarding-close">C'est parti !</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

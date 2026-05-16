@@ -189,7 +189,7 @@
       password: document.getElementById('login-password').value,
     });
     if (data.error) { showError(data.error); btn.disabled = false; btn.textContent = 'Se connecter'; }
-    else window.location.href = '/';
+    else window.location.href = '/app.html';
   };
 
   // ── Register ──
@@ -204,12 +204,12 @@
       password: document.getElementById('reg-password').value,
     });
     if (data.error) { showError(data.error); btn.disabled = false; btn.textContent = 'Créer mon compte'; }
-    else window.location.href = '/';
+    else window.location.href = '/app.html';
   };
 
   // Si déjà connecté → rediriger
   fetch('/api/auth/me').then(r => r.json()).then(d => {
-    if (d.user) window.location.href = '/';
+    if (d.user) window.location.href = '/app.html';
   });
 </script>
 
