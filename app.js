@@ -9,6 +9,7 @@ const { globalLimiter, aiLimiter } = require('./middleware/rateLimit');
 const { requireAuth } = require('./middleware/auth');
 
 const app = express();
+app.set('trust proxy', 1); // Railway reverse proxy
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
