@@ -1682,7 +1682,7 @@ function appendMsg(role, text, model = null) {
   const time = new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
   if (role === 'ai') {
     const isGroq = model && model.toLowerCase().includes('groq');
-    const badge = model ? `<span class="chat-model-badge ${isGroq ? 'groq' : 'claude'}">${model}</span>` : '';
+    const badge = (model && isLocal) ? `<span class="chat-model-badge ${isGroq ? 'groq' : 'claude'}">${model}</span>` : '';
     el.innerHTML = `<div class="chat-bubble">${marked.parse(text)}</div><div class="chat-meta">${badge}<button class="chat-copy-btn" title="Copier">⎘</button><span class="chat-time">${time}</span></div>`;
     el.querySelector('.chat-copy-btn').addEventListener('click', function() {
       navigator.clipboard.writeText(text).then(() => {
@@ -1986,6 +1986,7 @@ function hideLoader()     { loader.classList.add('hidden'); }
 
 // ── MODÈLE IA BADGE ──────────────────────────────────────────────────────────
 function setModelBadge(sectionId, modelName) {
+  if (!isLocal) return; // badge visible uniquement en local
   const sec = document.getElementById(sectionId);
   if (!sec) return;
   let badge = sec.querySelector('.model-badge');
@@ -2038,6 +2039,10 @@ const pharmaClearBtn  = document.getElementById('pharma-clear-btn');
 const pharmaExportBtn = document.getElementById('pharma-export-btn');
 
 // visibilité pharma gérée par initAuth() selon le plan
+if (isLocal) {
+  const pharmaBadge = document.getElementById('pharma-ai-badge');
+  if (pharmaBadge) pharmaBadge.style.display = '';
+}
 
 pharmaToggleBtn.addEventListener('click', () => {
   const isHidden = pharmaSection.classList.toggle('hidden');
