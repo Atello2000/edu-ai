@@ -231,6 +231,21 @@ header::after {
 .stats-toggle.active  { border-color:var(--blue);  background:var(--blue-bg);  }
 .pharma-toggle.active { border-color:var(--pharma); background:var(--pharma-bg); }
 
+.back-home-btn {
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  border-radius:50%;
+  width:40px; height:40px;
+  font-size:1rem; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+  box-shadow:var(--shadow-sm);
+  backdrop-filter:blur(14px);
+  color:var(--text);
+  flex-shrink:0;
+}
+.back-home-btn:hover { border-color:var(--blue); transform:translateX(-2px); }
+
 /* Online counter */
 .online-counter {
   display:inline-flex; align-items:center; gap:.4rem;

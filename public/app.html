@@ -20,6 +20,9 @@
 
 <header>
   <div class="header-actions header-actions-left">
+    <button class="back-home-btn hidden" id="back-home-btn" title="Tableau de bord">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
     <button class="stats-toggle" id="stats-toggle" title="Mes statistiques" aria-label="Mes statistiques">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg>
     </button>
@@ -54,6 +57,7 @@
       <button class="dash-action dash-action-primary" id="dash-continue-btn">Continuer</button>
       <button class="dash-action" id="dash-upload-btn">Charger un cours</button>
       <button class="dash-action" id="dash-library-btn">Explorer la bibliothèque</button>
+      <button class="dash-action" id="dash-history-btn">Mes cours récents</button>
       <button class="dash-action" id="dash-stats-btn">Voir mes stats</button>
     </div>
   </div>
@@ -104,7 +108,7 @@
   </div>
 
   <!-- ── ÉTAPE 1 : UPLOAD ── -->
-  <div class="panel" id="upload-section">
+  <div class="panel hidden" id="upload-section">
     <div class="panel-label">Étape 01</div>
     <h2 class="panel-title">Charger vos <em>fichiers</em></h2>
     <p class="panel-desc">Importez vos cours en PDF, PPT, PPTX ou DOCX — jusqu'à <span id="upload-size-hint">20 Mo</span> par fichier</p>
@@ -385,6 +389,10 @@
 
 <!-- Float Nav -->
 <nav class="float-nav hidden" id="float-nav">
+  <button class="fnav-btn fnav-home" data-target="dashboard-panel">
+    <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
+    <span class="fnav-label">Accueil</span>
+  </button>
   <button class="fnav-btn" data-target="summary-section">
     <span class="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
     <span class="fnav-label">Résumés</span>

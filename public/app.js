@@ -64,6 +64,28 @@ function renderUserMenu() {
   };
 }
 
+// ── PANEL NAVIGATION ─────────────────────────────────────────────────────────
+const ALL_PANELS = [
+  'dashboard-panel','upload-section','actions-section',
+  'summary-section','quiz-section','flashcard-section',
+  'chat-section','exam-sheet-section',
+  'stats-panel','history-panel','library-panel'
+];
+const generatedSections = new Set();
+
+function showPanel(id) {
+  ALL_PANELS.forEach(pid => {
+    const el = document.getElementById(pid);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById(id);
+  if (target) target.classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const backBtn = document.getElementById('back-home-btn');
+  if (backBtn) backBtn.classList.toggle('hidden', id === 'dashboard-panel');
+  refreshFloatNav();
+}
+
 // ── REFS ────────────────────────────────────────────────────────────────────
 const fileInput       = document.getElementById('file-input');
 const dropZone        = document.getElementById('drop-zone');
@@ -153,8 +175,7 @@ uploadBtn.addEventListener('click', async () => {
     if (!data.success) throw new Error(data.error);
     uploadedFilesMeta = data.files;
     renderUploadedFiles();
-    actionsSection.classList.remove('hidden');
-    actionsSection.scrollIntoView({ behavior: 'smooth' });
+    showPanel('actions-section');
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
 });
@@ -335,15 +356,11 @@ function onLibraryChange() {
   libSelectionLbl.textContent = `${checked} cours sélectionné${checked>1?'s':''}`;
   // Afficher la section d'actions dès qu'un fichier est coché
   if (checked > 0) {
-    actionsSection.classList.remove('hidden');
-  } else if (!uploadedFilesMeta.length) {
-    actionsSection.classList.add('hidden');
+    showPanel('actions-section');
   }
 }
 
-libGoBtn.addEventListener('click', () =>
-  actionsSection.scrollIntoView({ behavior: 'smooth' })
-);
+libGoBtn.addEventListener('click', () => showPanel('actions-section'));
 
 libSearch?.addEventListener('input', renderLibrary);
 libClearSearch?.addEventListener('click', () => {
@@ -779,9 +796,8 @@ summarizeBtn.addEventListener('click', async () => {
     });
     if (!res.ok) throw new Error('Erreur serveur');
     hideLoader();
-    summarySection.classList.remove('hidden');
-    summarySection.scrollIntoView({ behavior: 'smooth' });
-    refreshFloatNav();
+    generatedSections.add('summary-section');
+    showPanel('summary-section');
 
     const reader  = res.body.getReader();
     const decoder = new TextDecoder();
@@ -1113,8 +1129,8 @@ quizBtn.addEventListener('click', async () => {
     quizAns = {}; quizIdx = 0;
     quizProgressInfo.textContent = `${quizAllQ.length} question${quizAllQ.length>1?'s':''}`;
     quizStepHeader.classList.remove('hidden');
-    quizSection.classList.remove('hidden');
-    quizSection.scrollIntoView({ behavior:'smooth' });
+    generatedSections.add('quiz-section');
+    showPanel('quiz-section');
     showQuizQuestion(0);
     saveSession({ quiz: data.results });
     if (data.model) setModelBadge('quiz-section', data.model);
@@ -1218,7 +1234,7 @@ submitQuiz.addEventListener('click', () => {
   const timeStr = timeTaken ? ` · ${Math.floor(timeTaken/60)}:${String(timeTaken%60).padStart(2,'0')} min` : '';
   quizScore.innerHTML = `<div class="score-number">${correct}/${quizAllQ.length}</div><div class="score-label">${pct}% de bonnes réponses${timeStr}</div><div class="score-msg">${msg}</div>`;
   quizScore.classList.remove('hidden');
-  quizScore.scrollIntoView({ behavior:'smooth' });
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   saveQuizStat(pct, correct, quizAllQ.length);
 });
 
@@ -1245,8 +1261,8 @@ examSheetBtn.addEventListener('click', async () => {
     if (!data.success) throw new Error(data.error);
     examSheetMd = data.sheet || '';
     examSheetResult.innerHTML = `<div class="exam-sheet-card">${marked.parse(examSheetMd)}</div>`;
-    examSheetSection.classList.remove('hidden');
-    examSheetSection.scrollIntoView({ behavior: 'smooth' });
+    generatedSections.add('exam-sheet-section');
+    showPanel('exam-sheet-section');
     if (data.model) setModelBadge('exam-sheet-section', data.model);
     saveSession({ examSheet: { files: files.map(f => f.name), sheet: examSheetMd } });
     fetchQuota();
@@ -1345,8 +1361,8 @@ flashcardBtn.addEventListener('click', async () => {
     if (!data.success) throw new Error(data.error);
     allDecks = data.results.map(r => ({ name:r.name, cards:r.flashcards }));
     buildFcTabs(); loadDeck(0);
-    fcSection.classList.remove('hidden');
-    fcSection.scrollIntoView({ behavior:'smooth' });
+    generatedSections.add('flashcard-section');
+    showPanel('flashcard-section');
     saveSession({ flashcards: data.results });
     if (data.model) setModelBadge('flashcard-section', data.model);
     fetchQuota();
@@ -1552,9 +1568,8 @@ chatOpenBtn.addEventListener('click', () => {
   chatFiles = getSelectedUploadedFiles();
   if (!chatFiles.length) return alert('Chargez d\'abord des fichiers.');
   buildChatChips();
-  chatSection.classList.remove('hidden');
-  chatSection.scrollIntoView({ behavior:'smooth' });
-  refreshFloatNav();
+  generatedSections.add('chat-section');
+  showPanel('chat-section');
 });
 
 function buildChatChips() {
@@ -1718,9 +1733,8 @@ function renderHistoryPanel() {
   const sessions = getSessions();
   const panel    = document.getElementById('history-panel');
   const list     = document.getElementById('history-list');
-  if (!sessions.length) { panel.classList.add('hidden'); return; }
-  panel.classList.remove('hidden');
   list.innerHTML = '';
+  if (!sessions.length) { list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem">Aucune session sauvegardée.</p>'; return; }
   sessions.forEach(s => {
     const el   = document.createElement('div');
     el.className = 'history-item';
@@ -1748,6 +1762,7 @@ function renderHistoryPanel() {
 }
 
 function restoreSession(s) {
+  let firstPanel = 'actions-section';
   if (s.summaries) {
     summaryResults.innerHTML = '';
     summaryAllResults = s.summaries;
@@ -1755,7 +1770,8 @@ function restoreSession(s) {
     s.summaries.forEach(r => summaryResults.appendChild(renderSummaryItem(r)));
     buildSummaryTabs();
     if (s.summaries.length > 1) switchSummaryTab(0);
-    summarySection.classList.remove('hidden');
+    generatedSections.add('summary-section');
+    firstPanel = 'summary-section';
   }
   if (s.quiz) {
     quizContainer.innerHTML = '';
@@ -1767,21 +1783,23 @@ function restoreSession(s) {
       quizStepHeader.classList.remove('hidden');
       showQuizQuestion(0);
     }
-    quizSection.classList.remove('hidden');
     quizScore.classList.add('hidden');
+    generatedSections.add('quiz-section');
+    if (firstPanel === 'actions-section') firstPanel = 'quiz-section';
   }
   if (s.flashcards) {
     allDecks = s.flashcards.map(r=>({ name:r.name, cards:r.flashcards }));
     buildFcTabs(); loadDeck(0);
-    fcSection.classList.remove('hidden');
+    generatedSections.add('flashcard-section');
+    if (firstPanel === 'actions-section') firstPanel = 'flashcard-section';
   }
   if (s.examSheet) {
     examSheetMd = s.examSheet.sheet || '';
     examSheetResult.innerHTML = `<div class="exam-sheet-card">${marked.parse(examSheetMd)}</div>`;
-    examSheetSection.classList.remove('hidden');
+    generatedSections.add('exam-sheet-section');
+    if (firstPanel === 'actions-section') firstPanel = 'exam-sheet-section';
   }
-  refreshFloatNav();
-  document.getElementById('upload-section').scrollIntoView({ behavior:'smooth' });
+  showPanel(firstPanel);
 }
 
 document.getElementById('history-clear-all').addEventListener('click', () => {
@@ -1793,17 +1811,19 @@ const floatNav     = document.getElementById('float-nav');
 const NAV_SECTIONS = ['summary-section','quiz-section','flashcard-section','chat-section','exam-sheet-section'];
 
 function refreshFloatNav() {
-  const visible = NAV_SECTIONS.filter(id => !document.getElementById(id).classList.contains('hidden'));
-  floatNav.classList.toggle('hidden', visible.length === 0);
-  floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
-    btn.classList.toggle('active', !document.getElementById(btn.dataset.target).classList.contains('hidden'))
-  );
+  floatNav.classList.toggle('hidden', generatedSections.size === 0);
+  floatNav.querySelectorAll('.fnav-btn').forEach(btn => {
+    const target = btn.dataset.target;
+    if (target === 'dashboard-panel') {
+      btn.classList.toggle('active', !document.getElementById('dashboard-panel').classList.contains('hidden'));
+    } else {
+      btn.classList.toggle('active', !document.getElementById(target).classList.contains('hidden'));
+    }
+  });
 }
 
 floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
-  btn.addEventListener('click', () =>
-    document.getElementById(btn.dataset.target).scrollIntoView({ behavior:'smooth', block:'start' })
-  )
+  btn.addEventListener('click', () => showPanel(btn.dataset.target))
 );
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
@@ -1813,9 +1833,8 @@ const statsContent = document.getElementById('stats-content');
 const statsToggle  = document.getElementById('stats-toggle');
 
 statsToggle.addEventListener('click', () => {
-  const isHidden = statsPanel.classList.toggle('hidden');
-  statsToggle.classList.toggle('active', !isHidden);
-  if (!isHidden) { renderStatsPanel(); statsPanel.scrollIntoView({ behavior:'smooth' }); }
+  renderStatsPanel();
+  showPanel('stats-panel');
 });
 
 document.getElementById('stats-reset-btn').addEventListener('click', () => {
@@ -1951,17 +1970,13 @@ dashContinueBtn?.addEventListener('click', () => {
   const lastSession = getSessions()[0];
   if (lastSession) restoreSession(lastSession);
 });
-dashUploadBtn?.addEventListener('click', () =>
-  document.getElementById('upload-section').scrollIntoView({ behavior: 'smooth' })
-);
-dashLibraryBtn?.addEventListener('click', () =>
-  libPanel.scrollIntoView({ behavior: 'smooth' })
-);
+dashUploadBtn?.addEventListener('click', () => showPanel('upload-section'));
+dashLibraryBtn?.addEventListener('click', () => showPanel('library-panel'));
+document.getElementById('dash-history-btn')?.addEventListener('click', () => {
+  renderHistoryPanel(); showPanel('history-panel');
+});
 dashStatsBtn?.addEventListener('click', () => {
-  statsPanel.classList.remove('hidden');
-  statsToggle.classList.add('active');
-  renderStatsPanel();
-  statsPanel.scrollIntoView({ behavior: 'smooth' });
+  renderStatsPanel(); showPanel('stats-panel');
 });
 
 renderDashboard();
@@ -2029,5 +2044,6 @@ document.getElementById('onboarding-close')?.addEventListener('click', () => {
 (async () => {
   const ok = await initAuth();
   if (!ok) return;
-  renderHistoryPanel();
+  showPanel('dashboard-panel');
+  document.getElementById('back-home-btn').addEventListener('click', () => showPanel('dashboard-panel'));
 })();
