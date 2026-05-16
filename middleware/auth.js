@@ -1,15 +1,20 @@
-const db = require('../db');
+const jwt = require('jsonwebtoken');
+const db  = require('../db');
+
+const JWT_SECRET = process.env.SESSION_SECRET || 'edu-ai-dev-secret-change-in-prod';
 
 function requireAuth(req, res, next) {
-  if (!req.session.userId)
-    return res.status(401).json({ error: 'Connexion requise.' });
-  const user = db.prepare('SELECT id, email, name, plan FROM users WHERE id = ?').get(req.session.userId);
-  if (!user) {
-    req.session.destroy(() => {});
-    return res.status(401).json({ error: 'Session expirée.' });
+  const token = req.cookies?.['edu.token'];
+  if (!token) return res.status(401).json({ error: 'Connexion requise.' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const user = db.prepare('SELECT id, email, name, plan FROM users WHERE id = ?').get(decoded.userId);
+    if (!user) return res.status(401).json({ error: 'Session expirée.' });
+    req.user = user;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Session expirée. Reconnectez-vous.' });
   }
-  req.user = user;
-  next();
 }
 
-module.exports = { requireAuth };
+module.exports = { requireAuth, JWT_SECRET };
