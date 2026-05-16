@@ -3,8 +3,7 @@ const express      = require('express');
 const cors         = require('cors');
 const path         = require('path');
 const fs           = require('fs');
-const session      = require('express-session');
-const SQLiteStore  = require('connect-sqlite3')(session);
+const session = require('express-session');
 const { globalLimiter, aiLimiter } = require('./middleware/rateLimit');
 const { requireAuth } = require('./middleware/auth');
 
@@ -13,9 +12,8 @@ app.set('trust proxy', 1); // Railway reverse proxy
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// ── Sessions ──────────────────────────────────────────────────────────────────
+// ── Sessions (MemoryStore — suffisant pour 1 instance Railway) ────────────────
 app.use(session({
-  store: new SQLiteStore({ db: 'sessions.db', dir: path.join(__dirname, 'data') }),
   secret: process.env.SESSION_SECRET || 'edu-ai-dev-secret-change-in-prod',
   name:   'edu.sid',
   resave: false,
