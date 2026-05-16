@@ -30,6 +30,12 @@ db.exec(`
     chat       INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (user_id, date)
   );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    sid     TEXT PRIMARY KEY,
+    data    TEXT NOT NULL,
+    expires INTEGER NOT NULL
+  );
 `);
 
 module.exports = db;
