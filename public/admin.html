@@ -48,6 +48,7 @@
     }
     .plan-free { background:var(--border); color:var(--muted); }
     .plan-pro  { background:var(--gold-bg); color:var(--gold); border:1px solid var(--gold-dim); }
+    .plan-max  { background:var(--purple-bg); color:var(--purple); border:1px solid var(--purple); }
 
     .quota-mini { font-size:.75rem; color:var(--muted); line-height:1.6; }
 
@@ -159,12 +160,20 @@
     }
     tbody.innerHTML = users.map(u => {
       const date = new Date(u.created_at).toLocaleDateString('fr-FR');
-      const isPro = u.plan === 'pro';
+      const planLabel = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' }[u.plan] || u.plan;
+      const planBtns = {
+        free: `<button class="btn-sm promote" onclick="setPlan(${u.id},'pro')">↑ Pro</button>
+               <button class="btn-sm promote" onclick="setPlan(${u.id},'max')" style="color:var(--purple);border-color:var(--purple)">↑ Max</button>`,
+        pro:  `<button class="btn-sm demote"  onclick="setPlan(${u.id},'free')">↓ Gratuit</button>
+               <button class="btn-sm promote" onclick="setPlan(${u.id},'max')" style="color:var(--purple);border-color:var(--purple)">↑ Max</button>`,
+        max:  `<button class="btn-sm demote"  onclick="setPlan(${u.id},'free')">↓ Gratuit</button>
+               <button class="btn-sm demote"  onclick="setPlan(${u.id},'pro')">↓ Pro</button>`,
+      }[u.plan] || '';
       return `<tr data-id="${u.id}">
         <td style="color:var(--muted);font-size:.8rem">${u.id}</td>
         <td><strong>${esc(u.name)}</strong></td>
         <td style="color:var(--muted);font-size:.83rem">${esc(u.email)}</td>
-        <td><span class="plan-badge plan-${u.plan}">${isPro ? '✦ Pro' : 'Gratuit'}</span></td>
+        <td><span class="plan-badge plan-${u.plan}">${planLabel}</span></td>
         <td class="quota-mini">
           📄 ${u.q_summarize} résumés &nbsp;
           ❓ ${u.q_quiz} quiz &nbsp;
@@ -173,9 +182,7 @@
         </td>
         <td style="color:var(--muted);font-size:.82rem">${date}</td>
         <td style="display:flex;gap:.4rem;flex-wrap:wrap">
-          <button class="btn-sm ${isPro ? 'demote' : 'promote'}" onclick="setPlan(${u.id}, '${isPro ? 'free' : 'pro'}')">
-            ${isPro ? '↓ Gratuit' : '↑ Pro'}
-          </button>
+          ${planBtns}
           <button class="btn-sm danger" onclick="deleteUser(${u.id}, '${esc(u.name)}')">Supprimer</button>
         </td>
       </tr>`;

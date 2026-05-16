@@ -30,7 +30,7 @@ router.get('/users', requireAuth, requireAdmin, (req, res) => {
 // ── PATCH /api/admin/users/:id/plan ──────────────────────────────────────────
 router.patch('/users/:id/plan', requireAuth, requireAdmin, (req, res) => {
   const { plan } = req.body;
-  if (!['free', 'pro'].includes(plan))
+  if (!['free', 'pro', 'max'].includes(plan))
     return res.status(400).json({ error: 'Plan invalide.' });
   db.prepare('UPDATE users SET plan = ? WHERE id = ?').run(plan, req.params.id);
   res.json({ ok: true });

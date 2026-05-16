@@ -24,8 +24,9 @@ const LIMITS = IS_PROD ? {
 
 // Quotas journaliers par plan
 const QUOTA_DAILY = {
-  free: { summarize: 5, quiz: 10, flashcards: 10, chat: 8 },
-  pro:  { summarize: 50, quiz: 100, flashcards: 100, chat: 80 },
+  free: { summarize: 3,  quiz: 5,  flashcards: 5,  chat: 5  },
+  pro:  { summarize: 15, quiz: 30, flashcards: 30, chat: 20 },
+  max:  { summarize: 50, quiz: 100, flashcards: 100, chat: 60 },
 };
 
 function getTodayStr() { return new Date().toISOString().slice(0, 10); }

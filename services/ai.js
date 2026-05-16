@@ -14,6 +14,7 @@ const groq = IS_PROD && process.env.GROQ_API_KEY
   : null;
 
 const GROQ_MODEL  = 'llama-3.3-70b-versatile';
+const CHAT_MODEL  = 'claude-haiku-4-5-20251001';
 const MODEL_LABEL = groq ? 'Groq · Llama 3.3' : 'Claude Sonnet 4.6';
 
 // cachedContent : mis en cache côté Claude (cache_control ephemeral).
@@ -98,11 +99,11 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
     }
   }
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-6', max_tokens: maxTokens,
+    model: CHAT_MODEL, max_tokens: maxTokens,
     system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
     messages
   });
-  return { text: msg.content[0].text, model: 'Claude Sonnet 4.6' };
+  return { text: msg.content[0].text, model: 'Claude Haiku 4.5' };
 }
 
 function calcMaxTokens(type, textLen, count = 0) {

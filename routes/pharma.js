@@ -20,7 +20,7 @@ router.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
     const stream = anthropic.messages.stream({
-      model:      'claude-sonnet-4-6',
+      model:      'claude-haiku-4-5-20251001',
       max_tokens: 1500,
       system:     [{ type: 'text', text: PHARMA_SYSTEM, cache_control: { type: 'ephemeral' } }],
       messages:   (messages || []).slice(-10)
