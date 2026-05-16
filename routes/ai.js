@@ -4,6 +4,11 @@ const { aiComplete, aiStream, aiChat, calcMaxTokens, MODEL_LABEL } = require('..
 const { extractText } = require('../services/text');
 const { checkQuota, LIMITS } = require('../middleware/quota');
 
+const VALID_LANGS = ['fr', 'en', 'ar'];
+function langLabel(lang) {
+  return { fr: 'en français', en: 'in English', ar: 'باللغة العربية' }[lang] || 'en français';
+}
+
 // ── Résumé (SSE streaming) ────────────────────────────────────────────────────
 router.post('/summarize', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -21,6 +26,8 @@ router.post('/summarize', async (req, res) => {
 
   try {
     const { files } = req.body;
+    const lang = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
+    const inLang = langLabel(lang);
     let streamModel = MODEL_LABEL;
 
     for (const file of files) {
@@ -28,9 +35,8 @@ router.post('/summarize', async (req, res) => {
       const truncated = text.slice(0, LIMITS.summaryChars);
       send({ type: 'start', name: file.name });
 
-      // Le contenu du cours est mis en cache côté Claude pour les appels suivants
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
-      const prompt = `Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet en français, structuré en Markdown, avec exactement ce plan :
+      const prompt = `Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}, structuré en Markdown, avec exactement ce plan :
 
 ## 🎯 Objectifs du cours
 (2-3 phrases sur ce que l'étudiant va apprendre)
@@ -69,9 +75,11 @@ router.post('/quiz', async (req, res) => {
 
   try {
     const { files } = req.body;
-    const VALID_DIFF  = ['facile', 'moyen', 'difficile'];
-    const difficulty  = VALID_DIFF.includes(req.body.difficulty) ? req.body.difficulty : 'moyen';
-    const count       = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
+    const lang       = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
+    const inLang     = langLabel(lang);
+    const VALID_DIFF = ['facile', 'moyen', 'difficile'];
+    const difficulty = VALID_DIFF.includes(req.body.difficulty) ? req.body.difficulty : 'moyen';
+    const count      = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
 
     const results = await Promise.all(files.map(async file => {
       const text      = await extractText(file.path, file.name);
@@ -94,7 +102,7 @@ Varie obligatoirement les types de questions parmi :
 N'utilise pas deux fois le même type de question consécutivement.`;
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
-      const prompt = `Génère ${count} questions QCM de niveau ${difficulty} en français basées sur ce cours.
+      const prompt = `Génère ${count} questions QCM de niveau ${difficulty} ${inLang} basées sur ce cours.
 ${difficultyGuide}
 ${questionTypes}
 
@@ -154,13 +162,15 @@ router.post('/exam-sheet', async (req, res) => {
     const { files } = req.body;
     if (!files || !files.length) return res.status(400).json({ error: 'Aucun fichier sélectionné' });
 
+    const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
+    const inLang = langLabel(lang);
     let context = '';
     for (const file of files.slice(0, 5)) {
       const text = await extractText(file.path, file.name);
       context += `\n\n=== ${file.name} ===\n${text.slice(0, 18000)}`;
     }
 
-    const { text, model } = await aiComplete(`Tu es un enseignant exigeant qui prépare une fiche d'examen en français.
+    const { text, model } = await aiComplete(`Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
 
 À partir des cours fournis, produis une fiche de révision dense, claire et directement exploitable avant un contrôle.
 
@@ -200,6 +210,8 @@ router.post('/flashcards', async (req, res) => {
 
   try {
     const { files } = req.body;
+    const lang      = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
+    const inLang    = langLabel(lang);
     const count     = Math.min(parseInt(req.body.count) || 10, LIMITS.flashMaxCount);
 
     const results = await Promise.all(files.map(async file => {
@@ -207,7 +219,7 @@ router.post('/flashcards', async (req, res) => {
       const truncated = text.slice(0, LIMITS.flashChars);
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
-      const prompt = `Tu es un assistant pédagogique. Génère ${count} flashcards en français pour aider à mémoriser les concepts essentiels.
+      const prompt = `Tu es un assistant pédagogique. Génère ${count} flashcards ${inLang} pour aider à mémoriser les concepts essentiels.
 
 Chaque flashcard doit avoir :
 - Un RECTO : une question courte, un terme, ou un concept clé

@@ -28,6 +28,9 @@
     </button>
   </div>
   <div class="header-actions header-actions-right">
+    <button class="settings-btn" id="settings-btn" title="Paramètres">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
     <button class="theme-toggle" id="theme-toggle" title="Changer de thème">🌙</button>
   </div>
   <div class="header-content">
@@ -414,6 +417,137 @@
     <span class="fnav-label">Fiche</span>
   </button>
 </nav>
+
+<!-- ── SETTINGS DRAWER ── -->
+<div class="drawer-overlay hidden" id="settings-overlay"></div>
+<aside class="settings-drawer hidden" id="settings-drawer">
+  <div class="drawer-header">
+    <h2>Paramètres</h2>
+    <button class="drawer-close" id="settings-close">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <div class="drawer-body">
+
+    <!-- Mon compte -->
+    <section class="settings-section">
+      <h3 class="settings-section-title">Mon compte</h3>
+      <div class="settings-account-card" id="settings-account-card">
+        <div class="sac-avatar" id="sac-avatar">?</div>
+        <div class="sac-info">
+          <strong id="sac-name">—</strong>
+          <span id="sac-email">—</span>
+          <span class="sac-plan" id="sac-plan"></span>
+        </div>
+        <a href="/profile.html" class="sac-edit-btn">Modifier</a>
+      </div>
+    </section>
+
+    <!-- Apparence -->
+    <section class="settings-section">
+      <h3 class="settings-section-title">Apparence</h3>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Thème</span>
+          <small>Clair ou sombre</small>
+        </div>
+        <div class="theme-switch" id="theme-switch">
+          <button class="ts-btn" data-theme="light">☀️ Clair</button>
+          <button class="ts-btn" data-theme="dark">🌙 Sombre</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Réduire les animations</span>
+          <small>Désactive les transitions</small>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="pref-reduce-motion"/>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Préférences IA -->
+    <section class="settings-section">
+      <h3 class="settings-section-title">Préférences IA</h3>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Langue des réponses</span>
+          <small>Langue utilisée par l'IA</small>
+        </div>
+        <select class="settings-select" id="pref-lang">
+          <option value="fr">🇫🇷 Français</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="ar">🇸🇦 العربية</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Questions quiz par défaut</span>
+          <small>Nombre pré-rempli au lancement</small>
+        </div>
+        <input type="number" class="settings-number" id="pref-quiz-count" min="3" max="20" value="5"/>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Difficulté par défaut</span>
+          <small>Niveau pré-sélectionné</small>
+        </div>
+        <select class="settings-select" id="pref-quiz-difficulty">
+          <option value="facile">Facile</option>
+          <option value="moyen">Moyen</option>
+          <option value="difficile">Difficile</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Flashcards par défaut</span>
+          <small>Nombre de cartes générées</small>
+        </div>
+        <input type="number" class="settings-number" id="pref-fc-count" min="5" max="40" value="10"/>
+      </div>
+    </section>
+
+    <!-- Données & vie privée -->
+    <section class="settings-section">
+      <h3 class="settings-section-title">Données &amp; vie privée</h3>
+      <div class="settings-danger-row">
+        <div class="settings-row-label">
+          <span>Historique des sessions</span>
+          <small>Sessions sauvegardées localement</small>
+        </div>
+        <button class="settings-danger-btn" id="clear-history-btn">Effacer</button>
+      </div>
+      <div class="settings-danger-row">
+        <div class="settings-row-label">
+          <span>Statistiques quiz</span>
+          <small>Scores et progression</small>
+        </div>
+        <button class="settings-danger-btn" id="clear-stats-btn">Réinitialiser</button>
+      </div>
+      <div class="settings-danger-row">
+        <div class="settings-row-label">
+          <span>Tutoriel d'accueil</span>
+          <small>Réafficher le guide de démarrage</small>
+        </div>
+        <button class="settings-neutral-btn" id="reset-onboarding-btn">Réafficher</button>
+      </div>
+    </section>
+
+    <!-- À propos -->
+    <section class="settings-section settings-section-last">
+      <h3 class="settings-section-title">À propos</h3>
+      <div class="settings-about">
+        <span class="about-logo">EDU <em>AI</em></span>
+        <span class="about-version">v1.0 · Plateforme IA pédagogique</span>
+        <a href="/index.html" class="about-link" target="_blank">Page d'accueil ↗</a>
+      </div>
+    </section>
+
+  </div>
+</aside>
 
 <!-- Loader -->
 <div class="loader hidden" id="loader">
