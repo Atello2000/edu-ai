@@ -8,11 +8,40 @@ async function initAuth() {
     if (!data.user) { window.location.href = '/login.html'; return false; }
     currentUser = data.user;
     renderUserMenu();
+    applyPlanRestrictions();
+    showOnboarding();
     return true;
   } catch {
     window.location.href = '/login.html';
     return false;
   }
+}
+
+function applyPlanRestrictions() {
+  const plan = currentUser.plan;
+
+  // Pharma : visible seulement pour Max
+  const pharmaToggle = document.getElementById('pharma-toggle');
+  const pharmaSection = document.getElementById('pharma-section');
+  const pharmaFnav = document.querySelector('.fnav-pharma');
+  if (plan !== 'max') {
+    pharmaToggle?.classList.add('hidden');
+    pharmaSection?.classList.add('hidden');
+    pharmaFnav?.classList.add('hidden');
+  } else {
+    pharmaToggle?.classList.remove('hidden');
+  }
+
+  // Bibliothèque : cacher le bouton dashboard en prod
+  if (!isLocal) {
+    document.getElementById('dash-library-btn')?.classList.add('hidden');
+  }
+}
+
+function showOnboarding() {
+  if (localStorage.getItem('edu-ai-onboarded')) return;
+  const modal = document.getElementById('onboarding-modal');
+  if (modal) modal.classList.remove('hidden');
 }
 
 function renderUserMenu() {
@@ -33,6 +62,7 @@ function renderUserMenu() {
         <span class="user-plan plan-${currentUser.plan}">${currentUser.plan === 'pro' ? '✦ Pro' : 'Gratuit'}</span>
       </div>
       <hr class="dropdown-sep"/>
+      <a href="/profile.html" class="dropdown-item" style="display:block;text-decoration:none;color:var(--text)">Mon profil</a>
       <button class="dropdown-item" id="logout-btn">Se déconnecter</button>
     </div>`;
   actionsRight.prepend(menu);
@@ -2007,7 +2037,7 @@ const pharmaToggleBtn = document.getElementById('pharma-toggle');
 const pharmaClearBtn  = document.getElementById('pharma-clear-btn');
 const pharmaExportBtn = document.getElementById('pharma-export-btn');
 
-if (!isLocal) pharmaToggleBtn.classList.add('hidden');
+// visibilité pharma gérée par initAuth() selon le plan
 
 pharmaToggleBtn.addEventListener('click', () => {
   const isHidden = pharmaSection.classList.toggle('hidden');
@@ -2283,6 +2313,12 @@ pharmaFicheGen.addEventListener('click', async () => {
     if (data.model) setModelBadge('pharma-section', data.model);
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
+});
+
+// ── ONBOARDING ────────────────────────────────────────────────────────────────
+document.getElementById('onboarding-close')?.addEventListener('click', () => {
+  document.getElementById('onboarding-modal').classList.add('hidden');
+  localStorage.setItem('edu-ai-onboarded', '1');
 });
 
 // Init

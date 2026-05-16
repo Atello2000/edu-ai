@@ -2,6 +2,14 @@ const express = require('express');
 const router  = express.Router();
 const { anthropic, aiComplete } = require('../services/ai');
 
+function requireMax(req, res, next) {
+  if (!req.user || req.user.plan !== 'max')
+    return res.status(403).json({ error: 'Le module Régulation Pharmaceutique est réservé au plan Max.' });
+  next();
+}
+
+router.use(requireMax);
+
 const PHARMA_SYSTEM = `Tu es un expert senior en régulation pharmaceutique avec 20 ans d'expérience. Tu maîtrises :
 - La réglementation européenne (EMA, directives, règlements)
 - La réglementation française (ANSM, AMM, ATU/AAP)

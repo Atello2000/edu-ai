@@ -413,7 +413,7 @@
       <div class="pharma-chat-toolbar">
         <div class="pharma-ai-badge">
           <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="#22c55e"/></svg>
-          Claude Sonnet 4.6
+          Claude Haiku 4.5
         </div>
         <div class="pharma-chat-actions">
           <button class="summary-action-btn" id="pharma-export-btn" title="Exporter la conversation">
@@ -557,6 +557,35 @@
     <div class="spinner"></div>
     <p id="loader-text">Traitement en cours…</p>
     <span class="loader-hint">Cela peut prendre quelques secondes</span>
+  </div>
+</div>
+
+<!-- ── ONBOARDING MODAL ── -->
+<div class="modal-overlay hidden" id="onboarding-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Bienvenue sur EDU <em>AI</em> 👋</h2>
+      <p>Voici comment tirer le meilleur parti de la plateforme</p>
+    </div>
+    <div class="onboarding-steps">
+      <div class="ob-step">
+        <div class="ob-icon purple">📂</div>
+        <div><strong>1. Chargez vos cours</strong><br><span>PDF, PowerPoint ou Word — jusqu'à 20 Mo</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-icon blue">⚡</div>
+        <div><strong>2. Choisissez une action</strong><br><span>Résumé, Quiz, Flashcards ou Chat avec le cours</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-icon teal">🧠</div>
+        <div><strong>3. Révisez intelligemment</strong><br><span>Les flashcards utilisent la révision espacée (SM-2) pour mémoriser durablement</span></div>
+      </div>
+      <div class="ob-step">
+        <div class="ob-icon gold">📊</div>
+        <div><strong>4. Suivez votre progression</strong><br><span>Consultez vos stats depuis le bouton 📊 en haut à gauche</span></div>
+      </div>
+    </div>
+    <button class="act-btn blue full" id="onboarding-close">C'est parti !</button>
   </div>
 </div>
 

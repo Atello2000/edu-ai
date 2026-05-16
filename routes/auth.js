@@ -60,4 +60,31 @@ router.get('/me', (req, res) => {
   res.json({ user });
 });
 
+// ── PUT /api/auth/profile ─────────────────────────────────────────────────────
+router.put('/profile', async (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Non connecté.' });
+  const { name, currentPassword, newPassword } = req.body || {};
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+  if (!user) return res.status(401).json({ error: 'Session invalide.' });
+
+  // Changer le nom
+  if (name && name.trim()) {
+    db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), user.id);
+  }
+
+  // Changer le mot de passe
+  if (newPassword) {
+    if (!currentPassword) return res.status(400).json({ error: 'Mot de passe actuel requis.' });
+    if (newPassword.length < 8) return res.status(400).json({ error: 'Nouveau mot de passe trop court (8 caractères minimum).' });
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
+    const hash = await bcrypt.hash(newPassword, 12);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, user.id);
+  }
+
+  const updated = db.prepare('SELECT id, email, name, plan, created_at FROM users WHERE id = ?').get(user.id);
+  res.json({ user: updated });
+});
+
 module.exports = router;

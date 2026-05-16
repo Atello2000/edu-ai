@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDU AI — Révisez plus intelligemment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #070b14; --surface: #0d1422; --card: #111827;
+      --border: #1e2d4a; --text: #e8ecf6; --muted: #6b7fa3;
+      --blue: #3d7eff; --blue-bg: rgba(61,126,255,.09);
+      --gold: #d4a94c; --gold-bg: rgba(212,169,76,.09);
+      --teal: #1dd1a1; --teal-bg: rgba(29,209,161,.09);
+      --purple: #a78bfa; --purple-bg: rgba(167,139,250,.09);
+      --radius: 16px; --radius-sm: 10px;
+    }
+    [data-theme="light"] {
+      --bg: #f2f1ed; --surface: #fff; --card: #fff;
+      --border: #ddd8d0; --text: #1a1a2e; --muted: #6b7280;
+      --blue: #2563eb; --gold: #a0720a;
+    }
+
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    a { text-decoration: none; }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 2rem; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: var(--bg); z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; }
+    .nav-logo em { color: var(--blue); font-style: italic; }
+    .nav-actions { display: flex; gap: .75rem; align-items: center; }
+    .btn-outline {
+      border: 1px solid var(--border); border-radius: 8px; padding: .45rem 1.1rem;
+      color: var(--text); font-family: 'Outfit', sans-serif; font-size: .88rem;
+      cursor: pointer; background: transparent; transition: border-color .2s;
+    }
+    .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-primary {
+      background: var(--blue); color: #fff; border: none; border-radius: 8px;
+      padding: .48rem 1.2rem; font-family: 'Outfit', sans-serif; font-size: .88rem;
+      font-weight: 600; cursor: pointer; transition: opacity .2s;
+    }
+    .btn-primary:hover { opacity: .88; }
+
+    /* HERO */
+    .hero {
+      text-align: center; padding: 5rem 2rem 4rem;
+      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(61,126,255,.18) 0%, transparent 65%);
+    }
+    .hero-badge {
+      display: inline-block; background: var(--blue-bg); color: var(--blue);
+      border: 1px solid rgba(61,126,255,.25); border-radius: 99px;
+      padding: .3rem .9rem; font-size: .8rem; font-weight: 500; margin-bottom: 1.5rem;
+    }
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(2.8rem, 7vw, 5rem);
+      font-weight: 300; line-height: 1.1; margin-bottom: 1.25rem; max-width: 700px; margin-inline: auto;
+    }
+    .hero h1 em { color: var(--blue); font-style: italic; }
+    .hero p {
+      color: var(--muted); font-size: 1.1rem; max-width: 520px;
+      margin: 0 auto 2.5rem;
+    }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-hero {
+      background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm);
+      padding: .85rem 2rem; font-family: 'Outfit', sans-serif; font-size: 1rem;
+      font-weight: 600; cursor: pointer; transition: opacity .2s;
+    }
+    .btn-hero:hover { opacity: .88; }
+    .btn-hero-outline {
+      background: transparent; color: var(--text); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: .85rem 2rem;
+      font-family: 'Outfit', sans-serif; font-size: 1rem; cursor: pointer; transition: border-color .2s;
+    }
+    .btn-hero-outline:hover { border-color: var(--blue); color: var(--blue); }
+
+    /* FEATURES */
+    .section { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--blue); margin-bottom: .75rem; }
+    .section h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 300; margin-bottom: 3rem; }
+    .section h2 em { color: var(--blue); font-style: italic; }
+
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+    .feature-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.5rem; transition: border-color .2s;
+    }
+    .feature-card:hover { border-color: var(--blue); }
+    .feat-icon {
+      width: 2.6rem; height: 2.6rem; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.25rem; margin-bottom: 1rem;
+    }
+    .feat-icon.purple { background: var(--purple-bg); }
+    .feat-icon.blue   { background: var(--blue-bg); }
+    .feat-icon.teal   { background: var(--teal-bg); }
+    .feat-icon.gold   { background: var(--gold-bg); }
+    .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: .4rem; }
+    .feature-card p  { font-size: .85rem; color: var(--muted); }
+
+    /* PRICING */
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
+    .price-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.75rem 1.5rem; position: relative;
+    }
+    .price-card.featured { border-color: var(--blue); background: var(--blue-bg); }
+    .price-badge {
+      position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+      background: var(--blue); color: #fff; font-size: .7rem; font-weight: 700;
+      padding: .2rem .8rem; border-radius: 99px; text-transform: uppercase; letter-spacing: .06em;
+    }
+    .plan-name { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
+    .plan-price { font-size: 2.4rem; font-weight: 700; line-height: 1; }
+    .plan-price span { font-size: .9rem; font-weight: 400; color: var(--muted); }
+    .plan-features { margin: 1.25rem 0; display: flex; flex-direction: column; gap: .5rem; }
+    .plan-feat { font-size: .84rem; color: var(--muted); display: flex; gap: .5rem; }
+    .plan-feat::before { content: '✓'; color: var(--teal); font-weight: 700; flex-shrink: 0; }
+    .plan-cta {
+      width: 100%; padding: .7rem; border-radius: var(--radius-sm);
+      font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 600;
+      cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+      color: var(--text); transition: all .2s;
+    }
+    .price-card.featured .plan-cta { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .plan-cta:hover { opacity: .88; }
+
+    /* FAQ */
+    .faq { display: flex; flex-direction: column; gap: .75rem; }
+    .faq-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+    .faq-q { padding: 1rem 1.25rem; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .faq-q::after { content: '▼'; font-size: .7rem; color: var(--muted); transition: transform .2s; }
+    .faq-item.open .faq-q::after { transform: rotate(180deg); }
+    .faq-a { display: none; padding: 0 1.25rem 1rem; font-size: .88rem; color: var(--muted); }
+    .faq-item.open .faq-a { display: block; }
+
+    /* FOOTER */
+    footer {
+      text-align: center; padding: 2.5rem; border-top: 1px solid var(--border);
+      color: var(--muted); font-size: .83rem;
+    }
+    footer strong { color: var(--text); }
+
+    .theme-btn {
+      background: transparent; border: 1px solid var(--border); border-radius: 50%;
+      width: 2rem; height: 2rem; cursor: pointer; font-size: .9rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 1rem; }
+      .hero { padding: 3.5rem 1.25rem 3rem; }
+      .section { padding: 3rem 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">EDU <em>AI</em></div>
+  <div class="nav-actions">
+    <button class="theme-btn" id="theme-btn">🌙</button>
+    <a href="/login.html" class="btn-outline">Connexion</a>
+    <a href="/login.html#register" class="btn-primary">Commencer</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">Propulsé par Claude & Llama 3.3</div>
+  <h1>Révisez plus <em>intelligemment</em></h1>
+  <p>Chargez vos cours PDF ou PowerPoint — l'IA génère résumés, quiz, flashcards et répond à toutes vos questions.</p>
+  <div class="hero-btns">
+    <a href="/login.html#register" class="btn-hero">Créer un compte gratuit</a>
+    <a href="/login.html" class="btn-hero-outline">Se connecter</a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<div class="section">
+  <div class="section-label">Fonctionnalités</div>
+  <h2>Tout ce dont vous avez besoin pour <em>réussir</em></h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feat-icon purple">📄</div>
+      <h3>Résumés structurés</h3>
+      <p>5 sections claires générées en quelques secondes : objectifs, points clés, résumé détaillé, concepts et à retenir.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon blue">❓</div>
+      <h3>Quiz QCM adaptatif</h3>
+      <p>Questions générées depuis vos cours, 3 niveaux de difficulté, mode examen avec chronomètre.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon teal">🃏</div>
+      <h3>Flashcards intelligentes</h3>
+      <p>Algorithme de révision espacée SM-2 — vous révisez ce que vous ne maîtrisez pas encore, au bon moment.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon gold">💬</div>
+      <h3>Chat avec le cours</h3>
+      <p>Posez n'importe quelle question sur vos fichiers. Joignez un devoir ou une image pour le faire corriger par l'IA.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon purple">📋</div>
+      <h3>Fiche d'examen</h3>
+      <p>Définitions, pièges à éviter, tableaux de synthèse et questions probables — générés en un clic.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon blue">📊</div>
+      <h3>Suivi de progression</h3>
+      <p>Tableau de bord avec scores, temps de révision, cartes maîtrisées et statistiques de session.</p>
+    </div>
+  </div>
+</div>
+
+<!-- PRICING -->
+<div class="section" style="background:var(--surface);max-width:100%;padding:4rem 2rem">
+  <div style="max-width:1100px;margin:0 auto">
+    <div class="section-label">Tarifs</div>
+    <h2>Simple et <em>transparent</em></h2>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <div class="plan-name">Gratuit</div>
+        <div class="plan-price">0€ <span>/ mois</span></div>
+        <div class="plan-features">
+          <div class="plan-feat">3 résumés / jour</div>
+          <div class="plan-feat">5 quiz / jour</div>
+          <div class="plan-feat">5 flashcards / jour</div>
+          <div class="plan-feat">5 messages chat / jour</div>
+          <div class="plan-feat">PDF, PPT, DOCX</div>
+        </div>
+        <a href="/login.html#register"><button class="plan-cta">Commencer gratuitement</button></a>
+      </div>
+      <div class="price-card featured">
+        <div class="price-badge">Populaire</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">4€ <span>/ mois</span></div>
+        <div class="plan-features">
+          <div class="plan-feat">15 résumés / jour</div>
+          <div class="plan-feat">30 quiz / jour</div>
+          <div class="plan-feat">30 flashcards / jour</div>
+          <div class="plan-feat">20 messages chat / jour</div>
+          <div class="plan-feat">Priorité de traitement</div>
+        </div>
+        <a href="/login.html#register"><button class="plan-cta">Choisir Pro</button></a>
+      </div>
+      <div class="price-card">
+        <div class="plan-name">Max</div>
+        <div class="plan-price">9€ <span>/ mois</span></div>
+        <div class="plan-features">
+          <div class="plan-feat">50 résumés / jour</div>
+          <div class="plan-feat">100 quiz / jour</div>
+          <div class="plan-feat">100 flashcards / jour</div>
+          <div class="plan-feat">60 messages chat / jour</div>
+          <div class="plan-feat">Module Régulation Pharma</div>
+        </div>
+        <a href="/login.html#register"><button class="plan-cta">Choisir Max</button></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="section">
+  <div class="section-label">FAQ</div>
+  <h2>Questions <em>fréquentes</em></h2>
+  <div class="faq">
+    <div class="faq-item">
+      <div class="faq-q">Quels types de fichiers sont acceptés ?</div>
+      <div class="faq-a">PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers en même temps.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Mes cours sont-ils stockés sur vos serveurs ?</div>
+      <div class="faq-a">Les fichiers uploadés sont temporaires et supprimés après traitement. Vos données de progression (quiz, flashcards) sont liées à votre compte.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Comment fonctionne la révision espacée ?</div>
+      <div class="faq-a">L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées, pour maximiser la mémorisation à long terme.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Puis-je annuler mon abonnement ?</div>
+      <div class="faq-a">Oui, à tout moment. Votre compte repasse automatiquement en plan Gratuit à la fin de la période payée.</div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <strong>EDU AI</strong> — Révisez plus intelligemment &nbsp;·&nbsp;
+  <a href="/login.html" style="color:var(--blue)">Connexion</a> &nbsp;·&nbsp;
+  <a href="/login.html#register" style="color:var(--blue)">Inscription</a>
+</footer>
+
+<script>
+  const saved = localStorage.getItem('edu-ai-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('theme-btn');
+  btn.textContent = saved === 'dark' ? '🌙' : '☀️';
+  btn.onclick = () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('edu-ai-theme', next);
+    btn.textContent = next === 'dark' ? '🌙' : '☀️';
+  };
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-q').forEach(q => {
+    q.onclick = () => q.parentElement.classList.toggle('open');
+  });
+
+  // Si déjà connecté → app directement
+  fetch('/api/auth/me').then(r => r.json()).then(d => {
+    if (d.user) window.location.href = '/';
+  });
+</script>
+</body>
+</html>

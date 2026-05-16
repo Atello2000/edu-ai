@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EDU AI — Mon profil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:2rem; }
+    .profile-card { width:100%; max-width:460px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:2.25rem; box-shadow:var(--shadow-lg); }
+    .profile-header { text-align:center; margin-bottom:2rem; }
+    .profile-avatar { width:4rem; height:4rem; border-radius:50%; background:var(--blue); color:#fff; font-size:1.7rem; font-weight:700; display:flex; align-items:center; justify-content:center; margin:0 auto .9rem; }
+    .profile-header h2 { font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:300; }
+    .profile-header .plan-badge { margin-top:.5rem; display:inline-block; padding:.2rem .7rem; border-radius:99px; font-size:.78rem; font-weight:600; }
+    .plan-free { background:var(--border); color:var(--muted); }
+    .plan-pro  { background:var(--gold-bg); color:var(--gold); border:1px solid var(--gold-dim); }
+    .plan-max  { background:var(--purple-bg); color:var(--purple); border:1px solid var(--purple); }
+
+    .profile-section { margin-bottom:1.75rem; }
+    .profile-section h3 { font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:1rem; padding-bottom:.5rem; border-bottom:1px solid var(--border-sub); }
+
+    .form-group { display:flex; flex-direction:column; gap:.4rem; margin-bottom:.85rem; }
+    .form-group label { font-size:.78rem; font-weight:500; color:var(--muted); }
+    .form-group input { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-xs); padding:.65rem .9rem; font-family:'Outfit',sans-serif; font-size:.93rem; color:var(--text); outline:none; transition:border-color .2s; }
+    .form-group input:focus { border-color:var(--blue); }
+
+    .save-btn { width:100%; background:var(--blue); color:#fff; border:none; border-radius:var(--radius-xs); padding:.75rem; font-family:'Outfit',sans-serif; font-size:.95rem; font-weight:600; cursor:pointer; transition:opacity .2s; }
+    .save-btn:hover { opacity:.88; }
+    .save-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+    .alert { padding:.6rem 1rem; border-radius:var(--radius-xs); font-size:.84rem; margin-bottom:1rem; display:none; }
+    .alert.success { background:var(--teal-bg); color:var(--teal); border:1px solid rgba(29,209,161,.3); display:block; }
+    .alert.error   { background:var(--rose-bg); color:var(--rose); border:1px solid rgba(255,107,129,.3); display:block; }
+
+    .back-link { display:inline-flex; align-items:center; gap:.4rem; color:var(--muted); font-size:.84rem; text-decoration:none; margin-bottom:1.5rem; transition:color .2s; }
+    .back-link:hover { color:var(--text); }
+
+    .quota-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+    .quota-item { background:var(--surface); border:1px solid var(--border-sub); border-radius:var(--radius-xs); padding:.65rem .8rem; }
+    .quota-item .q-action { font-size:.75rem; color:var(--muted); }
+    .quota-item .q-bar { height:4px; background:var(--border); border-radius:2px; margin:.4rem 0; overflow:hidden; }
+    .quota-item .q-fill { height:100%; border-radius:2px; background:var(--blue); transition:width .4s; }
+    .quota-item .q-nums { font-size:.72rem; color:var(--muted); }
+  </style>
+</head>
+<body>
+
+<div class="profile-card">
+  <a href="/" class="back-link">← Retour à l'app</a>
+
+  <div class="profile-header">
+    <div class="profile-avatar" id="profile-avatar">?</div>
+    <h2 id="profile-name">Chargement…</h2>
+    <div class="plan-badge" id="profile-plan"></div>
+  </div>
+
+  <!-- Quota du jour -->
+  <div class="profile-section" id="quota-section" style="display:none">
+    <h3>Quota aujourd'hui</h3>
+    <div class="quota-grid" id="quota-grid"></div>
+  </div>
+
+  <!-- Changer le nom -->
+  <div class="profile-section">
+    <h3>Informations</h3>
+    <div id="name-alert" class="alert"></div>
+    <form id="name-form">
+      <div class="form-group">
+        <label>Nom complet</label>
+        <input type="text" id="input-name" placeholder="Ton prénom et nom" required/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="input-email" disabled style="opacity:.5;cursor:not-allowed"/>
+      </div>
+      <button type="submit" class="save-btn" id="name-btn">Enregistrer</button>
+    </form>
+  </div>
+
+  <!-- Changer le mot de passe -->
+  <div class="profile-section">
+    <h3>Mot de passe</h3>
+    <div id="pwd-alert" class="alert"></div>
+    <form id="pwd-form">
+      <div class="form-group">
+        <label>Mot de passe actuel</label>
+        <input type="password" id="input-current-pwd" placeholder="••••••••" required/>
+      </div>
+      <div class="form-group">
+        <label>Nouveau mot de passe</label>
+        <input type="password" id="input-new-pwd" placeholder="8 caractères minimum" required minlength="8"/>
+      </div>
+      <button type="submit" class="save-btn" id="pwd-btn">Changer le mot de passe</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const saved = localStorage.getItem('edu-ai-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+
+  const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
+  const QUOTA_LABELS = { summarize: 'Résumés', quiz: 'Quiz', flashcards: 'Flashcards', chat: 'Chat' };
+
+  async function load() {
+    const r = await fetch('/api/auth/me');
+    const d = await r.json();
+    if (!d.user) { window.location.href = '/login.html'; return; }
+    const u = d.user;
+
+    document.getElementById('profile-avatar').textContent = u.name.charAt(0).toUpperCase();
+    document.getElementById('profile-name').textContent   = u.name;
+    document.getElementById('input-name').value           = u.name;
+    document.getElementById('input-email').value          = u.email;
+
+    const planEl = document.getElementById('profile-plan');
+    planEl.textContent  = PLAN_LABELS[u.plan] || u.plan;
+    planEl.className    = `plan-badge plan-${u.plan}`;
+
+    // Quota
+    const qRes = await fetch('/api/quota');
+    const qData = await qRes.json();
+    if (!qData.unlimited) {
+      document.getElementById('quota-section').style.display = 'block';
+      const grid = document.getElementById('quota-grid');
+      grid.innerHTML = Object.entries(QUOTA_LABELS).map(([key, label]) => {
+        const used = qData[key]?.used ?? 0;
+        const limit = qData[key]?.limit ?? 1;
+        const pct = Math.min(100, Math.round(used / limit * 100));
+        const color = pct >= 90 ? 'var(--rose)' : pct >= 60 ? 'var(--gold)' : 'var(--blue)';
+        return `<div class="quota-item">
+          <div class="q-action">${label}</div>
+          <div class="q-bar"><div class="q-fill" style="width:${pct}%;background:${color}"></div></div>
+          <div class="q-nums">${used} / ${limit} aujourd'hui</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  function showAlert(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `alert ${type}`;
+    setTimeout(() => { el.className = 'alert'; }, 4000);
+  }
+
+  document.getElementById('name-form').onsubmit = async e => {
+    e.preventDefault();
+    const btn = document.getElementById('name-btn');
+    btn.disabled = true;
+    const r = await fetch('/api/auth/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: document.getElementById('input-name').value })
+    });
+    const d = await r.json();
+    btn.disabled = false;
+    if (d.error) showAlert('name-alert', d.error, 'error');
+    else {
+      showAlert('name-alert', 'Nom mis à jour !', 'success');
+      document.getElementById('profile-name').textContent  = d.user.name;
+      document.getElementById('profile-avatar').textContent = d.user.name.charAt(0).toUpperCase();
+    }
+  };
+
+  document.getElementById('pwd-form').onsubmit = async e => {
+    e.preventDefault();
+    const btn = document.getElementById('pwd-btn');
+    btn.disabled = true;
+    const r = await fetch('/api/auth/profile', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentPassword: document.getElementById('input-current-pwd').value,
+        newPassword:     document.getElementById('input-new-pwd').value,
+      })
+    });
+    const d = await r.json();
+    btn.disabled = false;
+    if (d.error) showAlert('pwd-alert', d.error, 'error');
+    else {
+      showAlert('pwd-alert', 'Mot de passe changé !', 'success');
+      document.getElementById('pwd-form').reset();
+    }
+  };
+
+  load();
+</script>
+</body>
+</html>
