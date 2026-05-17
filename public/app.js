@@ -2081,43 +2081,35 @@ fetchQuota();
 // ── PWA SERVICE WORKER ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(reg => {
+    // SW déjà en attente (onglet rouvert après déploiement)
+    if (reg.waiting) applyUpdate(reg.waiting);
+
     reg.addEventListener('updatefound', () => {
       const newSW = reg.installing;
       newSW.addEventListener('statechange', () => {
         if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-          showUpdateBanner(newSW);
+          applyUpdate(newSW);
         }
       });
     });
   }).catch(() => {});
+
+  // Recharge la page dès que le nouveau SW prend le contrôle
+  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
 }
 
-function showUpdateBanner(newSW) {
-  if (document.getElementById('update-banner')) return;
-  const banner = document.createElement('div');
-  banner.id = 'update-banner';
-  banner.innerHTML = `
-    <span>✦ Nouvelle version disponible</span>
-    <button id="update-reload-btn">Mettre à jour</button>
-    <button id="update-dismiss-btn">✕</button>`;
-  banner.style.cssText = `
+function applyUpdate(newSW) {
+  // Toast discret, puis mise à jour automatique après 2 s
+  const toast = document.createElement('div');
+  toast.textContent = '✦ Mise à jour en cours…';
+  toast.style.cssText = `
     position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);
     background:#1a2540;border:1px solid #3d7eff;color:#e8ecf6;
-    padding:.65rem 1.1rem;border-radius:10px;display:flex;gap:.75rem;
-    align-items:center;z-index:9999;box-shadow:0 8px 28px rgba(0,0,0,.4);
-    font-family:'Outfit',sans-serif;font-size:.88rem;white-space:nowrap;`;
-  document.body.appendChild(banner);
-
-  document.getElementById('update-reload-btn').style.cssText =
-    'background:#3d7eff;color:#fff;border:none;border-radius:6px;padding:.3rem .9rem;font-weight:600;cursor:pointer;font-family:inherit;';
-  document.getElementById('update-dismiss-btn').style.cssText =
-    'background:none;border:none;color:#6b7fa3;cursor:pointer;font-size:1rem;padding:0 .2rem;';
-
-  document.getElementById('update-reload-btn').onclick = () => {
-    newSW.postMessage({ type: 'SKIP_WAITING' });
-    navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
-  };
-  document.getElementById('update-dismiss-btn').onclick = () => banner.remove();
+    padding:.6rem 1.2rem;border-radius:10px;z-index:9999;
+    font-family:'Outfit',sans-serif;font-size:.85rem;
+    box-shadow:0 8px 28px rgba(0,0,0,.4);pointer-events:none;`;
+  document.body.appendChild(toast);
+  setTimeout(() => newSW.postMessage({ type: 'SKIP_WAITING' }), 2000);
 }
 
 
