@@ -1818,14 +1818,16 @@ const NAV_SECTIONS = ['summary-section','quiz-section','flashcard-section','chat
 
 function refreshFloatNav() {
   const hasFiles = uploadedFilesMeta && uploadedFilesMeta.length > 0;
-  floatNav.classList.toggle('hidden', generatedSections.size === 0 && !hasFiles);
+  const hasActivity = generatedSections.size > 0 || hasFiles;
+  floatNav.classList.toggle('hidden', !hasActivity);
 
   floatNav.querySelectorAll('.fnav-btn').forEach(btn => {
     const target = btn.dataset.target;
     if (target === 'dashboard-panel') {
       btn.classList.toggle('active', !document.getElementById('dashboard-panel').classList.contains('hidden'));
     } else if (target === 'actions-section') {
-      btn.classList.toggle('hidden', !hasFiles);
+      // Visible dès qu'il y a eu une activité (fichiers chargés ou sections générées)
+      btn.classList.toggle('hidden', !hasActivity);
       btn.classList.toggle('active', !document.getElementById('actions-section')?.classList.contains('hidden'));
     } else if (btn.classList.contains('fnav-generated')) {
       btn.classList.toggle('hidden', !generatedSections.has(target));
