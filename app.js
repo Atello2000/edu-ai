@@ -14,6 +14,16 @@ app.use(express.json({ limit: '10mb' }));
 
 app.use(cookieParser());
 
+// Sert sw.js avec la version du déploiement injectée + no-cache pour détection instantanée
+const SW_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_DEPLOYMENT_ID || String(Date.now());
+app.get('/sw.js', (req, res) => {
+  const swPath = path.join(__dirname, 'public', 'sw.js');
+  const content = fs.readFileSync(swPath, 'utf8').replace('__CACHE_VERSION__', SW_VERSION);
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.send(content);
+});
+
 app.use(express.static('public'));
 app.use('/api', globalLimiter);
 
