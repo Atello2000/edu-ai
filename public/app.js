@@ -89,7 +89,8 @@ function showPanel(id) {
 }
 
 function refreshActionsAvailability() {
-  const hasFiles = uploadedFilesMeta && uploadedFilesMeta.length > 0;
+  // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
+  const hasFiles = uploadedFilesMeta && uploadedFilesMeta.some(f => f.text || f.path);
   const notice = document.getElementById('no-files-notice');
   const fileArea = document.querySelector('#actions-section .file-select-area');
   if (notice) notice.classList.toggle('hidden', hasFiles);

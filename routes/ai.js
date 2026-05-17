@@ -9,6 +9,12 @@ function langLabel(lang) {
   return { fr: 'en français', en: 'in English', ar: 'باللغة العربية' }[lang] || 'en français';
 }
 
+async function getFileText(file) {
+  if (file.text) return file.text;
+  if (!file.path) throw new Error(`Contenu du fichier "${file.name}" indisponible. Veuillez le re-charger.`);
+  return extractText(file.path, file.name);
+}
+
 // ── Résumé (SSE streaming) ────────────────────────────────────────────────────
 router.post('/summarize', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -31,7 +37,7 @@ router.post('/summarize', async (req, res) => {
     let streamModel = MODEL_LABEL;
 
     for (const file of files) {
-      const text     = file.text || await extractText(file.path, file.name);
+      const text     = await getFileText(file);
       const truncated = text.slice(0, LIMITS.summaryChars);
       send({ type: 'start', name: file.name });
 
@@ -82,7 +88,7 @@ router.post('/quiz', async (req, res) => {
     const count      = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
 
     const results = await Promise.all(files.map(async file => {
-      const text      = await extractText(file.path, file.name);
+      const text      = await getFileText(file);
       const truncated = text.slice(0, LIMITS.quizChars);
 
       const difficultyGuide = {
@@ -166,7 +172,7 @@ router.post('/exam-sheet', async (req, res) => {
     const inLang = langLabel(lang);
     let context = '';
     for (const file of files.slice(0, 5)) {
-      const text = await extractText(file.path, file.name);
+      const text = await getFileText(file);
       context += `\n\n=== ${file.name} ===\n${text.slice(0, 18000)}`;
     }
 
@@ -215,7 +221,7 @@ router.post('/flashcards', async (req, res) => {
     const count     = Math.min(parseInt(req.body.count) || 10, LIMITS.flashMaxCount);
 
     const results = await Promise.all(files.map(async file => {
-      const text      = await extractText(file.path, file.name);
+      const text      = await getFileText(file);
       const truncated = text.slice(0, LIMITS.flashChars);
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
@@ -266,7 +272,7 @@ router.post('/chat', async (req, res) => {
 
     let context = '';
     for (const file of files) {
-      const text = await extractText(file.path, file.name);
+      const text = await getFileText(file);
       context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, LIMITS.chatChars)}`;
     }
 
