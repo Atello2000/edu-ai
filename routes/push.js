@@ -8,13 +8,19 @@ const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
 const VAPID_EMAIL   = `mailto:${process.env.ADMIN_EMAIL || 'admin@edu-ai.app'}`;
 
+let pushEnabled = false;
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
-  webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+  try {
+    webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+    pushEnabled = true;
+  } catch (e) {
+    console.warn('[Push] Clés VAPID invalides — push désactivé:', e.message);
+  }
 }
 
 // GET /api/push/vapid-public-key
 router.get('/vapid-public-key', (req, res) => {
-  if (!VAPID_PUBLIC) return res.status(503).json({ error: 'Push non configuré' });
+  if (!pushEnabled) return res.status(503).json({ error: 'Push non configuré' });
   res.json({ publicKey: VAPID_PUBLIC });
 });
 
@@ -46,7 +52,7 @@ router.delete('/unsubscribe', requireAuth, (req, res) => {
 
 // POST /api/push/notify-due — appelé par le client au login si cartes dues
 router.post('/notify-due', requireAuth, async (req, res) => {
-  if (!VAPID_PUBLIC) return res.json({ sent: false });
+  if (!pushEnabled) return res.json({ sent: false });
   const { dueCount } = req.body || {};
   if (!dueCount || dueCount < 1) return res.json({ sent: false });
 
