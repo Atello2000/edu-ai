@@ -2214,3 +2214,41 @@ main {
 .ob-icon.gold   { background: var(--gold-bg); }
 .ob-step strong { font-size: .9rem; display: block; margin-bottom: .15rem; }
 .ob-step span   { font-size: .8rem; color: var(--muted); }
+
+/* ── Mindmap modal ─────────────────────────────────────────────────────────── */
+.mindmap-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(0,0,0,.72); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.mindmap-overlay.hidden { display: none; }
+.mindmap-modal {
+  width: 100%; max-width: 960px; height: 82vh;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,.5);
+}
+.mindmap-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mindmap-course-name {
+  font-size: .9rem; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mindmap-header-actions { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.mindmap-close-btn {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 1.1rem; line-height: 1;
+  padding: .3rem .5rem; border-radius: var(--radius-xs);
+  transition: color .15s;
+}
+.mindmap-close-btn:hover { color: var(--text); }
+#mindmap-svg {
+  flex: 1; width: 100%;
+  background: var(--surface);
+}

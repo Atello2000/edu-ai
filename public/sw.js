@@ -1,4 +1,4 @@
-const CACHE = 'edu-ai-v4';
+const CACHE = 'edu-ai-v5';
 const ASSETS = ['/', '/index.html', '/app.html', '/style.css', '/app.js', '/manifest.json', '/icon.svg',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap',
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
@@ -15,6 +15,23 @@ self.addEventListener('activate', e => {
     Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
   ));
   self.clients.claim();
+});
+
+self.addEventListener('push', e => {
+  const data = e.data?.json() || {};
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'EDU AI', {
+      body:  data.body  || 'Vous avez des flashcards à réviser.',
+      icon:  data.icon  || '/icon.svg',
+      badge: '/icon.svg',
+      data:  { url: data.url || '/app.html' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.openWindow(e.notification.data?.url || '/app.html'));
 });
 
 self.addEventListener('fetch', e => {

@@ -414,6 +414,7 @@ const SVG = {
   pause:`<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="3" y="2" width="4" height="12" rx="1"/><rect x="9" y="2" width="4" height="12" rx="1"/></svg>`,
   resume:`<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><polygon points="3,2 13,8 3,14"/></svg>`,
   stopIcon:`<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>`,
+  map:`<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="8" cy="8" r="2"/><line x1="8" y1="6" x2="8" y2="2"/><line x1="8" y1="14" x2="8" y2="10"/><line x1="6" y1="8" x2="2" y2="8"/><line x1="14" y1="8" x2="10" y2="8"/><circle cx="8" cy="2" r="1.2" fill="currentColor" stroke="none"/><circle cx="8" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="2" cy="8" r="1.2" fill="currentColor" stroke="none"/><circle cx="14" cy="8" r="1.2" fill="currentColor" stroke="none"/></svg>`,
 };
 
 const SECTION_CONFIG = [
@@ -468,6 +469,7 @@ function renderSummaryItem(r) {
       <button class="summary-action-btn copy-btn" data-text="${encoded}">${SVG.copy} Copier</button>
       <button class="summary-action-btn download-btn" data-name="${r.name}" data-text="${encoded}">${SVG.download} TXT</button>
       <button class="summary-action-btn pdf pdf-btn" data-name="${r.name}">${SVG.pdf} PDF</button>
+      <button class="summary-action-btn mindmap-btn">${SVG.map} Mindmap</button>
     </div>`;
 
   // Toolbar
@@ -539,6 +541,9 @@ function renderSummaryItem(r) {
   });
   item.querySelector('.pdf-btn').addEventListener('click', () =>
     exportSummaryToPDF(baseName, r.summary, sectionsEl)
+  );
+  item.querySelector('.mindmap-btn').addEventListener('click', () =>
+    openMindmap(r.name, r.summary)
   );
   return item;
 }
@@ -2157,12 +2162,139 @@ document.getElementById('reset-onboarding-btn').addEventListener('click', () => 
   if (modal) modal.classList.remove('hidden');
 });
 
+// ── MINDMAP ───────────────────────────────────────────────────────────────────
+let markmapInstance = null;
+const mindmapOverlay    = document.getElementById('mindmap-overlay');
+const mindmapSvgEl      = document.getElementById('mindmap-svg');
+const mindmapCourseName = document.getElementById('mindmap-course-name');
+
+document.getElementById('mindmap-close').addEventListener('click', closeMindmap);
+document.getElementById('mindmap-fit-btn').addEventListener('click', () => markmapInstance?.fit());
+mindmapOverlay.addEventListener('click', e => { if (e.target === mindmapOverlay) closeMindmap(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !mindmapOverlay.classList.contains('hidden')) closeMindmap(); });
+
+function closeMindmap() {
+  mindmapOverlay.classList.add('hidden');
+  mindmapSvgEl.innerHTML = '';
+  markmapInstance = null;
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) return res();
+    const s = Object.assign(document.createElement('script'), { src, onload: res, onerror: rej });
+    document.head.appendChild(s);
+  });
+}
+
+async function openMindmap(courseName, markdown) {
+  mindmapCourseName.textContent = courseName;
+  mindmapOverlay.classList.remove('hidden');
+  mindmapSvgEl.innerHTML = `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+    fill="var(--muted)" font-family="Outfit,sans-serif" font-size="14">Génération de la carte…</text>`;
+
+  try {
+    await loadScript('https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/markmap-lib@0.15/dist/browser/index.js');
+    await loadScript('https://cdn.jsdelivr.net/npm/markmap-view@0.15/dist/browser/index.js');
+  } catch {
+    mindmapSvgEl.innerHTML = `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+      fill="var(--rose)" font-family="Outfit,sans-serif" font-size="14">Erreur de chargement de la bibliothèque</text>`;
+    return;
+  }
+
+  const base = courseName.replace(/\.[^.]+$/, '');
+  const md   = `# ${base}\n\n${markdown}`;
+  const { Transformer, Markmap } = window.markmap;
+  const transformer = new Transformer();
+  const { root }    = transformer.transform(md);
+
+  mindmapSvgEl.innerHTML = '';
+  markmapInstance = Markmap.create(mindmapSvgEl, { paddingX: 16, duration: 300 }, root);
+  markmapInstance.fit();
+}
+
+// ── PUSH NOTIFICATIONS ────────────────────────────────────────────────────────
+function urlBase64ToUint8Array(base64) {
+  const pad  = '='.repeat((4 - base64.length % 4) % 4);
+  const b64  = (base64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw  = atob(b64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function subscribeToPush() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  const permission = await Notification.requestPermission();
+  if (permission !== 'granted') return false;
+  try {
+    const r = await fetch('/api/push/vapid-public-key');
+    const d = await r.json();
+    if (!d.publicKey) return false;
+    const reg  = await navigator.serviceWorker.ready;
+    const sub  = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(d.publicKey)
+    });
+    await fetch('/api/push/subscribe', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub })
+    });
+    localStorage.setItem('edu-ai-push', '1');
+    return true;
+  } catch { return false; }
+}
+
+async function unsubscribeFromPush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await fetch('/api/push/unsubscribe', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: sub.endpoint })
+      });
+      await sub.unsubscribe();
+    }
+  } catch {}
+  localStorage.removeItem('edu-ai-push');
+}
+
+async function notifyDueCardsIfNeeded() {
+  if (localStorage.getItem('edu-ai-push') !== '1') return;
+  const srsData = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
+  const now = Date.now();
+  const dueCount = Object.values(srsData).filter(c => !c.nextReview || c.nextReview <= now).length;
+  if (dueCount > 0) {
+    fetch('/api/push/notify-due', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dueCount })
+    });
+  }
+}
+
+const pushToggle = document.getElementById('pref-push-notif');
+if (pushToggle) {
+  pushToggle.checked = localStorage.getItem('edu-ai-push') === '1';
+  pushToggle.addEventListener('change', async () => {
+    if (pushToggle.checked) {
+      const ok = await subscribeToPush();
+      if (!ok) {
+        pushToggle.checked = false;
+        alert('Notifications refusées ou non disponibles sur ce navigateur.');
+      }
+    } else {
+      await unsubscribeFromPush();
+    }
+  });
+}
+
 // Init
 (async () => {
   const ok = await initAuth();
   if (!ok) return;
   applyPrefs();
   showPanel('dashboard-panel');
+  notifyDueCardsIfNeeded();
   document.getElementById('back-home-btn').addEventListener('click', () => showPanel('dashboard-panel'));
   document.getElementById('header-logo').addEventListener('click', () => showPanel('dashboard-panel'));
 })();

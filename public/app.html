@@ -500,6 +500,21 @@
       </div>
     </section>
 
+    <!-- Notifications -->
+    <section class="settings-section">
+      <h3 class="settings-section-title">Notifications</h3>
+      <div class="settings-row">
+        <div class="settings-row-label">
+          <span>Rappels de révision</span>
+          <small>Notification quand des flashcards sont dues</small>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="pref-push-notif"/>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
     <!-- Données & vie privée -->
     <section class="settings-section">
       <h3 class="settings-section-title">Données &amp; vie privée</h3>
@@ -538,6 +553,20 @@
 
   </div>
 </aside>
+
+<!-- ── MINDMAP MODAL ── -->
+<div class="mindmap-overlay hidden" id="mindmap-overlay">
+  <div class="mindmap-modal">
+    <div class="mindmap-header">
+      <span class="mindmap-course-name" id="mindmap-course-name">Carte mentale</span>
+      <div class="mindmap-header-actions">
+        <button class="ghost-btn" id="mindmap-fit-btn">Centrer</button>
+        <button class="mindmap-close-btn" id="mindmap-close">✕</button>
+      </div>
+    </div>
+    <svg id="mindmap-svg"></svg>
+  </div>
+</div>
 
 <!-- Loader -->
 <div class="loader hidden" id="loader">
