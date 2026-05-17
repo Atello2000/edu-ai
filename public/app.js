@@ -84,7 +84,21 @@ function showPanel(id) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
   const backBtn = document.getElementById('back-home-btn');
   if (backBtn) backBtn.classList.toggle('hidden', id === 'dashboard-panel');
+  if (id === 'actions-section') refreshActionsAvailability();
   refreshFloatNav();
+}
+
+function refreshActionsAvailability() {
+  const hasFiles = uploadedFilesMeta && uploadedFilesMeta.length > 0;
+  const notice = document.getElementById('no-files-notice');
+  const fileArea = document.querySelector('#actions-section .file-select-area');
+  if (notice) notice.classList.toggle('hidden', hasFiles);
+  if (fileArea) fileArea.classList.toggle('hidden', !hasFiles);
+  document.querySelectorAll('#actions-section .act-btn:not(#no-files-upload-btn)').forEach(btn => {
+    btn.disabled = !hasFiles;
+    btn.style.opacity = hasFiles ? '' : '0.4';
+    btn.style.cursor = hasFiles ? '' : 'not-allowed';
+  });
 }
 
 // ── REFS ────────────────────────────────────────────────────────────────────
@@ -1826,8 +1840,8 @@ function refreshFloatNav() {
     if (target === 'dashboard-panel') {
       btn.classList.toggle('active', !document.getElementById('dashboard-panel').classList.contains('hidden'));
     } else if (target === 'actions-section') {
-      // Visible dès qu'il y a eu une activité (fichiers chargés ou sections générées)
-      btn.classList.toggle('hidden', !hasActivity);
+      // Visible seulement quand des fichiers sont réellement en mémoire
+      btn.classList.toggle('hidden', !hasFiles);
       btn.classList.toggle('active', !document.getElementById('actions-section')?.classList.contains('hidden'));
     } else if (btn.classList.contains('fnav-generated')) {
       btn.classList.toggle('hidden', !generatedSections.has(target));
@@ -1988,6 +2002,7 @@ dashContinueBtn?.addEventListener('click', () => {
   if (lastSession) restoreSession(lastSession);
 });
 dashUploadBtn?.addEventListener('click', () => showPanel('upload-section'));
+document.getElementById('no-files-upload-btn')?.addEventListener('click', () => showPanel('upload-section'));
 dashLibraryBtn?.addEventListener('click', () => showPanel('library-panel'));
 document.getElementById('dash-history-btn')?.addEventListener('click', () => {
   renderHistoryPanel(); showPanel('history-panel');
