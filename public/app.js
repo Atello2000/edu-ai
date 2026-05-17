@@ -212,7 +212,10 @@ selectAll.addEventListener('change', () =>
 
 function getSelectedUploadedFiles() {
   const uploaded = Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'))
-    .map(c => ({ id: c.value, name: c.dataset.name, path: c.dataset.path }));
+    .map(c => {
+      const meta = uploadedFilesMeta.find(f => f.id === c.value || f.name === c.dataset.name);
+      return { id: c.value, name: c.dataset.name, path: c.dataset.path || '', text: meta?.text || '' };
+    });
   const library = [];
   libAllSections.forEach(section => section.subjects.forEach(subject =>
     subject.files.forEach(f => { if (libSelectedIds.has(f.id)) library.push(f); })
@@ -1740,8 +1743,15 @@ function saveSession(update) {
   const fileKey = uploadedFilesMeta.map(f=>f.name).sort().join('|');
   let idx = sessions.findIndex(s => s.fileKey === fileKey);
   if (idx === -1) {
-    sessions.unshift({ id: Date.now(), fileKey, timestamp: Date.now(), files: uploadedFilesMeta.map(f=>f.name) });
+    sessions.unshift({
+      id: Date.now(), fileKey, timestamp: Date.now(),
+      files: uploadedFilesMeta.map(f => f.name),
+      filesMeta: uploadedFilesMeta.map(f => ({ name: f.name, text: f.text || '' }))
+    });
     idx = 0;
+  }
+  if (!sessions[idx].filesMeta && uploadedFilesMeta.some(f => f.text)) {
+    sessions[idx].filesMeta = uploadedFilesMeta.map(f => ({ name: f.name, text: f.text || '' }));
   }
   Object.assign(sessions[idx], update, { timestamp: Date.now() });
   localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
@@ -1782,6 +1792,14 @@ function renderHistoryPanel() {
 }
 
 function restoreSession(s) {
+  // Rebuild uploadedFilesMeta from saved text so actions work without re-uploading
+  if (s.filesMeta && s.filesMeta.length) {
+    uploadedFilesMeta = s.filesMeta.map((f, i) => ({
+      id: `restored-${i}`, name: f.name, path: '', text: f.text || '', size: 0
+    }));
+    renderUploadedFiles();
+    refreshActionsAvailability();
+  }
   let firstPanel = 'actions-section';
   if (s.summaries) {
     summaryResults.innerHTML = '';

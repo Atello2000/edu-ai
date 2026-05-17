@@ -31,7 +31,7 @@ router.post('/summarize', async (req, res) => {
     let streamModel = MODEL_LABEL;
 
     for (const file of files) {
-      const text     = await extractText(file.path, file.name);
+      const text     = file.text || await extractText(file.path, file.name);
       const truncated = text.slice(0, LIMITS.summaryChars);
       send({ type: 'start', name: file.name });
 
