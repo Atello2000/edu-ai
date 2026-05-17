@@ -1840,8 +1840,8 @@ function refreshFloatNav() {
     if (target === 'dashboard-panel') {
       btn.classList.toggle('active', !document.getElementById('dashboard-panel').classList.contains('hidden'));
     } else if (target === 'actions-section') {
-      // Visible seulement quand des fichiers sont réellement en mémoire
-      btn.classList.toggle('hidden', !hasFiles);
+      // Visible dès qu'il y a de l'activité (session restaurée ou fichiers chargés)
+      btn.classList.toggle('hidden', !hasActivity);
       btn.classList.toggle('active', !document.getElementById('actions-section')?.classList.contains('hidden'));
     } else if (btn.classList.contains('fnav-generated')) {
       btn.classList.toggle('hidden', !generatedSections.has(target));
