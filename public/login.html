@@ -132,7 +132,7 @@
 
 <script>
   // ── Thème ──
-  const saved = localStorage.getItem('theme') || 'dark';
+  const saved = localStorage.getItem('edu-ai-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
   const themeBtn = document.getElementById('theme-toggle');
   themeBtn.textContent = saved === 'dark' ? '🌙' : '☀️';
@@ -140,7 +140,7 @@
     const cur = document.documentElement.getAttribute('data-theme');
     const next = cur === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+    localStorage.setItem('edu-ai-theme', next);
     themeBtn.textContent = next === 'dark' ? '🌙' : '☀️';
   };
 
@@ -213,7 +213,7 @@
   });
 </script>
 
-<p class="landing-link">Découvrir la plateforme → <a href="/landing.html">En savoir plus</a></p>
+<p class="landing-link">Découvrir la plateforme → <a href="/">En savoir plus</a></p>
 
 </body>
 </html>

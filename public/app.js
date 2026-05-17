@@ -2110,7 +2110,7 @@ document.querySelectorAll('.ts-btn').forEach(btn =>
   btn.addEventListener('click', () => {
     const t = btn.dataset.theme;
     document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('theme', t);
+    localStorage.setItem('edu-ai-theme', t);
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) themeToggle.textContent = t === 'dark' ? '🌙' : '☀️';
     document.querySelectorAll('.ts-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
