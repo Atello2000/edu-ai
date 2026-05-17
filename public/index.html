@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>EDU AI — Révisez plus intelligemment</title>
+  <meta name="description" content="Chargez vos cours PDF ou PowerPoint — l'IA génère résumés, quiz, flashcards et répond à toutes vos questions en quelques secondes."/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,7 +12,7 @@
     :root {
       --bg: #070b14; --surface: #0d1422; --card: #111827;
       --border: #1e2d4a; --text: #e8ecf6; --muted: #6b7fa3;
-      --blue: #3d7eff; --blue-bg: rgba(61,126,255,.09);
+      --blue: #3d7eff; --blue-bg: rgba(61,126,255,.09); --blue-glow: rgba(61,126,255,.25);
       --gold: #d4a94c; --gold-bg: rgba(212,169,76,.09);
       --teal: #1dd1a1; --teal-bg: rgba(29,209,161,.09);
       --purple: #a78bfa; --purple-bg: rgba(167,139,250,.09);
@@ -20,80 +21,219 @@
     [data-theme="light"] {
       --bg: #f2f1ed; --surface: #fff; --card: #fff;
       --border: #ddd8d0; --text: #1a1a2e; --muted: #6b7280;
-      --blue: #2563eb; --gold: #a0720a;
+      --blue: #2563eb; --blue-bg: rgba(37,99,235,.07); --blue-glow: rgba(37,99,235,.2);
+      --gold: #a0720a; --teal: #0d9e7a; --purple: #7c3aed;
     }
 
-    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
-    a { text-decoration: none; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; overflow-x: hidden; }
+    a { text-decoration: none; color: inherit; }
 
-    /* NAV */
+    /* ── ANIMATIONS ── */
+    .fade-up {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+    .fade-up-delay-1 { transition-delay: .1s; }
+    .fade-up-delay-2 { transition-delay: .2s; }
+    .fade-up-delay-3 { transition-delay: .3s; }
+    .fade-up-delay-4 { transition-delay: .4s; }
+    .fade-up-delay-5 { transition-delay: .5s; }
+
+    /* ── NAV ── */
     nav {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 1.25rem 2rem; border-bottom: 1px solid var(--border);
-      position: sticky; top: 0; background: var(--bg); z-index: 100;
-      backdrop-filter: blur(12px);
+      padding: 1.1rem 2.5rem; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; background: rgba(7,11,20,.85); z-index: 100;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     }
+    [data-theme="light"] nav { background: rgba(242,241,237,.88); }
     .nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 300; }
     .nav-logo em { color: var(--blue); font-style: italic; }
+    .nav-links { display: flex; gap: 2rem; align-items: center; }
+    .nav-links a { font-size: .88rem; color: var(--muted); transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
     .nav-actions { display: flex; gap: .75rem; align-items: center; }
     .btn-outline {
       border: 1px solid var(--border); border-radius: 8px; padding: .45rem 1.1rem;
       color: var(--text); font-family: 'Outfit', sans-serif; font-size: .88rem;
-      cursor: pointer; background: transparent; transition: border-color .2s;
+      cursor: pointer; background: transparent; transition: border-color .2s, color .2s;
     }
     .btn-outline:hover { border-color: var(--blue); color: var(--blue); }
     .btn-primary {
       background: var(--blue); color: #fff; border: none; border-radius: 8px;
       padding: .48rem 1.2rem; font-family: 'Outfit', sans-serif; font-size: .88rem;
-      font-weight: 600; cursor: pointer; transition: opacity .2s;
+      font-weight: 600; cursor: pointer; transition: opacity .2s, box-shadow .2s;
     }
-    .btn-primary:hover { opacity: .88; }
+    .btn-primary:hover { opacity: .88; box-shadow: 0 4px 20px var(--blue-glow); }
+    .theme-btn {
+      background: transparent; border: 1px solid var(--border); border-radius: 50%;
+      width: 2rem; height: 2rem; cursor: pointer; font-size: .9rem;
+      display: flex; align-items: center; justify-content: center; transition: border-color .2s;
+    }
+    .theme-btn:hover { border-color: var(--blue); }
 
-    /* HERO */
+    /* ── HERO ── */
     .hero {
-      text-align: center; padding: 5rem 2rem 4rem;
-      background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(61,126,255,.18) 0%, transparent 65%);
+      text-align: center; padding: 6rem 2rem 5rem; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 90% 60% at 50% -5%, rgba(61,126,255,.22) 0%, transparent 65%);
+      pointer-events: none;
     }
     .hero-badge {
-      display: inline-block; background: var(--blue-bg); color: var(--blue);
-      border: 1px solid rgba(61,126,255,.25); border-radius: 99px;
-      padding: .3rem .9rem; font-size: .8rem; font-weight: 500; margin-bottom: 1.5rem;
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: var(--blue-bg); color: var(--blue);
+      border: 1px solid rgba(61,126,255,.3); border-radius: 99px;
+      padding: .32rem 1rem; font-size: .8rem; font-weight: 500; margin-bottom: 1.75rem;
     }
+    .hero-badge::before { content: '✦'; font-size: .65rem; }
     .hero h1 {
-      font-family: 'Cormorant Garamond', serif; font-size: clamp(2.8rem, 7vw, 5rem);
-      font-weight: 300; line-height: 1.1; margin-bottom: 1.25rem; max-width: 700px; margin-inline: auto;
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(2.8rem, 7vw, 5.2rem);
+      font-weight: 300; line-height: 1.08; margin-bottom: 1.4rem; max-width: 760px; margin-inline: auto;
     }
     .hero h1 em { color: var(--blue); font-style: italic; }
     .hero p {
-      color: var(--muted); font-size: 1.1rem; max-width: 520px;
-      margin: 0 auto 2.5rem;
+      color: var(--muted); font-size: 1.15rem; max-width: 560px;
+      margin: 0 auto 2.75rem; line-height: 1.7;
     }
-    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .hero-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 4rem; }
     .btn-hero {
       background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm);
-      padding: .85rem 2rem; font-family: 'Outfit', sans-serif; font-size: 1rem;
-      font-weight: 600; cursor: pointer; transition: opacity .2s;
+      padding: .9rem 2.2rem; font-family: 'Outfit', sans-serif; font-size: 1rem;
+      font-weight: 600; cursor: pointer; transition: opacity .2s, box-shadow .2s;
+      display: inline-flex; align-items: center; gap: .5rem;
     }
-    .btn-hero:hover { opacity: .88; }
+    .btn-hero:hover { opacity: .88; box-shadow: 0 6px 28px var(--blue-glow); }
     .btn-hero-outline {
       background: transparent; color: var(--text); border: 1px solid var(--border);
-      border-radius: var(--radius-sm); padding: .85rem 2rem;
-      font-family: 'Outfit', sans-serif; font-size: 1rem; cursor: pointer; transition: border-color .2s;
+      border-radius: var(--radius-sm); padding: .9rem 2.2rem;
+      font-family: 'Outfit', sans-serif; font-size: 1rem; cursor: pointer;
+      transition: border-color .2s, color .2s;
+      display: inline-flex; align-items: center; gap: .5rem;
     }
     .btn-hero-outline:hover { border-color: var(--blue); color: var(--blue); }
 
-    /* FEATURES */
-    .section { padding: 4rem 2rem; max-width: 1100px; margin: 0 auto; }
-    .section-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--blue); margin-bottom: .75rem; }
-    .section h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 300; margin-bottom: 3rem; }
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: flex; justify-content: center; gap: 3.5rem; flex-wrap: wrap;
+      padding: 2rem 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .stat-item { text-align: center; }
+    .stat-value {
+      font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 600; color: var(--blue);
+      line-height: 1;
+    }
+    .stat-label { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
+
+    /* ── APP MOCKUP ── */
+    .mockup-section {
+      padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; text-align: center;
+    }
+    .app-mockup {
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,.4), 0 0 0 1px var(--border);
+      max-width: 860px; margin: 0 auto;
+    }
+    .mockup-bar {
+      background: var(--surface); padding: .7rem 1.2rem;
+      display: flex; align-items: center; gap: .5rem; border-bottom: 1px solid var(--border);
+    }
+    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mockup-dot.red { background: #ff5f56; }
+    .mockup-dot.yellow { background: #ffbd2e; }
+    .mockup-dot.green { background: #27c93f; }
+    .mockup-url {
+      background: var(--card); border-radius: 4px; padding: .2rem .8rem;
+      font-size: .72rem; color: var(--muted); flex: 1; max-width: 340px; margin: 0 auto;
+      text-align: center;
+    }
+    .mockup-body {
+      display: grid; grid-template-columns: 200px 1fr; min-height: 340px;
+    }
+    .mockup-sidebar {
+      background: var(--surface); border-right: 1px solid var(--border); padding: 1.2rem;
+    }
+    .mockup-sidebar-title {
+      font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--muted); margin-bottom: .8rem;
+    }
+    .mockup-file {
+      display: flex; align-items: center; gap: .5rem; padding: .45rem .6rem;
+      border-radius: 6px; font-size: .78rem; color: var(--muted); margin-bottom: .25rem;
+      cursor: default;
+    }
+    .mockup-file.active { background: var(--blue-bg); color: var(--blue); }
+    .mockup-file .fi { font-size: .9rem; }
+    .mockup-main { padding: 1.5rem; }
+    .mockup-tabs {
+      display: flex; gap: .5rem; margin-bottom: 1.2rem;
+    }
+    .mockup-tab {
+      font-size: .75rem; padding: .3rem .8rem; border-radius: 99px;
+      border: 1px solid var(--border); color: var(--muted); cursor: default;
+    }
+    .mockup-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .mockup-card-preview {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.2rem; margin-bottom: .75rem;
+    }
+    .mockup-card-q { font-size: .82rem; font-weight: 600; margin-bottom: .5rem; }
+    .mockup-card-a { font-size: .78rem; color: var(--muted); }
+    .mockup-card-footer {
+      display: flex; gap: .5rem; margin-top: .8rem;
+    }
+    .mockup-btn {
+      flex: 1; padding: .35rem; border-radius: 6px; font-size: .72rem;
+      font-weight: 600; text-align: center; cursor: default;
+    }
+    .mockup-btn.hard { background: rgba(220,38,38,.15); color: #f87171; }
+    .mockup-btn.ok { background: rgba(234,179,8,.15); color: #facc15; }
+    .mockup-btn.easy { background: rgba(29,209,161,.15); color: var(--teal); }
+    .mockup-progress { display: flex; gap: .75rem; font-size: .72rem; color: var(--muted); align-items: center; margin-top: 1rem; }
+    .mockup-progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .mockup-progress-fill { height: 100%; background: var(--blue); border-radius: 99px; width: 68%; }
+
+    /* ── HOW IT WORKS ── */
+    .section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--blue); margin-bottom: .75rem;
+    }
+    .section h2 {
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(1.9rem, 4vw, 2.9rem);
+      font-weight: 300; margin-bottom: 3rem;
+    }
     .section h2 em { color: var(--blue); font-style: italic; }
 
+    .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; }
+    .step-card {
+      position: relative; padding: 2rem 1.75rem;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    }
+    .step-number {
+      font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; font-weight: 300;
+      color: var(--blue); opacity: .18; position: absolute; top: 1rem; right: 1.5rem;
+      line-height: 1;
+    }
+    .step-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+    .step-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: .5rem; }
+    .step-card p { font-size: .87rem; color: var(--muted); line-height: 1.6; }
+    .step-connector {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--blue); font-size: 1.2rem; padding-top: 2.5rem;
+    }
+
+    /* ── FEATURES ── */
     .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
     .feature-card {
       background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 1.5rem; transition: border-color .2s;
+      padding: 1.5rem; transition: border-color .25s, transform .25s, box-shadow .25s;
     }
-    .feature-card:hover { border-color: var(--blue); }
+    .feature-card:hover { border-color: var(--blue); transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,.2); }
     .feat-icon {
       width: 2.6rem; height: 2.6rem; border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
@@ -104,68 +244,130 @@
     .feat-icon.teal   { background: var(--teal-bg); }
     .feat-icon.gold   { background: var(--gold-bg); }
     .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: .4rem; }
-    .feature-card p  { font-size: .85rem; color: var(--muted); }
+    .feature-card p  { font-size: .85rem; color: var(--muted); line-height: 1.6; }
 
-    /* PRICING */
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
+    /* ── TESTIMONIALS ── */
+    .testimonials-section {
+      padding: 5rem 2rem; background: var(--surface);
+    }
+    .testimonials-inner { max-width: 1100px; margin: 0 auto; }
+    .testimonials-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+    .testimonial-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.75rem; position: relative;
+    }
+    .testimonial-card::before {
+      content: '"'; font-family: 'Cormorant Garamond', serif; font-size: 4rem;
+      color: var(--blue); opacity: .2; position: absolute; top: .5rem; left: 1.25rem;
+      line-height: 1;
+    }
+    .testimonial-text { font-size: .92rem; color: var(--text); line-height: 1.7; margin-bottom: 1.25rem; padding-top: .75rem; }
+    .testimonial-author { display: flex; align-items: center; gap: .75rem; }
+    .testimonial-avatar {
+      width: 2.4rem; height: 2.4rem; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .av-blue { background: linear-gradient(135deg, #3d7eff, #7c3aed); }
+    .av-teal { background: linear-gradient(135deg, #1dd1a1, #2563eb); }
+    .av-gold { background: linear-gradient(135deg, #d4a94c, #e11d48); }
+    .testimonial-name { font-size: .88rem; font-weight: 600; }
+    .testimonial-role { font-size: .78rem; color: var(--muted); }
+    .stars { color: #facc15; font-size: .85rem; margin-bottom: .75rem; }
+
+    /* ── PRICING ── */
+    .pricing-section { padding: 5rem 2rem; background: var(--surface); }
+    .pricing-inner { max-width: 1100px; margin: 0 auto; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem; }
     .price-card {
       background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 1.75rem 1.5rem; position: relative;
+      padding: 2rem 1.75rem; position: relative; transition: transform .25s, box-shadow .25s;
     }
+    .price-card:hover { transform: translateY(-4px); box-shadow: 0 20px 48px rgba(0,0,0,.25); }
     .price-card.featured { border-color: var(--blue); background: var(--blue-bg); }
     .price-badge {
       position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
       background: var(--blue); color: #fff; font-size: .7rem; font-weight: 700;
-      padding: .2rem .8rem; border-radius: 99px; text-transform: uppercase; letter-spacing: .06em;
+      padding: .22rem .9rem; border-radius: 99px; text-transform: uppercase; letter-spacing: .06em;
+      white-space: nowrap;
     }
     .plan-name { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
-    .plan-price { font-size: 2.4rem; font-weight: 700; line-height: 1; }
+    .plan-price { font-size: 2.6rem; font-weight: 700; line-height: 1; margin-bottom: .25rem; }
     .plan-price span { font-size: .9rem; font-weight: 400; color: var(--muted); }
-    .plan-features { margin: 1.25rem 0; display: flex; flex-direction: column; gap: .5rem; }
+    .plan-desc { font-size: .82rem; color: var(--muted); margin-bottom: 1.25rem; }
+    .plan-features { margin: 1.25rem 0; display: flex; flex-direction: column; gap: .55rem; }
     .plan-feat { font-size: .84rem; color: var(--muted); display: flex; gap: .5rem; }
     .plan-feat::before { content: '✓'; color: var(--teal); font-weight: 700; flex-shrink: 0; }
     .plan-cta {
-      width: 100%; padding: .7rem; border-radius: var(--radius-sm);
+      width: 100%; padding: .75rem; border-radius: var(--radius-sm);
       font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 600;
       cursor: pointer; border: 1px solid var(--border); background: var(--surface);
       color: var(--text); transition: all .2s;
     }
     .price-card.featured .plan-cta { background: var(--blue); color: #fff; border-color: var(--blue); }
-    .plan-cta:hover { opacity: .88; }
+    .plan-cta:hover { opacity: .88; box-shadow: 0 4px 16px var(--blue-glow); }
 
-    /* FAQ */
+    /* ── FAQ ── */
     .faq { display: flex; flex-direction: column; gap: .75rem; }
     .faq-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-    .faq-q { padding: 1rem 1.25rem; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .faq-q::after { content: '▼'; font-size: .7rem; color: var(--muted); transition: transform .2s; }
+    .faq-q { padding: 1.1rem 1.25rem; font-weight: 500; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: .95rem; }
+    .faq-q::after { content: '▼'; font-size: .65rem; color: var(--muted); transition: transform .25s; flex-shrink: 0; margin-left: .5rem; }
     .faq-item.open .faq-q::after { transform: rotate(180deg); }
-    .faq-a { display: none; padding: 0 1.25rem 1rem; font-size: .88rem; color: var(--muted); }
+    .faq-a { display: none; padding: 0 1.25rem 1.1rem; font-size: .88rem; color: var(--muted); line-height: 1.7; }
     .faq-item.open .faq-a { display: block; }
 
-    /* FOOTER */
+    /* ── FINAL CTA ── */
+    .cta-section {
+      padding: 6rem 2rem; text-align: center;
+      background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(61,126,255,.13) 0%, transparent 70%);
+      border-top: 1px solid var(--border);
+    }
+    .cta-section h2 {
+      font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 300; margin-bottom: 1rem; line-height: 1.15;
+    }
+    .cta-section h2 em { color: var(--blue); font-style: italic; }
+    .cta-section p { color: var(--muted); font-size: 1.05rem; max-width: 480px; margin: 0 auto 2.5rem; }
+    .cta-note { font-size: .82rem; color: var(--muted); margin-top: 1rem; }
+
+    /* ── FOOTER ── */
     footer {
-      text-align: center; padding: 2.5rem; border-top: 1px solid var(--border);
-      color: var(--muted); font-size: .83rem;
+      padding: 2.5rem; border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+      color: var(--muted); font-size: .83rem; max-width: 100%;
     }
-    footer strong { color: var(--text); }
+    .footer-brand { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--text); }
+    .footer-brand em { color: var(--blue); font-style: italic; }
+    .footer-links { display: flex; gap: 1.5rem; }
+    .footer-links a { color: var(--muted); transition: color .2s; }
+    .footer-links a:hover { color: var(--blue); }
 
-    .theme-btn {
-      background: transparent; border: 1px solid var(--border); border-radius: 50%;
-      width: 2rem; height: 2rem; cursor: pointer; font-size: .9rem;
-      display: flex; align-items: center; justify-content: center;
-    }
+    /* ── NAV MOBILE ── */
+    .nav-links { display: none; }
+    @media (min-width: 768px) { .nav-links { display: flex; } }
 
-    @media (max-width: 600px) {
-      nav { padding: 1rem; }
-      .hero { padding: 3.5rem 1.25rem 3rem; }
-      .section { padding: 3rem 1.25rem; }
+    @media (max-width: 700px) {
+      nav { padding: 1rem 1.25rem; }
+      .hero { padding: 4rem 1.25rem 3.5rem; }
+      .section { padding: 3.5rem 1.25rem; }
+      .stats-bar { gap: 2rem; }
+      .mockup-body { grid-template-columns: 1fr; }
+      .mockup-sidebar { display: none; }
+      .steps-grid { gap: 1.5rem; }
+      footer { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
+<!-- NAV -->
 <nav>
   <div class="nav-logo">EDU <em>AI</em></div>
+  <div class="nav-links">
+    <a href="#features">Fonctionnalités</a>
+    <a href="#pricing">Tarifs</a>
+    <a href="#faq">FAQ</a>
+  </div>
   <div class="nav-actions">
     <button class="theme-btn" id="theme-btn">🌙</button>
     <a href="/login.html" class="btn-outline">Connexion</a>
@@ -175,46 +377,144 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge">Propulsé par Claude & Llama 3.3</div>
-  <h1>Révisez plus <em>intelligemment</em></h1>
-  <p>Chargez vos cours PDF ou PowerPoint — l'IA génère résumés, quiz, flashcards et répond à toutes vos questions.</p>
-  <div class="hero-btns">
-    <a href="/login.html#register" class="btn-hero">Créer un compte gratuit</a>
-    <a href="/login.html" class="btn-hero-outline">Se connecter</a>
+  <div class="hero-badge fade-up">Résultats visibles dès la première révision</div>
+  <h1 class="fade-up fade-up-delay-1">Transformez vos cours en <em>intelligence</em></h1>
+  <p class="fade-up fade-up-delay-2">
+    Chargez vos PDF ou PowerPoint — l'IA génère résumés, quiz, flashcards et répond à toutes vos questions en quelques secondes.
+  </p>
+  <div class="hero-btns fade-up fade-up-delay-3">
+    <a href="/login.html#register" class="btn-hero">Commencer gratuitement →</a>
+    <a href="#how-it-works" class="btn-hero-outline">▶ Voir comment ça marche</a>
   </div>
 </section>
 
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-item fade-up">
+    <div class="stat-value" data-count="4800" data-suffix="+">0</div>
+    <div class="stat-label">Étudiants actifs</div>
+  </div>
+  <div class="stat-item fade-up fade-up-delay-1">
+    <div class="stat-value" data-count="120000" data-suffix="+">0</div>
+    <div class="stat-label">Flashcards créées</div>
+  </div>
+  <div class="stat-item fade-up fade-up-delay-2">
+    <div class="stat-value" data-count="98" data-suffix="%">0</div>
+    <div class="stat-label">Satisfaction utilisateurs</div>
+  </div>
+  <div class="stat-item fade-up fade-up-delay-3">
+    <div class="stat-value" data-count="35000" data-suffix="+">0</div>
+    <div class="stat-label">Quiz générés</div>
+  </div>
+</div>
+
+<!-- APP MOCKUP -->
+<div class="mockup-section">
+  <div class="section-label fade-up">Aperçu de l'application</div>
+  <h2 class="fade-up fade-up-delay-1" style="margin-bottom:2.5rem">Votre salle de révision <em>intelligente</em></h2>
+
+  <div class="app-mockup fade-up fade-up-delay-2">
+    <div class="mockup-bar">
+      <div class="mockup-dot red"></div>
+      <div class="mockup-dot yellow"></div>
+      <div class="mockup-dot green"></div>
+      <div class="mockup-url">edu-ai.app · Flashcards</div>
+    </div>
+    <div class="mockup-body">
+      <div class="mockup-sidebar">
+        <div class="mockup-sidebar-title">Mes cours</div>
+        <div class="mockup-file active"><span class="fi">📄</span> Biochimie S3.pdf</div>
+        <div class="mockup-file"><span class="fi">📊</span> Marketing Mix.pptx</div>
+        <div class="mockup-file"><span class="fi">📄</span> Droit des contrats.pdf</div>
+        <div class="mockup-file"><span class="fi">📝</span> Maths Appliquées.docx</div>
+        <div style="margin-top:1.5rem;padding:.5rem .6rem;background:var(--blue-bg);border:1px dashed rgba(61,126,255,.3);border-radius:8px;font-size:.72rem;color:var(--blue);text-align:center;cursor:default">+ Ajouter un cours</div>
+      </div>
+      <div class="mockup-main">
+        <div class="mockup-tabs">
+          <div class="mockup-tab">Résumé</div>
+          <div class="mockup-tab">Quiz</div>
+          <div class="mockup-tab active">Flashcards</div>
+          <div class="mockup-tab">Chat</div>
+          <div class="mockup-tab">Fiche exam</div>
+        </div>
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:.75rem;">Carte 7 sur 24 · Biochimie S3</div>
+        <div class="mockup-card-preview">
+          <div class="mockup-card-q">Qu'est-ce que la phosphorylation oxydative ?</div>
+          <div class="mockup-card-a">Processus métabolique dans lequel l'énergie libérée par l'oxydation des nutriments est utilisée pour synthétiser de l'ATP à partir d'ADP et de phosphate inorganique, principalement dans les mitochondries.</div>
+          <div class="mockup-card-footer">
+            <div class="mockup-btn hard">Difficile</div>
+            <div class="mockup-btn ok">Correct</div>
+            <div class="mockup-btn easy">Facile</div>
+          </div>
+        </div>
+        <div class="mockup-progress">
+          <span>Progression</span>
+          <div class="mockup-progress-bar"><div class="mockup-progress-fill"></div></div>
+          <span>68%</span>
+          <span style="margin-left:auto;color:var(--teal)">🔥 5j de suite</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section" id="how-it-works">
+  <div class="section-label fade-up">Comment ça marche</div>
+  <h2 class="fade-up fade-up-delay-1">Trois étapes vers la <em>maîtrise</em></h2>
+  <div class="steps-grid">
+    <div class="step-card fade-up fade-up-delay-1">
+      <div class="step-number">01</div>
+      <div class="step-icon">📂</div>
+      <h3>Chargez votre cours</h3>
+      <p>Glissez-déposez un PDF, PowerPoint ou Word. EDU AI lit, comprend et structure votre document en quelques secondes.</p>
+    </div>
+    <div class="step-card fade-up fade-up-delay-2">
+      <div class="step-number">02</div>
+      <div class="step-icon">⚡</div>
+      <h3>L'IA génère tout</h3>
+      <p>Résumé structuré, flashcards, quiz QCM, fiche d'examen — tout est créé automatiquement et adapté au contenu de votre cours.</p>
+    </div>
+    <div class="step-card fade-up fade-up-delay-3">
+      <div class="step-number">03</div>
+      <div class="step-icon">🧠</div>
+      <h3>Révisez intelligemment</h3>
+      <p>L'algorithme de répétition espacée SM-2 planifie vos révisions au moment optimal. Vous progressez sans effort supplémentaire.</p>
+    </div>
+  </div>
+</div>
+
 <!-- FEATURES -->
-<div class="section">
-  <div class="section-label">Fonctionnalités</div>
-  <h2>Tout ce dont vous avez besoin pour <em>réussir</em></h2>
+<div class="section" id="features" style="padding-top:0">
+  <div class="section-label fade-up">Fonctionnalités</div>
+  <h2 class="fade-up fade-up-delay-1">Tout ce dont vous avez besoin pour <em>réussir</em></h2>
   <div class="features-grid">
-    <div class="feature-card">
+    <div class="feature-card fade-up fade-up-delay-1">
       <div class="feat-icon purple">📄</div>
       <h3>Résumés structurés</h3>
-      <p>5 sections claires générées en quelques secondes : objectifs, points clés, résumé détaillé, concepts et à retenir.</p>
+      <p>5 sections claires générées en secondes : objectifs, points clés, résumé détaillé, concepts et à retenir.</p>
     </div>
-    <div class="feature-card">
+    <div class="feature-card fade-up fade-up-delay-2">
       <div class="feat-icon blue">❓</div>
       <h3>Quiz QCM adaptatif</h3>
-      <p>Questions générées depuis vos cours, 3 niveaux de difficulté, mode examen avec chronomètre.</p>
+      <p>Questions générées depuis vos cours, 3 niveaux de difficulté, mode examen avec chronomètre intégré.</p>
     </div>
-    <div class="feature-card">
+    <div class="feature-card fade-up fade-up-delay-3">
       <div class="feat-icon teal">🃏</div>
       <h3>Flashcards intelligentes</h3>
-      <p>Algorithme de révision espacée SM-2 — vous révisez ce que vous ne maîtrisez pas encore, au bon moment.</p>
+      <p>Algorithme SM-2 — vous révisez ce que vous ne maîtrisez pas encore, exactement au bon moment.</p>
     </div>
-    <div class="feature-card">
+    <div class="feature-card fade-up fade-up-delay-1">
       <div class="feat-icon gold">💬</div>
       <h3>Chat avec le cours</h3>
-      <p>Posez n'importe quelle question sur vos fichiers. Joignez un devoir ou une image pour le faire corriger par l'IA.</p>
+      <p>Posez n'importe quelle question sur vos fichiers. Joignez une image ou un devoir pour le faire corriger.</p>
     </div>
-    <div class="feature-card">
+    <div class="feature-card fade-up fade-up-delay-2">
       <div class="feat-icon purple">📋</div>
       <h3>Fiche d'examen</h3>
       <p>Définitions, pièges à éviter, tableaux de synthèse et questions probables — générés en un clic.</p>
     </div>
-    <div class="feature-card">
+    <div class="feature-card fade-up fade-up-delay-3">
       <div class="feat-icon blue">📊</div>
       <h3>Suivi de progression</h3>
       <p>Tableau de bord avec scores, temps de révision, cartes maîtrisées et statistiques de session.</p>
@@ -222,15 +522,60 @@
   </div>
 </div>
 
+<!-- TESTIMONIALS -->
+<div class="testimonials-section">
+  <div class="testimonials-inner">
+    <div class="section-label fade-up">Témoignages</div>
+    <h2 class="fade-up fade-up-delay-1" style="margin-bottom:2.5rem">Ce qu'en disent les <em>étudiants</em></h2>
+    <div class="testimonials-grid">
+      <div class="testimonial-card fade-up fade-up-delay-1">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-text">J'ai préparé mes partiels de biochimie avec EDU AI. Les flashcards générées automatiquement depuis mes cours m'ont fait gagner des heures. J'ai eu 16/20 alors que j'avais 11 en octobre.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar av-blue">A</div>
+          <div>
+            <div class="testimonial-name">Amina K.</div>
+            <div class="testimonial-role">L2 Sciences de la Vie, Paris</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card fade-up fade-up-delay-2">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-text">Le chat avec le cours change tout. Je charge mon PPT et je pose mes questions directement — c'est comme avoir un prof disponible 24h/24. J'utilise EDU AI tous les soirs avant les exams.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar av-teal">M</div>
+          <div>
+            <div class="testimonial-name">Mamadou D.</div>
+            <div class="testimonial-role">Master Droit des Affaires, Dakar</div>
+          </div>
+        </div>
+      </div>
+      <div class="testimonial-card fade-up fade-up-delay-3">
+        <div class="stars">★★★★★</div>
+        <div class="testimonial-text">Les fiches d'examen générées en un clic sont bluffantes. En médecine on a des cours énormes — EDU AI m'extrait l'essentiel et les questions probables. Incontournable pour les concours.</div>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar av-gold">S</div>
+          <div>
+            <div class="testimonial-name">Sofia R.</div>
+            <div class="testimonial-role">PACES, Université de Lyon</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- PRICING -->
-<div class="section" style="background:var(--surface);max-width:100%;padding:4rem 2rem">
-  <div style="max-width:1100px;margin:0 auto">
-    <div class="section-label">Tarifs</div>
-    <h2>Simple et <em>transparent</em></h2>
+<div class="pricing-section" id="pricing">
+  <div class="pricing-inner">
+    <div class="section-label fade-up">Tarifs</div>
+    <h2 class="fade-up fade-up-delay-1" style="margin-bottom:.75rem">Simple et <em>transparent</em></h2>
+    <p class="fade-up fade-up-delay-2" style="color:var(--muted);font-size:.95rem;margin-bottom:2.5rem">Commencez gratuitement, passez à Pro quand vous en avez besoin.</p>
     <div class="pricing-grid">
-      <div class="price-card">
+      <div class="price-card fade-up fade-up-delay-1">
         <div class="plan-name">Gratuit</div>
         <div class="plan-price">0€ <span>/ mois</span></div>
+        <div class="plan-desc">Pour découvrir EDU AI sans engagement</div>
         <div class="plan-features">
           <div class="plan-feat">3 résumés / jour</div>
           <div class="plan-feat">5 quiz / jour</div>
@@ -240,28 +585,33 @@
         </div>
         <a href="/login.html#register"><button class="plan-cta">Commencer gratuitement</button></a>
       </div>
-      <div class="price-card featured">
-        <div class="price-badge">Populaire</div>
+      <div class="price-card featured fade-up fade-up-delay-2">
+        <div class="price-badge">Le plus populaire</div>
         <div class="plan-name">Pro</div>
         <div class="plan-price">4€ <span>/ mois</span></div>
+        <div class="plan-desc">Pour les étudiants en période d'examen</div>
         <div class="plan-features">
           <div class="plan-feat">15 résumés / jour</div>
           <div class="plan-feat">30 quiz / jour</div>
           <div class="plan-feat">30 flashcards / jour</div>
           <div class="plan-feat">20 messages chat / jour</div>
-          <div class="plan-feat">Priorité de traitement</div>
+          <div class="plan-feat">Traitement prioritaire</div>
+          <div class="plan-feat">Historique illimité</div>
         </div>
         <a href="/login.html#register"><button class="plan-cta">Choisir Pro</button></a>
       </div>
-      <div class="price-card">
+      <div class="price-card fade-up fade-up-delay-3">
         <div class="plan-name">Max</div>
         <div class="plan-price">9€ <span>/ mois</span></div>
+        <div class="plan-desc">Pour une révision intensive sans limites</div>
         <div class="plan-features">
           <div class="plan-feat">50 résumés / jour</div>
           <div class="plan-feat">100 quiz / jour</div>
           <div class="plan-feat">100 flashcards / jour</div>
           <div class="plan-feat">60 messages chat / jour</div>
-          <div class="plan-feat">Module Régulation Pharma</div>
+          <div class="plan-feat">Traitement prioritaire</div>
+          <div class="plan-feat">Historique illimité</div>
+          <div class="plan-feat">Export PDF des fiches</div>
         </div>
         <a href="/login.html#register"><button class="plan-cta">Choisir Max</button></a>
       </div>
@@ -270,36 +620,55 @@
 </div>
 
 <!-- FAQ -->
-<div class="section">
-  <div class="section-label">FAQ</div>
-  <h2>Questions <em>fréquentes</em></h2>
-  <div class="faq">
+<div class="section" id="faq">
+  <div class="section-label fade-up">FAQ</div>
+  <h2 class="fade-up fade-up-delay-1">Questions <em>fréquentes</em></h2>
+  <div class="faq fade-up fade-up-delay-2">
     <div class="faq-item">
       <div class="faq-q">Quels types de fichiers sont acceptés ?</div>
-      <div class="faq-a">PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers en même temps.</div>
+      <div class="faq-a">PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers simultanément.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">Mes cours sont-ils stockés sur vos serveurs ?</div>
-      <div class="faq-a">Les fichiers uploadés sont temporaires et supprimés après traitement. Vos données de progression (quiz, flashcards) sont liées à votre compte.</div>
+      <div class="faq-a">Les fichiers uploadés sont temporaires et supprimés après traitement. Vos données de progression (quiz, flashcards, scores) sont liées à votre compte et sécurisées.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">Comment fonctionne la révision espacée ?</div>
-      <div class="faq-a">L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées, pour maximiser la mémorisation à long terme.</div>
+      <div class="faq-a">L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées. Vous révisez moins mais mieux — les cartes maîtrisées reviennent moins souvent, les difficiles plus fréquemment.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">La qualité des résumés dépend-elle du cours chargé ?</div>
+      <div class="faq-a">Oui — plus le document est structuré (titres, sections claires), meilleurs sont les résultats. EDU AI gère très bien les PDF issus de diaporamas de cours, les polys et les documents Word mis en page.</div>
     </div>
     <div class="faq-item">
       <div class="faq-q">Puis-je annuler mon abonnement ?</div>
-      <div class="faq-a">Oui, à tout moment. Votre compte repasse automatiquement en plan Gratuit à la fin de la période payée.</div>
+      <div class="faq-a">Oui, à tout moment depuis votre compte. Votre profil repasse automatiquement en plan Gratuit à la fin de la période payée, sans frais cachés.</div>
     </div>
   </div>
 </div>
 
+<!-- FINAL CTA -->
+<div class="cta-section">
+  <h2 class="fade-up">Prêt à réviser <em>différemment</em> ?</h2>
+  <p class="fade-up fade-up-delay-1">Rejoignez des milliers d'étudiants qui ont transformé leur façon de préparer les examens.</p>
+  <a href="/login.html#register" class="btn-hero fade-up fade-up-delay-2" style="display:inline-flex">Créer mon compte gratuit →</a>
+  <div class="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Prêt en 30 secondes</div>
+</div>
+
 <footer>
-  <strong>EDU AI</strong> — Révisez plus intelligemment &nbsp;·&nbsp;
-  <a href="/login.html" style="color:var(--blue)">Connexion</a> &nbsp;·&nbsp;
-  <a href="/login.html#register" style="color:var(--blue)">Inscription</a>
+  <div class="footer-brand">EDU <em>AI</em></div>
+  <div class="footer-links">
+    <a href="#features">Fonctionnalités</a>
+    <a href="#pricing">Tarifs</a>
+    <a href="#faq">FAQ</a>
+    <a href="/login.html">Connexion</a>
+    <a href="/login.html#register" style="color:var(--blue)">Inscription</a>
+  </div>
+  <div>© 2025 EDU AI</div>
 </footer>
 
 <script>
+  /* Theme */
   const saved = localStorage.getItem('edu-ai-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
   const btn = document.getElementById('theme-btn');
@@ -311,15 +680,47 @@
     btn.textContent = next === 'dark' ? '🌙' : '☀️';
   };
 
-  // FAQ accordion
+  /* FAQ accordion */
   document.querySelectorAll('.faq-q').forEach(q => {
     q.onclick = () => q.parentElement.classList.toggle('open');
   });
 
-  // Si déjà connecté → app directement
+  /* Redirect if logged in */
   fetch('/api/auth/me').then(r => r.json()).then(d => {
     if (d.user) window.location.href = '/app.html';
-  });
+  }).catch(() => {});
+
+  /* Scroll fade-in */
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  /* Counter animation */
+  function animateCount(el) {
+    const target = parseInt(el.dataset.count);
+    const suffix = el.dataset.suffix || '';
+    const duration = 1800;
+    const start = performance.now();
+    function step(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - p, 3);
+      const val = Math.floor(ease * target);
+      el.textContent = val >= 1000 ? (val >= 100000 ? Math.floor(val/1000) + 'k' : val.toLocaleString('fr-FR')) + suffix : val + suffix;
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = target >= 100000 ? Math.floor(target/1000) + 'k' + suffix : target.toLocaleString('fr-FR') + suffix;
+    }
+    requestAnimationFrame(step);
+  }
+  const counterObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting && e.target.dataset.count) {
+        animateCount(e.target);
+        counterObs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.5 });
+  document.querySelectorAll('[data-count]').forEach(el => counterObs.observe(el));
 </script>
 </body>
 </html>

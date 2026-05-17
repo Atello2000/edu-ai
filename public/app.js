@@ -1817,15 +1817,24 @@ const floatNav     = document.getElementById('float-nav');
 const NAV_SECTIONS = ['summary-section','quiz-section','flashcard-section','chat-section','exam-sheet-section'];
 
 function refreshFloatNav() {
-  floatNav.classList.toggle('hidden', generatedSections.size === 0);
+  const hasFiles = uploadedFilesMeta && uploadedFilesMeta.length > 0;
+  floatNav.classList.toggle('hidden', generatedSections.size === 0 && !hasFiles);
+
   floatNav.querySelectorAll('.fnav-btn').forEach(btn => {
     const target = btn.dataset.target;
     if (target === 'dashboard-panel') {
       btn.classList.toggle('active', !document.getElementById('dashboard-panel').classList.contains('hidden'));
-    } else {
-      btn.classList.toggle('active', !document.getElementById(target).classList.contains('hidden'));
+    } else if (target === 'actions-section') {
+      btn.classList.toggle('hidden', !hasFiles);
+      btn.classList.toggle('active', !document.getElementById('actions-section')?.classList.contains('hidden'));
+    } else if (btn.classList.contains('fnav-generated')) {
+      btn.classList.toggle('hidden', !generatedSections.has(target));
+      btn.classList.toggle('active', !document.getElementById(target)?.classList.contains('hidden'));
     }
   });
+
+  const divider = floatNav.querySelector('.fnav-divider');
+  if (divider) divider.classList.toggle('hidden', generatedSections.size === 0);
 }
 
 floatNav.querySelectorAll('.fnav-btn').forEach(btn =>

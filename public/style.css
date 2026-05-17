@@ -1144,6 +1144,9 @@ main {
 
 .fnav-icon  { font-size:1.05rem; }
 .fnav-label { font-family:'DM Mono',monospace; font-size:.56rem; letter-spacing:.06em; text-transform:uppercase; }
+.fnav-divider { width:1px; background:var(--border); margin:.4rem .1rem; align-self:stretch; }
+.fnav-actions { color:var(--blue); }
+.fnav-actions.active { background:var(--blue-bg); color:var(--blue); }
 
 /* ════════════════════════════════ HISTORIQUE ════════════════════════════════ */
 
