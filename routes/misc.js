@@ -78,7 +78,11 @@ router.post('/upload', (req, res, next) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'Aucun fichier reçu' });
   const files = await Promise.all(req.files.map(async f => {
     let text = '';
-    try { text = (await extractText(f.path, f.originalname)).slice(0, 80000); } catch {}
+    try {
+      // Laisser le temps au OS de finaliser l'écriture du fichier sur disque
+      await new Promise(r => setTimeout(r, 150));
+      text = (await extractText(f.path, f.originalname)).slice(0, 80000);
+    } catch {}
     return { id: f.filename, name: f.originalname, path: f.path, size: f.size, text };
   }));
   res.json({ success: true, files });

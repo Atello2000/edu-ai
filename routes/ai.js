@@ -89,6 +89,7 @@ router.post('/quiz', async (req, res) => {
 
     const results = await Promise.all(files.map(async file => {
       const text      = await getFileText(file);
+      if (!text.trim()) throw new Error(`Contenu de "${file.name}" vide ou indisponible. Rechargez le fichier.`);
       const truncated = text.slice(0, LIMITS.quizChars);
 
       const difficultyGuide = {
@@ -222,6 +223,7 @@ router.post('/flashcards', async (req, res) => {
 
     const results = await Promise.all(files.map(async file => {
       const text      = await getFileText(file);
+      if (!text.trim()) throw new Error(`Contenu de "${file.name}" vide ou indisponible. Rechargez le fichier.`);
       const truncated = text.slice(0, LIMITS.flashChars);
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
