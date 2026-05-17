@@ -31,9 +31,10 @@ function showOnboarding() {
 }
 
 function renderUserMenu() {
-  const actionsRight = document.querySelector('.header-actions-right');
-  if (!actionsRight || !currentUser) return;
+  const headerRight = document.querySelector('.header-right');
+  if (!headerRight || !currentUser) return;
 
+  const planLabels = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
   const menu = document.createElement('div');
   menu.className = 'user-menu';
   menu.innerHTML = `
@@ -45,13 +46,13 @@ function renderUserMenu() {
       <div class="user-info">
         <strong>${currentUser.name}</strong>
         <span>${currentUser.email}</span>
-        <span class="user-plan plan-${currentUser.plan}">${currentUser.plan === 'pro' ? '✦ Pro' : 'Gratuit'}</span>
+        <span class="user-plan plan-${currentUser.plan}">${planLabels[currentUser.plan] || currentUser.plan}</span>
       </div>
       <hr class="dropdown-sep"/>
       <a href="/profile.html" class="dropdown-item" style="display:block;text-decoration:none;color:var(--text)">Mon profil</a>
       <button class="dropdown-item" id="logout-btn">Se déconnecter</button>
     </div>`;
-  actionsRight.prepend(menu);
+  headerRight.prepend(menu);
 
   document.getElementById('user-menu-btn').onclick = (e) => {
     e.stopPropagation();
@@ -2163,4 +2164,5 @@ document.getElementById('reset-onboarding-btn').addEventListener('click', () => 
   applyPrefs();
   showPanel('dashboard-panel');
   document.getElementById('back-home-btn').addEventListener('click', () => showPanel('dashboard-panel'));
+  document.getElementById('header-logo').addEventListener('click', () => showPanel('dashboard-panel'));
 })();
