@@ -81,7 +81,6 @@ router.post('/quiz', async (req, res) => {
 
   try {
     const { files } = req.body;
-    console.log('[QUIZ] files reçus:', files?.length, files?.map(f => ({ name: f.name, hasText: !!f.text, textLen: f.text?.length, hasPath: !!f.path })));
     const lang       = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang     = langLabel(lang);
     const VALID_DIFF = ['facile', 'moyen', 'difficile'];
@@ -90,7 +89,6 @@ router.post('/quiz', async (req, res) => {
 
     const results = await Promise.all(files.map(async file => {
       const text      = await getFileText(file);
-      console.log('[QUIZ] text extrait pour', file.name, ':', text?.length, 'chars');
       if (!text.trim()) throw new Error(`Contenu de "${file.name}" vide ou indisponible. Rechargez le fichier.`);
       const truncated = text.slice(0, LIMITS.quizChars);
 
