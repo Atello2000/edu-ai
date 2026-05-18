@@ -47,6 +47,26 @@ db.exec(`
     auth       TEXT    NOT NULL,
     created_at TEXT    NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS folders (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name       TEXT    NOT NULL,
+    icon       TEXT    NOT NULL DEFAULT '📁',
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, name)
+  );
+
+  CREATE TABLE IF NOT EXISTS folder_files (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    folder_id  INTEGER NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+    filename   TEXT    NOT NULL,
+    orig_name  TEXT    NOT NULL,
+    size       INTEGER NOT NULL DEFAULT 0,
+    text       TEXT    NOT NULL DEFAULT '',
+    created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(folder_id, filename)
+  );
 `);
 
 module.exports = db;

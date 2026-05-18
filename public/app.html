@@ -38,20 +38,45 @@
 
   <!-- ── DASHBOARD ── -->
   <div class="panel dashboard-panel" id="dashboard-panel">
-    <div class="panel-header">
-      <div>
-        <div class="panel-label">Accueil</div>
-        <h2 class="panel-title">Tableau de <em>bord</em></h2>
-      </div>
-      <button class="ghost-btn" id="dashboard-refresh-btn">Actualiser</button>
+    <div class="dash-greeting">
+      <h1 class="dash-greeting-title" id="dash-greeting-title">Bonjour</h1>
+      <p class="dash-greeting-sub">Que souhaitez-vous réviser aujourd'hui ?</p>
     </div>
-    <div class="dashboard-grid" id="dashboard-grid"></div>
-    <div class="dashboard-actions">
-      <button class="dash-action dash-action-primary" id="dash-continue-btn">Continuer</button>
-      <button class="dash-action" id="dash-upload-btn">Charger un cours</button>
-      <button class="dash-action" id="dash-library-btn">Explorer la bibliothèque</button>
-      <button class="dash-action" id="dash-history-btn">Mes cours récents</button>
-      <button class="dash-action" id="dash-stats-btn">Voir mes stats</button>
+
+    <div class="dash-quick-actions">
+      <button class="dash-qaction" id="dash-upload-btn">
+        <span class="dash-qaction-icon">📂</span>
+        <span class="dash-qaction-label">Charger un cours</span>
+        <span class="dash-qaction-hint">PDF, PPT, DOCX</span>
+      </button>
+      <button class="dash-qaction" id="dash-continue-btn">
+        <span class="dash-qaction-icon">▶</span>
+        <span class="dash-qaction-label">Continuer</span>
+        <span class="dash-qaction-hint">Reprendre la session</span>
+      </button>
+      <button class="dash-qaction" id="dash-folders-btn">
+        <span class="dash-qaction-icon">📁</span>
+        <span class="dash-qaction-label">Mes matières</span>
+        <span class="dash-qaction-hint">Cours classés</span>
+      </button>
+      <button class="dash-qaction" id="dash-library-btn">
+        <span class="dash-qaction-icon">📚</span>
+        <span class="dash-qaction-label">Bibliothèque</span>
+        <span class="dash-qaction-hint">Cours partagés</span>
+      </button>
+    </div>
+
+    <div class="dash-stats-row">
+      <div class="panel-header" style="margin-bottom:.5rem">
+        <div class="panel-label">Progression</div>
+        <button class="ghost-btn" id="dashboard-refresh-btn">Actualiser</button>
+      </div>
+      <div class="dashboard-grid" id="dashboard-grid"></div>
+    </div>
+
+    <div class="dash-bottom-links">
+      <button class="dash-link" id="dash-history-btn">Mes cours récents →</button>
+      <button class="dash-link" id="dash-stats-btn">Statistiques détaillées →</button>
     </div>
   </div>
 
@@ -77,6 +102,35 @@
       <button class="ghost-btn" id="history-clear-all">Tout effacer</button>
     </div>
     <div id="history-list"></div>
+  </div>
+
+  <!-- ── MES MATIÈRES ── -->
+  <div class="panel hidden" id="folders-panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-label">Organisation</div>
+        <h2 class="panel-title">Mes <em>matières</em></h2>
+      </div>
+      <button class="ghost-btn" id="folder-create-btn">+ Nouvelle matière</button>
+    </div>
+    <p class="panel-desc">Classez vos cours par matière pour les retrouver et les réutiliser facilement</p>
+    <div id="folders-list"></div>
+
+    <!-- Vue détail d'un dossier -->
+    <div class="hidden" id="folder-detail">
+      <div class="folder-detail-header">
+        <button class="ghost-btn" id="folder-back-btn">← Retour</button>
+        <h3 class="folder-detail-title" id="folder-detail-title"></h3>
+        <div class="folder-detail-actions">
+          <button class="ghost-btn" id="folder-rename-btn" title="Renommer">✏️</button>
+          <button class="ghost-btn" id="folder-delete-btn" title="Supprimer">🗑️</button>
+        </div>
+      </div>
+      <div id="folder-files-list"></div>
+      <div class="folder-actions-bar hidden" id="folder-actions-bar">
+        <button class="act-btn purple" id="folder-use-btn">Utiliser ces cours →</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── BIBLIOTHÈQUE ── -->
@@ -155,6 +209,7 @@
           <span>Résumé structuré en 5 sections</span>
         </div>
         <button class="act-btn purple" id="summarize-btn">Lancer</button>
+        <button class="regen-link hidden" id="summarize-regen-btn">↺ Régénérer</button>
       </div>
 
       <div class="act-card" data-color="blue">
@@ -216,6 +271,7 @@
           <span>Définitions, pièges, tableaux et questions probables</span>
         </div>
         <button class="act-btn purple" id="exam-sheet-btn">Créer</button>
+        <button class="regen-link hidden" id="exam-sheet-regen-btn">↺ Régénérer</button>
       </div>
     </div>
   </div>
@@ -588,6 +644,24 @@
     <div class="spinner"></div>
     <p id="loader-text">Traitement en cours…</p>
     <span class="loader-hint">Cela peut prendre quelques secondes</span>
+  </div>
+</div>
+
+<!-- ── SAVE TO FOLDER MODAL ── -->
+<div class="modal-overlay hidden" id="save-folder-modal">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2>Enregistrer dans une <em>matière</em></h2>
+      <p>Classez ces fichiers pour les retrouver facilement</p>
+    </div>
+    <div id="save-folder-list"></div>
+    <div class="save-folder-new">
+      <input type="text" id="save-folder-new-name" placeholder="Nouvelle matière..." class="input-field" />
+      <button class="ghost-btn" id="save-folder-new-btn">Créer</button>
+    </div>
+    <div class="modal-footer">
+      <button class="ghost-btn" id="save-folder-skip">Passer</button>
+    </div>
   </div>
 </div>
 

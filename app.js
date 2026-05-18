@@ -37,10 +37,11 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api',      require('./routes/misc'));
 
 // ── Routes protégées (auth requise) ──────────────────────────────────────────
-app.use('/api',        requireAuth, aiLimiter, require('./routes/ai'));
-app.use('/api/pharma', requireAuth, aiLimiter, require('./routes/pharma'));
-app.use('/api/admin',  require('./routes/admin'));
-app.use('/api/push',   require('./routes/push'));
+app.use('/api',         requireAuth, aiLimiter, require('./routes/ai'));
+app.use('/api/folders', requireAuth, require('./routes/folders'));
+app.use('/api/pharma',  requireAuth, aiLimiter, require('./routes/pharma'));
+app.use('/api/admin',   require('./routes/admin'));
+app.use('/api/push',    require('./routes/push'));
 
 app.use((err, req, res, next) => {
   console.error(err);

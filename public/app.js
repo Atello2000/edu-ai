@@ -70,7 +70,7 @@ const ALL_PANELS = [
   'dashboard-panel','upload-section','actions-section',
   'summary-section','quiz-section','flashcard-section',
   'chat-section','exam-sheet-section',
-  'stats-panel','history-panel','library-panel'
+  'stats-panel','history-panel','folders-panel','library-panel'
 ];
 const generatedSections = new Set();
 
@@ -85,6 +85,7 @@ function showPanel(id) {
   const backBtn = document.getElementById('back-home-btn');
   if (backBtn) backBtn.classList.toggle('hidden', id === 'dashboard-panel');
   if (id === 'actions-section') refreshActionsAvailability();
+  if (id === 'folders-panel') fetchFolders().then(renderFoldersPanel);
   refreshFloatNav();
 }
 
@@ -191,7 +192,10 @@ uploadBtn.addEventListener('click', async () => {
     if (!data.success) throw new Error(data.error);
     uploadedFilesMeta = data.files;
     renderUploadedFiles();
+    summaryAllResults = []; summaryActiveTab = 0; examSheetMd = '';
+    updateSummarizeBtnState(); updateExamSheetBtnState();
     showPanel('actions-section');
+    showSaveFolderModal();
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
 });
@@ -778,6 +782,30 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
 let summaryAllResults = [];
 let summaryActiveTab  = 0;
 
+function updateSummarizeBtnState() {
+  const regenBtn = document.getElementById('summarize-regen-btn');
+  if (summaryAllResults.length > 0) {
+    summarizeBtn.textContent = 'Voir le résumé';
+    regenBtn?.classList.remove('hidden');
+  } else {
+    summarizeBtn.textContent = 'Lancer';
+    regenBtn?.classList.add('hidden');
+  }
+}
+
+function updateExamSheetBtnState() {
+  const regenBtn = document.getElementById('exam-sheet-regen-btn');
+  const btn = document.getElementById('exam-sheet-btn');
+  if (!btn) return;
+  if (examSheetMd) {
+    btn.textContent = 'Voir la fiche';
+    regenBtn?.classList.remove('hidden');
+  } else {
+    btn.textContent = 'Créer';
+    regenBtn?.classList.add('hidden');
+  }
+}
+
 function buildSummaryTabs() {
   summaryTabs.innerHTML = '';
   if (summaryAllResults.length <= 1) { summaryTabs.classList.add('hidden'); return; }
@@ -805,6 +833,7 @@ function switchSummaryTab(idx) {
 summarizeBtn.addEventListener('click', async () => {
   const files = getSelectedUploadedFiles();
   if (!files.length) return alert('Sélectionnez au moins un fichier.');
+  if (summaryAllResults.length > 0) { showPanel('summary-section'); return; }
   summarySection.classList.add('hidden');
   summaryResults.innerHTML = '';
   summaryTabs.innerHTML = '';
@@ -860,6 +889,7 @@ summarizeBtn.addEventListener('click', async () => {
         } else if (data.type === 'end') {
           saveSession({ summaries: summaryAllResults });
           fetchQuota();
+          updateSummarizeBtnState();
         } else if (data.type === 'error') {
           throw new Error(data.message);
         }
@@ -867,6 +897,12 @@ summarizeBtn.addEventListener('click', async () => {
     }
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
+});
+
+document.getElementById('summarize-regen-btn')?.addEventListener('click', () => {
+  summaryAllResults = []; summaryActiveTab = 0;
+  updateSummarizeBtnState();
+  summarizeBtn.click();
 });
 
 function createStreamingItem(name) {
@@ -1272,6 +1308,7 @@ let examSheetMd = '';
 examSheetBtn.addEventListener('click', async () => {
   const files = getSelectedUploadedFiles();
   if (!files.length) return alert('Sélectionnez au moins un fichier.');
+  if (examSheetMd) { showPanel('exam-sheet-section'); return; }
   showLoader("Création de la fiche d'examen...");
   examSheetSection.classList.add('hidden');
   examSheetResult.innerHTML = '';
@@ -1292,8 +1329,15 @@ examSheetBtn.addEventListener('click', async () => {
     fetchQuota();
     refreshFloatNav();
     renderDashboard();
+    updateExamSheetBtnState();
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
+});
+
+document.getElementById('exam-sheet-regen-btn')?.addEventListener('click', () => {
+  examSheetMd = '';
+  updateExamSheetBtnState();
+  examSheetBtn.click();
 });
 
 examSheetCopyBtn.addEventListener('click', () => {
@@ -1778,6 +1822,7 @@ function renderHistoryPanel() {
           ${s.summaries  ? '<span class="htag hs">Résumés</span>'    : ''}
           ${s.quiz       ? '<span class="htag hq">Quiz</span>'       : ''}
           ${s.flashcards ? '<span class="htag hf">Flashcards</span>' : ''}
+          ${s.examSheet  ? '<span class="htag he">Fiche</span>'      : ''}
         </div>
       </div>
       <button class="history-del" data-id="${s.id}" title="Supprimer">✕</button>`;
@@ -1838,11 +1883,218 @@ function restoreSession(s) {
     generatedSections.add('exam-sheet-section');
     if (firstPanel === 'actions-section') firstPanel = 'exam-sheet-section';
   }
+  updateSummarizeBtnState();
+  updateExamSheetBtnState();
   showPanel(firstPanel);
 }
 
 document.getElementById('history-clear-all').addEventListener('click', () => {
   localStorage.removeItem(HISTORY_KEY); renderHistoryPanel(); renderDashboard();
+});
+
+// ── MES MATIÈRES (FOLDERS) ───────────────────────────────────────────────────
+let userFolders = [];
+let currentFolderId = null;
+
+async function fetchFolders() {
+  try {
+    const res = await fetch('/api/folders');
+    const data = await res.json();
+    userFolders = data.folders || [];
+  } catch { userFolders = []; }
+}
+
+function renderFoldersPanel() {
+  const list = document.getElementById('folders-list');
+  const detail = document.getElementById('folder-detail');
+  if (!list) return;
+  detail.classList.add('hidden');
+  list.classList.remove('hidden');
+
+  if (!userFolders.length) {
+    list.innerHTML = '<div class="folders-empty">Aucune matière créée.<br>Cliquez sur « + Nouvelle matière » pour commencer.</div>';
+    return;
+  }
+  list.innerHTML = `<div class="folder-grid">${userFolders.map(f => `
+    <div class="folder-card" data-id="${f.id}">
+      <span class="folder-card-icon">${f.icon}</span>
+      <span class="folder-card-name">${f.name}</span>
+      <span class="folder-card-count">${f.file_count} fichier${f.file_count > 1 ? 's' : ''}</span>
+    </div>
+  `).join('')}</div>`;
+
+  list.querySelectorAll('.folder-card').forEach(card => {
+    card.addEventListener('click', () => openFolderDetail(+card.dataset.id));
+  });
+}
+
+async function openFolderDetail(folderId) {
+  currentFolderId = folderId;
+  const folder = userFolders.find(f => f.id === folderId);
+  if (!folder) return;
+
+  document.getElementById('folders-list').classList.add('hidden');
+  const detail = document.getElementById('folder-detail');
+  detail.classList.remove('hidden');
+  document.getElementById('folder-detail-title').textContent = `${folder.icon} ${folder.name}`;
+
+  const filesList = document.getElementById('folder-files-list');
+  filesList.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1rem">Chargement...</p>';
+
+  try {
+    const res = await fetch(`/api/folders/${folderId}/files`);
+    const data = await res.json();
+    const files = data.files || [];
+
+    if (!files.length) {
+      filesList.innerHTML = '<div class="folders-empty">Aucun fichier dans cette matière.<br>Chargez un cours et enregistrez-le ici.</div>';
+      document.getElementById('folder-actions-bar').classList.add('hidden');
+      return;
+    }
+
+    filesList.innerHTML = files.map(f => {
+      const ext = f.orig_name.split('.').pop().toUpperCase();
+      const date = new Date(f.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+      return `<div class="folder-file-item" data-id="${f.id}">
+        <span class="file-ext">${ext}</span>
+        <span class="folder-file-name">${f.orig_name}</span>
+        <span class="folder-file-date">${date}</span>
+        <button class="folder-file-del" data-id="${f.id}" title="Retirer">✕</button>
+      </div>`;
+    }).join('');
+
+    document.getElementById('folder-actions-bar').classList.remove('hidden');
+
+    filesList.querySelectorAll('.folder-file-del').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await fetch(`/api/folders/${folderId}/files/${btn.dataset.id}`, { method: 'DELETE' });
+        openFolderDetail(folderId);
+        fetchFolders().then(renderFoldersPanel);
+      });
+    });
+
+    document.getElementById('folder-use-btn').onclick = () => {
+      uploadedFilesMeta = files.map(f => ({
+        id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size
+      }));
+      renderUploadedFiles();
+      summaryAllResults = []; summaryActiveTab = 0; examSheetMd = '';
+      updateSummarizeBtnState(); updateExamSheetBtnState();
+      showPanel('actions-section');
+    };
+  } catch (err) {
+    filesList.innerHTML = `<p style="color:var(--rose);text-align:center">${err.message}</p>`;
+  }
+}
+
+document.getElementById('folder-back-btn')?.addEventListener('click', () => {
+  document.getElementById('folder-detail').classList.add('hidden');
+  document.getElementById('folders-list').classList.remove('hidden');
+});
+
+document.getElementById('folder-rename-btn')?.addEventListener('click', async () => {
+  const folder = userFolders.find(f => f.id === currentFolderId);
+  if (!folder) return;
+  const name = prompt('Nouveau nom :', folder.name);
+  if (!name || !name.trim()) return;
+  await fetch(`/api/folders/${currentFolderId}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name.trim() })
+  });
+  await fetchFolders();
+  renderFoldersPanel();
+  openFolderDetail(currentFolderId);
+});
+
+document.getElementById('folder-delete-btn')?.addEventListener('click', async () => {
+  const folder = userFolders.find(f => f.id === currentFolderId);
+  if (!folder) return;
+  if (!confirm(`Supprimer la matière « ${folder.name} » et tous ses fichiers ?`)) return;
+  await fetch(`/api/folders/${currentFolderId}`, { method: 'DELETE' });
+  currentFolderId = null;
+  await fetchFolders();
+  renderFoldersPanel();
+});
+
+document.getElementById('folder-create-btn')?.addEventListener('click', async () => {
+  const name = prompt('Nom de la matière :');
+  if (!name || !name.trim()) return;
+  const icon = prompt('Icône (emoji) :', '📁') || '📁';
+  try {
+    await fetch('/api/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), icon })
+    });
+    await fetchFolders();
+    renderFoldersPanel();
+  } catch (err) { alert(err.message); }
+});
+
+// ── Save-to-folder modal ─────────────────────────────────────────────────────
+const saveFolderModal = document.getElementById('save-folder-modal');
+let saveFolderSelectedId = null;
+
+async function showSaveFolderModal() {
+  await fetchFolders();
+  saveFolderSelectedId = null;
+  const list = document.getElementById('save-folder-list');
+  if (!userFolders.length) {
+    list.innerHTML = '<p style="color:var(--muted);text-align:center;font-size:.78rem;padding:.5rem 0">Aucune matière. Créez-en une ci-dessous.</p>';
+  } else {
+    list.innerHTML = userFolders.map(f => `
+      <div class="save-folder-item" data-id="${f.id}">
+        <span class="save-folder-item-icon">${f.icon}</span>
+        <span class="save-folder-item-name">${f.name}</span>
+        <span class="save-folder-item-check"></span>
+      </div>
+    `).join('');
+    list.querySelectorAll('.save-folder-item').forEach(el => {
+      el.addEventListener('click', () => {
+        list.querySelectorAll('.save-folder-item').forEach(x => { x.classList.remove('selected'); x.querySelector('.save-folder-item-check').textContent = ''; });
+        el.classList.add('selected');
+        el.querySelector('.save-folder-item-check').textContent = '✓';
+        saveFolderSelectedId = +el.dataset.id;
+        saveFilesToFolder(saveFolderSelectedId);
+      });
+    });
+  }
+  saveFolderModal.classList.remove('hidden');
+}
+
+async function saveFilesToFolder(folderId) {
+  try {
+    await fetch(`/api/folders/${folderId}/files`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: uploadedFilesMeta.map(f => ({ id: f.id, name: f.name, size: f.size, text: f.text })) })
+    });
+    saveFolderModal.classList.add('hidden');
+    await fetchFolders();
+  } catch (err) { alert(err.message); }
+}
+
+document.getElementById('save-folder-new-btn')?.addEventListener('click', async () => {
+  const input = document.getElementById('save-folder-new-name');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    const res = await fetch('/api/folders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (data.error) { alert(data.error); return; }
+    input.value = '';
+    await saveFilesToFolder(data.id);
+  } catch (err) { alert(err.message); }
+});
+
+document.getElementById('save-folder-skip')?.addEventListener('click', () => {
+  saveFolderModal.classList.add('hidden');
+});
+
+saveFolderModal?.addEventListener('click', (e) => {
+  if (e.target === saveFolderModal) saveFolderModal.classList.add('hidden');
 });
 
 // ── FLOAT NAV ────────────────────────────────────────────────────────────────
@@ -1967,6 +2219,14 @@ const dashStatsBtn        = document.getElementById('dash-stats-btn');
 
 function renderDashboard() {
   if (!dashboardGrid) return;
+
+  const greetEl = document.getElementById('dash-greeting-title');
+  if (greetEl && currentUser) {
+    const h = new Date().getHours();
+    const greet = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
+    greetEl.innerHTML = `${greet}, <em>${currentUser.name.split(' ')[0]}</em>`;
+  }
+
   const sessions = getSessions();
   const quizStats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
   const srsData = Object.values(getSRSData());
@@ -1979,7 +2239,7 @@ function renderDashboard() {
     {
       label: 'Dernière session',
       value: lastSession ? lastSession.files.slice(0, 2).join(' · ') : 'Aucune',
-      note: lastSession ? new Date(lastSession.timestamp).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Charge un cours pour commencer',
+      note: lastSession ? new Date(lastSession.timestamp).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Chargez un cours pour commencer',
       cls: 'blue'
     },
     {
@@ -2009,9 +2269,12 @@ function renderDashboard() {
       <div class="dash-note">${c.note}</div>
     </div>
   `).join('');
+
   if (dashContinueBtn) {
-    dashContinueBtn.disabled = !lastSession;
-    dashContinueBtn.textContent = lastSession ? 'Continuer la session' : 'Aucune session';
+    const hasSession = !!lastSession;
+    dashContinueBtn.disabled = !hasSession;
+    const hint = dashContinueBtn.querySelector('.dash-qaction-hint');
+    if (hint) hint.textContent = hasSession ? lastSession.files[0] : 'Aucune session';
   }
 }
 
@@ -2029,7 +2292,11 @@ document.getElementById('dash-history-btn')?.addEventListener('click', () => {
 dashStatsBtn?.addEventListener('click', () => {
   renderStatsPanel(); showPanel('stats-panel');
 });
+document.getElementById('dash-folders-btn')?.addEventListener('click', () => {
+  fetchFolders().then(() => { renderFoldersPanel(); showPanel('folders-panel'); });
+});
 
+fetchFolders();
 renderDashboard();
 
 // ── UTILS ────────────────────────────────────────────────────────────────────

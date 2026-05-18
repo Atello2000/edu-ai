@@ -5,6 +5,9 @@ const fs       = require('fs');
 const multer   = require('multer');
 const { IS_PROD, LIMITS, getQuotaStatus } = require('../middleware/quota');
 const { requireAuth } = require('../middleware/auth');
+const { extractText } = require('../services/text');
+
+const MAX_TEXT_UPLOAD = 80000;
 
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
 const uploadsDir  = path.join(__dirname, '..', 'uploads');
@@ -73,12 +76,17 @@ router.post('/upload', (req, res, next) => {
     if (req.fileTypeError) return res.status(400).json({ error: req.fileTypeError });
     next();
   });
-}, (req, res) => {
+}, async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'Aucun fichier reçu' });
-  res.json({
-    success: true,
-    files: req.files.map(f => ({ id: f.filename, name: f.originalname, path: f.path, size: f.size }))
-  });
+  const files = await Promise.all(req.files.map(async f => {
+    let text = '';
+    try {
+      const raw = await extractText(f.path, f.originalname);
+      text = raw.slice(0, MAX_TEXT_UPLOAD);
+    } catch (e) {}
+    return { id: f.filename, name: f.originalname, path: f.path, size: f.size, text };
+  }));
+  res.json({ success: true, files });
 });
 
 // Compteur d'utilisateurs en ligne
