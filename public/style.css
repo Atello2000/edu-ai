@@ -1280,6 +1280,27 @@ main {
 .save-folder-new .input-field:focus { border-color:var(--purple); }
 .modal-footer { margin-top:.75rem; text-align:center; }
 
+.folder-modal-body { display:flex; flex-direction:column; gap:.6rem; }
+.folder-modal-label {
+  font-family:'DM Mono',monospace; font-size:.68rem; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--muted);
+}
+.folder-icon-grid {
+  display:flex; flex-wrap:wrap; gap:.4rem;
+}
+.folder-icon-opt {
+  width:38px; height:38px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.1rem; cursor:pointer;
+  background:var(--surface); border:2px solid transparent;
+  transition:border-color .15s, transform .1s;
+}
+.folder-icon-opt:hover { border-color:var(--border); transform:scale(1.1); }
+.folder-icon-opt.selected { border-color:var(--purple); background:var(--purple-bg); }
+.folder-modal-actions {
+  display:flex; justify-content:flex-end; gap:.5rem; margin-top:1rem;
+}
+
 /* ════════════════════════════════ BIBLIOTHÈQUE ════════════════════════════════ */
 
 .lib-section        { margin-bottom:1.4rem; }

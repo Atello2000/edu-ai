@@ -1995,18 +1995,81 @@ document.getElementById('folder-back-btn')?.addEventListener('click', () => {
   document.getElementById('folders-list').classList.remove('hidden');
 });
 
-document.getElementById('folder-rename-btn')?.addEventListener('click', async () => {
+// ── Folder create/rename modal ───────────────────────────────────────────────
+const folderModal      = document.getElementById('folder-modal');
+const folderModalTitle = document.getElementById('folder-modal-title');
+const folderModalName  = document.getElementById('folder-modal-name');
+const folderModalGrid  = document.getElementById('folder-icon-grid');
+const folderModalConf  = document.getElementById('folder-modal-confirm');
+const FOLDER_ICONS = ['📁','📂','💊','🧬','⚗️','⚡','📐','💻','🔬','⚖️','🏛️','📿','💉','🧪','📜','🎵','🌍','🩺','📊','🧮'];
+let folderModalIcon = '📁';
+let folderModalMode = 'create'; // 'create' | 'rename'
+
+function openFolderModal(mode, existing) {
+  folderModalMode = mode;
+  if (mode === 'rename' && existing) {
+    folderModalTitle.innerHTML = 'Renommer la <em>matière</em>';
+    folderModalName.value = existing.name;
+    folderModalIcon = existing.icon || '📁';
+    folderModalConf.textContent = 'Enregistrer';
+  } else {
+    folderModalTitle.innerHTML = 'Nouvelle <em>matière</em>';
+    folderModalName.value = '';
+    folderModalIcon = '📁';
+    folderModalConf.textContent = 'Créer';
+  }
+  folderModalGrid.innerHTML = FOLDER_ICONS.map(ic =>
+    `<div class="folder-icon-opt${ic === folderModalIcon ? ' selected' : ''}" data-icon="${ic}">${ic}</div>`
+  ).join('');
+  folderModalGrid.querySelectorAll('.folder-icon-opt').forEach(el => {
+    el.addEventListener('click', () => {
+      folderModalGrid.querySelectorAll('.folder-icon-opt').forEach(x => x.classList.remove('selected'));
+      el.classList.add('selected');
+      folderModalIcon = el.dataset.icon;
+    });
+  });
+  folderModal.classList.remove('hidden');
+  folderModalName.focus();
+}
+
+function closeFolderModal() { folderModal.classList.add('hidden'); }
+
+document.getElementById('folder-modal-cancel')?.addEventListener('click', closeFolderModal);
+folderModal?.addEventListener('click', (e) => { if (e.target === folderModal) closeFolderModal(); });
+folderModalName?.addEventListener('keydown', (e) => { if (e.key === 'Enter') folderModalConf.click(); });
+
+folderModalConf?.addEventListener('click', async () => {
+  const name = folderModalName.value.trim();
+  if (!name) return;
+  try {
+    if (folderModalMode === 'rename') {
+      const res = await fetch(`/api/folders/${currentFolderId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, icon: folderModalIcon })
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      await fetchFolders();
+      renderFoldersPanel();
+      openFolderDetail(currentFolderId);
+    } else {
+      const res = await fetch('/api/folders', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, icon: folderModalIcon })
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return; }
+      await fetchFolders();
+      renderFoldersPanel();
+    }
+    closeFolderModal();
+  } catch (err) { alert(err.message); }
+});
+
+document.getElementById('folder-rename-btn')?.addEventListener('click', () => {
   const folder = userFolders.find(f => f.id === currentFolderId);
   if (!folder) return;
-  const name = prompt('Nouveau nom :', folder.name);
-  if (!name || !name.trim()) return;
-  await fetch(`/api/folders/${currentFolderId}`, {
-    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name.trim() })
-  });
-  await fetchFolders();
-  renderFoldersPanel();
-  openFolderDetail(currentFolderId);
+  openFolderModal('rename', folder);
 });
 
 document.getElementById('folder-delete-btn')?.addEventListener('click', async () => {
@@ -2019,18 +2082,8 @@ document.getElementById('folder-delete-btn')?.addEventListener('click', async ()
   renderFoldersPanel();
 });
 
-document.getElementById('folder-create-btn')?.addEventListener('click', async () => {
-  const name = prompt('Nom de la matière :');
-  if (!name || !name.trim()) return;
-  const icon = prompt('Icône (emoji) :', '📁') || '📁';
-  try {
-    await fetch('/api/folders', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name.trim(), icon })
-    });
-    await fetchFolders();
-    renderFoldersPanel();
-  } catch (err) { alert(err.message); }
+document.getElementById('folder-create-btn')?.addEventListener('click', () => {
+  openFolderModal('create');
 });
 
 // ── Save-to-folder modal ─────────────────────────────────────────────────────

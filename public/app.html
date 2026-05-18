@@ -647,6 +647,25 @@
   </div>
 </div>
 
+<!-- ── CREATE/RENAME FOLDER MODAL ── -->
+<div class="modal-overlay hidden" id="folder-modal">
+  <div class="modal-box modal-sm">
+    <div class="modal-header">
+      <h2 id="folder-modal-title">Nouvelle <em>matière</em></h2>
+    </div>
+    <div class="folder-modal-body">
+      <label class="folder-modal-label">Nom</label>
+      <input type="text" id="folder-modal-name" placeholder="Ex : Biochimie S3" class="input-field" autocomplete="off" />
+      <label class="folder-modal-label" id="folder-modal-icon-label">Icône</label>
+      <div class="folder-icon-grid" id="folder-icon-grid"></div>
+    </div>
+    <div class="folder-modal-actions">
+      <button class="ghost-btn" id="folder-modal-cancel">Annuler</button>
+      <button class="act-btn purple" id="folder-modal-confirm">Créer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── SAVE TO FOLDER MODAL ── -->
 <div class="modal-overlay hidden" id="save-folder-modal">
   <div class="modal-box modal-sm">
