@@ -38,16 +38,35 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(clients.openWindow(e.notification.data?.url || '/app.html'));
 });
 
+const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('/api/')) return; // API calls toujours en live
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-      if (res.ok) {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-      }
-      return res;
-    }))
-  );
+  if (e.request.url.includes('/api/')) return;
+
+  const isExternal = EXTERNAL.some(h => e.request.url.includes(h));
+
+  if (isExternal) {
+    // Cache-first pour les ressources CDN/fonts
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }))
+    );
+  } else {
+    // Network-first pour les assets locaux (app.html, app.js, style.css…)
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+  }
 });
