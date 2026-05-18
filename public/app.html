@@ -44,23 +44,23 @@
     </div>
 
     <div class="dash-quick-actions">
-      <button class="dash-qaction" id="dash-upload-btn">
-        <span class="dash-qaction-icon">📂</span>
+      <button class="dash-qaction dq-purple" id="dash-upload-btn">
+        <span class="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
         <span class="dash-qaction-label">Charger un cours</span>
         <span class="dash-qaction-hint">PDF, PPT, DOCX</span>
       </button>
-      <button class="dash-qaction" id="dash-continue-btn">
-        <span class="dash-qaction-icon">▶</span>
+      <button class="dash-qaction dq-blue" id="dash-continue-btn">
+        <span class="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
         <span class="dash-qaction-label">Continuer</span>
         <span class="dash-qaction-hint">Reprendre la session</span>
       </button>
-      <button class="dash-qaction" id="dash-folders-btn">
-        <span class="dash-qaction-icon">📁</span>
+      <button class="dash-qaction dq-gold" id="dash-folders-btn">
+        <span class="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
         <span class="dash-qaction-label">Mes matières</span>
         <span class="dash-qaction-hint">Cours classés</span>
       </button>
-      <button class="dash-qaction" id="dash-library-btn">
-        <span class="dash-qaction-icon">📚</span>
+      <button class="dash-qaction dq-teal" id="dash-library-btn">
+        <span class="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
         <span class="dash-qaction-label">Bibliothèque</span>
         <span class="dash-qaction-hint">Cours partagés</span>
       </button>
@@ -119,11 +119,11 @@
     <!-- Vue détail d'un dossier -->
     <div class="hidden" id="folder-detail">
       <div class="folder-detail-header">
-        <button class="ghost-btn" id="folder-back-btn">← Retour</button>
+        <button class="ghost-btn" id="folder-back-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Retour</button>
         <h3 class="folder-detail-title" id="folder-detail-title"></h3>
         <div class="folder-detail-actions">
-          <button class="ghost-btn" id="folder-rename-btn" title="Renommer">✏️</button>
-          <button class="ghost-btn" id="folder-delete-btn" title="Supprimer">🗑️</button>
+          <button class="ghost-btn" id="folder-rename-btn" title="Renommer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
+          <button class="ghost-btn" id="folder-delete-btn" title="Supprimer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
         </div>
       </div>
       <div id="folder-files-list"></div>
@@ -161,7 +161,7 @@
     <p class="panel-desc">Importez vos cours en PDF, PPT, PPTX ou DOCX — jusqu'à <span id="upload-size-hint">20 Mo</span> par fichier</p>
 
     <div class="drop-zone" id="drop-zone">
-      <div class="drop-icon">📂</div>
+      <div class="drop-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
       <p class="drop-main">Glissez vos fichiers ici</p>
       <p class="drop-or">ou</p>
       <label class="dz-btn" for="file-input">Parcourir</label>
@@ -172,7 +172,7 @@
     <div id="file-list"></div>
 
     <button class="act-btn gold full" id="upload-btn" disabled>
-      <span>⬆</span> Charger les fichiers
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Charger les fichiers
     </button>
   </div>
 
@@ -183,7 +183,7 @@
     <div class="quota-bar hidden" id="quota-bar"></div>
 
     <div class="no-files-notice hidden" id="no-files-notice">
-      <span>📂</span>
+      <span class="no-files-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="9" y1="13" x2="15" y2="13"/></svg></span>
       <div>
         <strong>Aucun fichier en mémoire</strong>
         <p>Les fichiers de la session précédente ne sont plus disponibles. Rechargez votre cours pour utiliser ces actions.</p>
@@ -286,7 +286,7 @@
       <button class="ghost-btn" id="copy-all-btn">Copier tout</button>
     </div>
     <div class="tts-bar hidden" id="tts-bar">
-      <span class="tts-bar-icon">🔊</span>
+      <span class="tts-bar-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
       <select id="tts-voice-select" class="tts-select"></select>
       <div class="tts-speed-wrap">
         <span class="tts-speed-lbl">Vitesse</span>
@@ -362,9 +362,9 @@
           <div class="fc-stat grey"><span id="fc-remaining-count">0</span><small>Non évaluées</small></div>
         </div>
         <div class="fc-top-actions">
-          <button class="ghost-btn srs-mode-btn" id="srs-mode-btn">🧠 Révision spacée</button>
-          <button class="ghost-btn" id="fc-shuffle">🔀 Mélanger</button>
-          <button class="ghost-btn" id="fc-restart">↺ Réinitialiser</button>
+          <button class="ghost-btn srs-mode-btn" id="srs-mode-btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 5.5-4 7.5S12 20 12 22c0-2-1-2.5-3-4.5S5 12 5 9a7 7 0 0 1 7-7z"/></svg> Révision espacée</button>
+          <button class="ghost-btn" id="fc-shuffle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Mélanger</button>
+          <button class="ghost-btn" id="fc-restart"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Réinitialiser</button>
         </div>
       </div>
 
@@ -380,7 +380,7 @@
     </div>
 
     <div class="fc-done hidden" id="fc-done">
-      <div class="fc-done-icon">🎉</div>
+      <div class="fc-done-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
       <h3>Session terminée !</h3>
       <div id="fc-done-stats"></div>
       <div class="fc-done-btns">
@@ -402,7 +402,7 @@
     <div class="chat-file-select" id="chat-file-select"></div>
     <div class="chat-messages" id="chat-messages">
       <div class="chat-welcome" id="chat-welcome">
-        <div class="chat-welcome-icon">💬</div>
+        <div class="chat-welcome-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <p>Posez une question ou joignez un devoir / QCM à corriger.</p>
         <div class="chat-suggestions">
           <button class="chat-sug">Quels sont les points clés ?</button>
@@ -674,20 +674,20 @@
     </div>
     <div class="onboarding-steps">
       <div class="ob-step">
-        <div class="ob-icon purple">📂</div>
+        <div class="ob-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
         <div><strong>1. Chargez vos cours</strong><br><span>PDF, PowerPoint ou Word — jusqu'à 20 Mo</span></div>
       </div>
       <div class="ob-step">
-        <div class="ob-icon blue">⚡</div>
+        <div class="ob-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
         <div><strong>2. Choisissez une action</strong><br><span>Résumé, Quiz, Flashcards ou Chat avec le cours</span></div>
       </div>
       <div class="ob-step">
-        <div class="ob-icon teal">🧠</div>
+        <div class="ob-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 5.5-4 7.5S12 20 12 22c0-2-1-2.5-3-4.5S5 12 5 9a7 7 0 0 1 7-7z"/></svg></div>
         <div><strong>3. Révisez intelligemment</strong><br><span>Les flashcards utilisent la révision espacée (SM-2) pour mémoriser durablement</span></div>
       </div>
       <div class="ob-step">
-        <div class="ob-icon gold">📊</div>
-        <div><strong>4. Suivez votre progression</strong><br><span>Consultez vos stats depuis le bouton 📊 en haut à gauche</span></div>
+        <div class="ob-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg></div>
+        <div><strong>4. Suivez votre progression</strong><br><span>Consultez vos stats depuis le bouton en haut à gauche</span></div>
       </div>
     </div>
     <button class="act-btn blue full" id="onboarding-close">C'est parti !</button>

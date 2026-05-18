@@ -1412,7 +1412,9 @@ function updateSRSDueCount() {
 srsModeBtn.addEventListener('click', () => {
   srsOnlyDue = !srsOnlyDue;
   srsModeBtn.classList.toggle('active', srsOnlyDue);
-  srsModeBtn.textContent = srsOnlyDue ? '📋 Toutes les cartes' : '🧠 Révision spacée';
+  srsModeBtn.innerHTML = srsOnlyDue
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg> Toutes les cartes'
+    : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 5.5-4 7.5S12 20 12 22c0-2-1-2.5-3-4.5S5 12 5 9a7 7 0 0 1 7-7z"/></svg> Révision espacée';
   updateSRSDueCount();
   renderGrid();
 });
@@ -2235,27 +2237,38 @@ function renderDashboard() {
   const lastSession = sessions[0];
   const libraryCount = libAllSections.reduce((a, s) => a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
 
+  const cardIcon = {
+    session: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    quiz: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>',
+    srs: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>',
+    lib: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
+  };
+
   const cards = [
     {
       label: 'Dernière session',
+      icon: cardIcon.session,
       value: lastSession ? lastSession.files.slice(0, 2).join(' · ') : 'Aucune',
       note: lastSession ? new Date(lastSession.timestamp).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Chargez un cours pour commencer',
       cls: 'blue'
     },
     {
       label: 'Quiz',
+      icon: cardIcon.quiz,
       value: avgPct !== null ? `${avgPct}%` : '—',
       note: `${quizStats.length} quiz complété${quizStats.length>1?'s':''}`,
       cls: avgPct === null ? 'muted' : avgPct >= 80 ? 'green' : avgPct >= 60 ? 'gold' : 'rose'
     },
     {
       label: 'Révision espacée',
+      icon: cardIcon.srs,
       value: dueCards,
       note: dueCards ? "cartes dues aujourd'hui" : 'aucune carte due',
       cls: dueCards ? 'rose' : 'green'
     },
     {
       label: 'Bibliothèque',
+      icon: cardIcon.lib,
       value: libraryCount,
       note: `cours disponible${libraryCount>1?'s':''} en local`,
       cls: 'purple'
@@ -2264,7 +2277,7 @@ function renderDashboard() {
 
   dashboardGrid.innerHTML = cards.map(c => `
     <div class="dash-card dash-${c.cls}">
-      <div class="dash-label">${c.label}</div>
+      <div class="dash-card-top"><span class="dash-card-icon">${c.icon}</span><span class="dash-label">${c.label}</span></div>
       <div class="dash-value" title="${c.value}">${c.value}</div>
       <div class="dash-note">${c.note}</div>
     </div>
