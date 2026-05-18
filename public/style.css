@@ -200,6 +200,26 @@ header {
 }
 .header-logo em { color: var(--blue); font-style: italic; }
 
+/* ── Jangalai brand logo ── */
+.jlogo {
+  display: inline-flex; align-items: center; gap: .35em;
+  line-height: 1; user-select: none;
+}
+.jlogo-spark { width: .82em; height: .82em; flex-shrink: 0; }
+.jlogo-word {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300; letter-spacing: .055em; color: var(--text);
+}
+.jlogo .jlogo-word em {
+  font-style: normal; font-weight: 700; color: var(--blue);
+}
+/* Taille dans le header app */
+.header-logo .jlogo { font-size: 1.25rem; }
+/* Taille dans l'auth (login) */
+.auth-logo .jlogo { font-size: 2rem; }
+/* Taille dans le footer */
+.footer-brand .jlogo { font-size: 1.1rem; }
+
 .header-right {
   display: flex;
   align-items: center;
