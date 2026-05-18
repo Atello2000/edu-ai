@@ -7,13 +7,184 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
   <style>
-    body { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); gap:1rem; }
-    .landing-link { font-size:.82rem; color:var(--muted); }
-    .landing-link a { color:var(--blue); text-decoration:none; }
-    .landing-link a:hover { text-decoration:underline; }
+    body {
+      display: flex; min-height: 100vh;
+      background: var(--bg); overflow: hidden;
+    }
+
+    /* ── Colonne gauche — mockup ── */
+    .auth-preview {
+      flex: 1; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      padding: 3rem 2.5rem;
+      overflow: hidden;
+    }
+
+    /* Gradient de fond ambiant */
+    .auth-preview::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 30% 30%, rgba(61,126,255,.18) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 55% at 75% 80%, rgba(167,139,250,.14) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 50% at 60% 10%, rgba(212,169,76,.10) 0%, transparent 55%);
+    }
+
+    /* Overlay de fondu vers la droite */
+    .auth-preview::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(to right, transparent 60%, var(--bg) 100%);
+      pointer-events: none;
+    }
+
+    .mockup-wrap {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 520px;
+      opacity: .72;
+      filter: blur(.4px);
+      transform: perspective(900px) rotateY(6deg) rotateX(2deg) scale(.96);
+      transform-origin: center center;
+    }
+
+    /* Fenêtre app */
+    .mock-window {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.6);
+      overflow: hidden;
+    }
+
+    /* Barre titre */
+    .mock-titlebar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: .55rem 1rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .mock-dot.r { background: #ff5f57; }
+    .mock-dot.y { background: #ffbd2e; }
+    .mock-dot.g { background: #28c840; }
+    .mock-title-text {
+      font-size: .75rem; color: var(--muted);
+      font-family: 'Outfit', sans-serif;
+      margin-left: .5rem;
+    }
+    .mock-title-text strong { color: var(--text); }
+
+    /* Corps */
+    .mock-body { padding: 1.2rem; display: flex; flex-direction: column; gap: .9rem; }
+
+    /* Bannière de bienvenue */
+    .mock-greeting {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem; font-weight: 300; color: var(--text);
+      line-height: 1.3;
+    }
+    .mock-greeting em { color: var(--blue); font-style: italic; }
+
+    /* Quick actions */
+    .mock-actions { display: flex; gap: .6rem; }
+    .mock-action {
+      flex: 1; border-radius: 10px; padding: .7rem .5rem;
+      display: flex; flex-direction: column; align-items: center; gap: .35rem;
+      font-family: 'Outfit', sans-serif; font-size: .72rem; font-weight: 500;
+      color: var(--text); border: 1px solid var(--border);
+    }
+    .mock-action.purple { background: var(--purple-bg); border-color: rgba(167,139,250,.25); }
+    .mock-action.blue   { background: var(--blue-bg);   border-color: rgba(61,126,255,.25); }
+    .mock-action.gold   { background: var(--gold-bg);   border-color: rgba(212,169,76,.25); }
+    .mock-action.teal   { background: var(--teal-bg);   border-color: rgba(29,209,161,.25); }
+    .mock-action svg    { opacity: .85; }
+
+    /* Cards de stats */
+    .mock-stats { display: flex; gap: .6rem; }
+    .mock-stat {
+      flex: 1; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: .65rem .8rem;
+    }
+    .mock-stat-val {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 400; color: var(--text);
+      line-height: 1;
+    }
+    .mock-stat-lbl {
+      font-family: 'Outfit', sans-serif;
+      font-size: .68rem; color: var(--muted); margin-top: .2rem;
+    }
+
+    /* Flashcard preview */
+    .mock-fc-row { display: flex; gap: .6rem; }
+    .mock-fc {
+      flex: 1; border-radius: 10px; padding: .8rem;
+      font-family: 'Outfit', sans-serif;
+      border: 1px solid var(--border);
+    }
+    .mock-fc.front {
+      background: linear-gradient(135deg,#111827,#182035);
+    }
+    .mock-fc.back {
+      background: linear-gradient(135deg,#0d1e1a,#101e1c);
+    }
+    .mock-fc-q {
+      font-size: .72rem; color: var(--muted); margin-bottom: .4rem;
+    }
+    .mock-fc-a {
+      font-size: .82rem; color: var(--text); font-weight: 500; line-height: 1.35;
+    }
+    .mock-fc-tag {
+      display: inline-block; margin-top: .45rem;
+      padding: .18rem .5rem; border-radius: 20px;
+      font-size: .65rem; font-weight: 600; letter-spacing: .04em;
+    }
+    .mock-fc-tag.blue   { background: var(--blue-bg);   color: var(--blue); }
+    .mock-fc-tag.teal   { background: var(--teal-bg);   color: var(--teal); }
+
+    /* Chat bubble */
+    .mock-chat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: .8rem; display: flex; gap: .7rem;
+      align-items: flex-start;
+    }
+    .mock-chat-avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--blue-bg); border: 1px solid rgba(61,126,255,.3);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mock-chat-text {
+      font-family: 'Outfit', sans-serif; font-size: .78rem;
+      color: var(--text); line-height: 1.45;
+    }
+    .mock-chat-text span { color: var(--muted); font-size: .7rem; display: block; margin-top: .25rem; }
+
+    /* Tagline sous le mockup */
+    .mockup-tagline {
+      position: relative; z-index: 1;
+      margin-top: 1.8rem; text-align: center;
+    }
+    .mockup-tagline p {
+      font-family: 'Outfit', sans-serif;
+      font-size: .82rem; color: var(--muted);
+      line-height: 1.6;
+    }
+    .mockup-tagline p strong { color: var(--text); font-weight: 500; }
+
+    /* ── Colonne droite — formulaire ── */
+    .auth-side {
+      width: 420px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem 2.5rem;
+      background: var(--bg);
+      border-left: 1px solid var(--border);
+    }
 
     .auth-card {
-      width: 100%; max-width: 420px; margin: 2rem;
+      width: 100%;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -73,12 +244,30 @@
     }
     .auth-error.show { display: block; }
 
+    .landing-link {
+      margin-top: 1.2rem;
+      font-size: .82rem; color: var(--muted); text-align: center;
+    }
+    .landing-link a { color: var(--blue); text-decoration: none; }
+    .landing-link a:hover { text-decoration: underline; }
+
     .theme-btn {
       position: fixed; top: 1rem; right: 1rem;
       background: var(--card); border: 1px solid var(--border);
       border-radius: 50%; width: 2.2rem; height: 2.2rem;
       cursor: pointer; font-size: 1rem;
       display: flex; align-items: center; justify-content: center;
+      z-index: 10;
+    }
+
+    /* ── Mobile : masquer le mockup ── */
+    @media (max-width: 860px) {
+      body { justify-content: center; }
+      .auth-preview { display: none; }
+      .auth-side {
+        width: 100%; border-left: none;
+        padding: 2rem 1.25rem;
+      }
     }
   </style>
 </head>
@@ -86,48 +275,147 @@
 
 <button class="theme-btn" id="theme-toggle" title="Changer de thème">🌙</button>
 
-<div class="auth-card">
-  <div class="auth-logo">
-    <h1>EDU <em>AI</em></h1>
-    <p>Plateforme IA pour vos cours</p>
+<!-- ══ Colonne gauche — aperçu de l'app ══ -->
+<div class="auth-preview">
+  <div style="position:relative;z-index:1;width:100%;max-width:500px">
+
+    <div class="mockup-wrap">
+      <div class="mock-window">
+
+        <!-- Titlebar -->
+        <div class="mock-titlebar">
+          <div class="mock-dot r"></div>
+          <div class="mock-dot y"></div>
+          <div class="mock-dot g"></div>
+          <span class="mock-title-text">EDU <strong>AI</strong> — Tableau de bord</span>
+        </div>
+
+        <!-- Corps -->
+        <div class="mock-body">
+
+          <div class="mock-greeting">
+            Bonjour, <em>Aminata</em> — Bonne session !
+          </div>
+
+          <!-- Quick actions -->
+          <div class="mock-actions">
+            <div class="mock-action purple">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              Résumé
+            </div>
+            <div class="mock-action blue">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Quiz
+            </div>
+            <div class="mock-action gold">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4a94c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Fiches
+            </div>
+            <div class="mock-action teal">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1dd1a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Chat IA
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="mock-stats">
+            <div class="mock-stat">
+              <div class="mock-stat-val">12</div>
+              <div class="mock-stat-lbl">Cours résumés</div>
+            </div>
+            <div class="mock-stat">
+              <div class="mock-stat-val">84</div>
+              <div class="mock-stat-lbl">Flashcards</div>
+            </div>
+            <div class="mock-stat">
+              <div class="mock-stat-val">7</div>
+              <div class="mock-stat-lbl">Quiz passés</div>
+            </div>
+          </div>
+
+          <!-- Flashcards -->
+          <div class="mock-fc-row">
+            <div class="mock-fc front">
+              <div class="mock-fc-q">Question</div>
+              <div class="mock-fc-a">Qu'est-ce que la mitose ?</div>
+              <div class="mock-fc-tag blue">Biologie</div>
+            </div>
+            <div class="mock-fc back">
+              <div class="mock-fc-q">Réponse</div>
+              <div class="mock-fc-a">Division cellulaire produisant 2 cellules filles identiques.</div>
+              <div class="mock-fc-tag teal">✓ Correct</div>
+            </div>
+          </div>
+
+          <!-- Chat -->
+          <div class="mock-chat">
+            <div class="mock-chat-avatar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="mock-chat-text">
+              L'ATP est la monnaie énergétique de la cellule. Il est produit principalement par la respiration cellulaire dans les mitochondries…
+              <span>EDU AI · il y a 2 min</span>
+            </div>
+          </div>
+
+        </div><!-- /mock-body -->
+      </div><!-- /mock-window -->
+    </div><!-- /mockup-wrap -->
+
+    <div class="mockup-tagline">
+      <p><strong>Résumés · Quiz · Flashcards · Chat IA</strong><br>
+      Tout ce dont vous avez besoin pour maîtriser vos cours.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Colonne droite — formulaire ══ -->
+<div class="auth-side">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>EDU <em>AI</em></h1>
+      <p>Plateforme IA pour vos cours</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login">Connexion</button>
+      <button class="auth-tab" id="tab-register">Inscription</button>
+    </div>
+
+    <div id="error-msg" class="auth-error"></div>
+
+    <!-- Login form -->
+    <form class="auth-form" id="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="vous@email.com" required autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password"/>
+      </div>
+      <button type="submit" class="auth-btn" id="login-btn">Se connecter</button>
+    </form>
+
+    <!-- Register form -->
+    <form class="auth-form" id="register-form" style="display:none">
+      <div class="form-group">
+        <label>Prénom / Nom</label>
+        <input type="text" id="reg-name" placeholder="Votre nom complet" required autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="vous@email.com" required autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Mot de passe</label>
+        <input type="password" id="reg-password" placeholder="8 caractères minimum" required autocomplete="new-password" minlength="8"/>
+      </div>
+      <button type="submit" class="auth-btn" id="register-btn">Créer mon compte</button>
+    </form>
   </div>
 
-  <div class="auth-tabs">
-    <button class="auth-tab active" id="tab-login">Connexion</button>
-    <button class="auth-tab" id="tab-register">Inscription</button>
-  </div>
-
-  <div id="error-msg" class="auth-error"></div>
-
-  <!-- Login form -->
-  <form class="auth-form" id="login-form">
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="vous@email.com" required autocomplete="email"/>
-    </div>
-    <div class="form-group">
-      <label>Mot de passe</label>
-      <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password"/>
-    </div>
-    <button type="submit" class="auth-btn" id="login-btn">Se connecter</button>
-  </form>
-
-  <!-- Register form -->
-  <form class="auth-form" id="register-form" style="display:none">
-    <div class="form-group">
-      <label>Prénom / Nom</label>
-      <input type="text" id="reg-name" placeholder="Votre nom complet" required autocomplete="off"/>
-    </div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="reg-email" placeholder="vous@email.com" required autocomplete="email"/>
-    </div>
-    <div class="form-group">
-      <label>Mot de passe</label>
-      <input type="password" id="reg-password" placeholder="8 caractères minimum" required autocomplete="new-password" minlength="8"/>
-    </div>
-    <button type="submit" class="auth-btn" id="register-btn">Créer mon compte</button>
-  </form>
+  <p class="landing-link">Découvrir la plateforme → <a href="/">En savoir plus</a></p>
 </div>
 
 <script>
@@ -212,8 +500,6 @@
     if (d.user) window.location.href = '/app.html';
   });
 </script>
-
-<p class="landing-link">Découvrir la plateforme → <a href="/">En savoir plus</a></p>
 
 </body>
 </html>
