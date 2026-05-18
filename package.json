@@ -1,5 +1,5 @@
 {
-  "name": "edu-ai",
+  "name": "jangalai",
   "version": "1.0.0",
   "description": "Plateforme IA pour résumer et évaluer des cours",
   "main": "server.js",

@@ -1,6 +1,6 @@
 {
-  "name": "EDU AI",
-  "short_name": "EDU AI",
+  "name": "Jangalai",
+  "short_name": "Jangalai",
   "description": "Résumés, quiz et flashcards générés par IA",
   "start_url": "/app.html",
   "display": "standalone",

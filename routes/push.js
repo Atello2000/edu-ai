@@ -6,7 +6,7 @@ const { requireAuth } = require('../middleware/auth');
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
-const VAPID_EMAIL   = `mailto:${process.env.ADMIN_EMAIL || 'admin@edu-ai.app'}`;
+const VAPID_EMAIL   = `mailto:${process.env.ADMIN_EMAIL || 'admin@jangalai.app'}`;
 
 let pushEnabled = false;
 if (VAPID_PUBLIC && VAPID_PRIVATE) {
@@ -60,7 +60,7 @@ router.post('/notify-due', requireAuth, async (req, res) => {
   if (!subs.length) return res.json({ sent: false });
 
   const payload = JSON.stringify({
-    title: 'EDU AI — Révision du jour',
+    title: 'Jangalai — Révision du jour',
     body:  `${dueCount} flashcard${dueCount > 1 ? 's' : ''} à réviser aujourd'hui !`,
     icon:  '/icon.svg',
     url:   '/app.html'

@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
 const db  = require('../db');
 
-const JWT_SECRET = process.env.SESSION_SECRET || 'edu-ai-dev-secret-change-in-prod';
+const JWT_SECRET = process.env.SESSION_SECRET || 'jangalai-dev-secret-change-in-prod';
 
 function requireAuth(req, res, next) {
-  const token = req.cookies?.['edu.token'];
+  const token = req.cookies?.['jangalai.token'];
   if (!token) return res.status(401).json({ error: 'Connexion requise.' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);

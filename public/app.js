@@ -25,7 +25,7 @@ function applyPlanRestrictions() {
 }
 
 function showOnboarding() {
-  if (localStorage.getItem('edu-ai-onboarded')) return;
+  if (localStorage.getItem('jangalai-onboarded')) return;
   const modal = document.getElementById('onboarding-modal');
   if (modal) modal.classList.remove('hidden');
 }
@@ -133,14 +133,14 @@ let uploadedFilesMeta = [];
 // ── THEME ────────────────────────────────────────────────────────────────────
 const themeToggle = document.getElementById('theme-toggle');
 const html        = document.documentElement;
-const savedTheme  = localStorage.getItem('edu-ai-theme') || 'dark';
+const savedTheme  = localStorage.getItem('jangalai-theme') || 'dark';
 html.setAttribute('data-theme', savedTheme);
 themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 themeToggle.addEventListener('click', () => {
   const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
   html.setAttribute('data-theme', next);
   themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-  localStorage.setItem('edu-ai-theme', next);
+  localStorage.setItem('jangalai-theme', next);
 });
 
 // ── UPLOAD ───────────────────────────────────────────────────────────────────
@@ -975,7 +975,7 @@ copyAllBtn.addEventListener('click', () => {
 });
 
 // ── TEXT-TO-SPEECH ───────────────────────────────────────────────────────────
-const TTS_SETTINGS_KEY = 'edu-ai-tts';
+const TTS_SETTINGS_KEY = 'jangalai-tts';
 let ttsActiveBtn  = null;
 let ttsActiveStop = null;
 let ttsKeepAlive  = null;
@@ -1375,7 +1375,7 @@ let cardStates   = {};
 let srsOnlyDue   = false;
 
 // SM-2
-const SRS_KEY = 'edu-ai-srs';
+const SRS_KEY = 'jangalai-srs';
 function cardHash(front) {
   let h = 0; for (let i=0;i<front.length;i++) h = Math.imul(31,h)+front.charCodeAt(i)|0; return h.toString(36);
 }
@@ -1780,7 +1780,7 @@ function appendMsgWithImage(role, text, img) {
 }
 
 // ── SESSION HISTORY ──────────────────────────────────────────────────────────
-const HISTORY_KEY = 'edu-ai-sessions';
+const HISTORY_KEY = 'jangalai-sessions';
 
 function getSessions() { return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]'); }
 
@@ -2184,7 +2184,7 @@ floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
 );
 
 // ── STATS ─────────────────────────────────────────────────────────────────────
-const QUIZ_STATS_KEY = 'edu-ai-quiz-stats';
+const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
 const statsPanel   = document.getElementById('stats-panel');
 const statsContent = document.getElementById('stats-content');
 const statsToggle  = document.getElementById('stats-toggle');
@@ -2450,11 +2450,11 @@ function applyUpdate(newSW) {
 // ── ONBOARDING ────────────────────────────────────────────────────────────────
 document.getElementById('onboarding-close')?.addEventListener('click', () => {
   document.getElementById('onboarding-modal').classList.add('hidden');
-  localStorage.setItem('edu-ai-onboarded', '1');
+  localStorage.setItem('jangalai-onboarded', '1');
 });
 
 // ── SETTINGS ─────────────────────────────────────────────────────────────────
-const PREFS_KEY = 'edu-ai-prefs';
+const PREFS_KEY = 'jangalai-prefs';
 function getPrefs() { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
 function savePrefs(patch) { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...getPrefs(), ...patch })); }
 
@@ -2522,7 +2522,7 @@ document.querySelectorAll('.ts-btn').forEach(btn =>
   btn.addEventListener('click', () => {
     const t = btn.dataset.theme;
     document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('edu-ai-theme', t);
+    localStorage.setItem('jangalai-theme', t);
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) themeToggle.textContent = t === 'dark' ? '🌙' : '☀️';
     document.querySelectorAll('.ts-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
@@ -2563,7 +2563,7 @@ document.getElementById('clear-stats-btn').addEventListener('click', () => {
 });
 
 document.getElementById('reset-onboarding-btn').addEventListener('click', () => {
-  localStorage.removeItem('edu-ai-onboarded');
+  localStorage.removeItem('jangalai-onboarded');
   closeSettings();
   const modal = document.getElementById('onboarding-modal');
   if (modal) modal.classList.remove('hidden');
@@ -2646,7 +2646,7 @@ async function subscribeToPush() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subscription: sub })
     });
-    localStorage.setItem('edu-ai-push', '1');
+    localStorage.setItem('jangalai-push', '1');
     return true;
   } catch { return false; }
 }
@@ -2663,11 +2663,11 @@ async function unsubscribeFromPush() {
       await sub.unsubscribe();
     }
   } catch {}
-  localStorage.removeItem('edu-ai-push');
+  localStorage.removeItem('jangalai-push');
 }
 
 async function notifyDueCardsIfNeeded() {
-  if (localStorage.getItem('edu-ai-push') !== '1') return;
+  if (localStorage.getItem('jangalai-push') !== '1') return;
   const srsData = JSON.parse(localStorage.getItem(SRS_KEY) || '{}');
   const now = Date.now();
   const dueCount = Object.values(srsData).filter(c => !c.nextReview || c.nextReview <= now).length;
@@ -2681,7 +2681,7 @@ async function notifyDueCardsIfNeeded() {
 
 const pushToggle = document.getElementById('pref-push-notif');
 if (pushToggle) {
-  pushToggle.checked = localStorage.getItem('edu-ai-push') === '1';
+  pushToggle.checked = localStorage.getItem('jangalai-push') === '1';
   pushToggle.addEventListener('change', async () => {
     if (pushToggle.checked) {
       const ok = await subscribeToPush();

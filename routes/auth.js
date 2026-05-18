@@ -15,11 +15,11 @@ const COOKIE_OPTS = {
 
 function setToken(res, userId) {
   const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('edu.token', token, COOKIE_OPTS);
+  res.cookie('jangalai.token', token, COOKIE_OPTS);
 }
 
 function getTokenUser(req) {
-  const token = req.cookies?.['edu.token'];
+  const token = req.cookies?.['jangalai.token'];
   if (!token) return null;
   try {
     return jwt.verify(token, JWT_SECRET);
@@ -67,7 +67,7 @@ router.post('/login', async (req, res) => {
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
 router.post('/logout', (req, res) => {
-  res.clearCookie('edu.token', { httpOnly: true, secure: !!process.env.RAILWAY_ENVIRONMENT, sameSite: 'lax' });
+  res.clearCookie('jangalai.token', { httpOnly: true, secure: !!process.env.RAILWAY_ENVIRONMENT, sameSite: 'lax' });
   res.json({ ok: true });
 });
 

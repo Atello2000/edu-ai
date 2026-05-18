@@ -2,9 +2,9 @@ const Database = require('better-sqlite3');
 const path     = require('path');
 const fs       = require('fs');
 
-// En prod Railway : DB_PATH=/data/edu-ai.db (volume persistant)
+// En prod Railway : DB_PATH=/data/jangalai.db (volume persistant)
 // En local : fichier dans le répertoire du projet
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'edu-ai.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'jangalai.db');
 const DB_DIR  = path.dirname(DB_PATH);
 
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
