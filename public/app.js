@@ -140,15 +140,17 @@ let uploadedFilesMeta = [];
 // ── THEME ────────────────────────────────────────────────────────────────────
 const themeToggle = document.getElementById('theme-toggle');
 const html        = document.documentElement;
-const savedTheme  = localStorage.getItem('jangalai-theme') || 'dark';
+const savedTheme  = localStorage.getItem('jangalai-theme') || 'light';
 html.setAttribute('data-theme', savedTheme);
-themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-themeToggle.addEventListener('click', () => {
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
-  localStorage.setItem('jangalai-theme', next);
-});
+if (themeToggle) {
+  themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+  themeToggle.addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    themeToggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('jangalai-theme', next);
+  });
+}
 
 // ── UPLOAD ───────────────────────────────────────────────────────────────────
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
