@@ -5,3 +5,7 @@ courses/
 data/
 *.log
 *.json.bak
+*.db
+*.db-shm
+*.db-wal
+.claude/
