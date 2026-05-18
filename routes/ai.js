@@ -3,6 +3,7 @@ const router  = express.Router();
 const { aiComplete, aiStream, aiChat, calcMaxTokens, MODEL_LABEL } = require('../services/ai');
 const { extractText } = require('../services/text');
 const { checkQuota, LIMITS } = require('../middleware/quota');
+const { logTokens } = require('../services/tokens');
 
 const VALID_LANGS = ['fr', 'en', 'ar'];
 function langLabel(lang) {
@@ -60,6 +61,7 @@ router.post('/summarize', async (req, res) => {
 (1 encadré blockquote avec la leçon principale en 2-3 phrases)`;
 
       for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length), cachedContent)) {
+        if (chunk.usage) { logTokens(req.user?.id, 'summarize', chunk.usage.provider, chunk.usage.input, chunk.usage.output); continue; }
         send({ type: 'delta', name: file.name, text: chunk.text });
         streamModel = chunk.model;
       }
@@ -136,9 +138,10 @@ Les explications doivent être pédagogiques, concrètes et utiles pour réviser
 
 Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
 
-      const { text: rawQuizText, model: fileQuizModel } = await aiComplete(
+      const { text: rawQuizText, model: fileQuizModel, usage: quizUsage } = await aiComplete(
         prompt, calcMaxTokens('quiz', truncated.length, count), cachedContent
       );
+      logTokens(req.user?.id, 'quiz', quizUsage?.provider, quizUsage?.input, quizUsage?.output);
 
       let quiz;
       try {
@@ -177,7 +180,7 @@ router.post('/exam-sheet', async (req, res) => {
       context += `\n\n=== ${file.name} ===\n${text.slice(0, 18000)}`;
     }
 
-    const { text, model } = await aiComplete(`Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
+    const { text, model, usage: sheetUsage } = await aiComplete(`Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
 
 À partir des cours fournis, produis une fiche de révision dense, claire et directement exploitable avant un contrôle.
 
@@ -204,6 +207,7 @@ Propose un plan sur 3 jours : quoi relire, quoi mémoriser, quoi tester.
 Cours :
 ${context}`, 4200);
 
+    logTokens(req.user?.id, 'exam-sheet', sheetUsage?.provider, sheetUsage?.input, sheetUsage?.output);
     res.json({ success: true, sheet: text, model });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -240,9 +244,10 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
   ]
 }`;
 
-      const { text: rawFlashText, model: fileFlashModel } = await aiComplete(
+      const { text: rawFlashText, model: fileFlashModel, usage: flashUsage } = await aiComplete(
         prompt, calcMaxTokens('flash', truncated.length, count), cachedContent
       );
+      logTokens(req.user?.id, 'flashcards', flashUsage?.provider, flashUsage?.input, flashUsage?.output);
 
       let data;
       try {
@@ -310,7 +315,8 @@ Cours disponibles :${context}${imageNote}`;
     }
 
     const maxTok = attachedFile ? 3000 : attachedImage ? 2000 : 1024;
-    const { text, model } = await aiChat(systemPrompt, finalMessages, maxTok, !!attachedImage);
+    const { text, model, usage: chatUsage } = await aiChat(systemPrompt, finalMessages, maxTok, !!attachedImage);
+    logTokens(req.user?.id, 'chat', chatUsage?.provider, chatUsage?.input, chatUsage?.output);
     res.json({ success: true, response: text, model });
   } catch (err) {
     res.status(500).json({ error: err.message });

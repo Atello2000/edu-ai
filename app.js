@@ -7,9 +7,15 @@ const cookieParser = require('cookie-parser');
 const { globalLimiter, aiLimiter } = require('./middleware/rateLimit');
 const { requireAuth } = require('./middleware/auth');
 
+const helmet = require('helmet');
+
 const app = express();
 app.set('trust proxy', 1); // Railway reverse proxy
-app.use(cors());
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(cors({
+  origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : 'http://localhost:3001',
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 
 app.use(cookieParser());
@@ -23,6 +29,12 @@ app.get('/sw.js', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.send(content);
 });
+
+// En production, sert le build React en priorité
+const reactDist = path.join(__dirname, 'client', 'dist');
+if (fs.existsSync(reactDist)) {
+  app.use(express.static(reactDist));
+}
 
 app.use(express.static('public'));
 app.use('/api', globalLimiter);
@@ -40,12 +52,20 @@ app.use('/api',      require('./routes/misc'));
 app.use('/api',         requireAuth, aiLimiter, require('./routes/ai'));
 app.use('/api/folders', requireAuth, require('./routes/folders'));
 app.use('/api/pharma',  requireAuth, aiLimiter, require('./routes/pharma'));
-app.use('/api/admin',   require('./routes/admin'));
+app.use('/api/admin',   requireAuth, require('./routes/admin'));
 app.use('/api/push',    require('./routes/push'));
+
+// SPA fallback — toutes les routes non-API renvoient index.html
+if (fs.existsSync(reactDist)) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(reactDist, 'index.html'));
+  });
+}
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: err.message || 'Erreur serveur' });
+  const isDev = !process.env.RAILWAY_ENVIRONMENT;
+  res.status(500).json({ error: isDev ? err.message : 'Erreur serveur' });
 });
 
 module.exports = app;

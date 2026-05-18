@@ -51,4 +51,33 @@ router.get('/stats', requireAuth, requireAdmin, (req, res) => {
   res.json({ total, pro: proCount, free: total - proCount, active_today: todayAct });
 });
 
+// ── GET /api/admin/tokens ─────────────────────────────────────────────────────
+router.get('/tokens', requireAuth, requireAdmin, (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+
+  const todayRow = db.prepare(`
+    SELECT COALESCE(SUM(input_tokens),0) AS input, COALESCE(SUM(output_tokens),0) AS output,
+           COALESCE(SUM(input_tokens+output_tokens),0) AS total
+    FROM token_usage WHERE date = ?
+  `).get(today);
+
+  const allRow = db.prepare(`
+    SELECT COALESCE(SUM(input_tokens),0) AS input, COALESCE(SUM(output_tokens),0) AS output,
+           COALESCE(SUM(input_tokens+output_tokens),0) AS total
+    FROM token_usage
+  `).get();
+
+  const byProvider = db.prepare(`
+    SELECT provider, SUM(input_tokens) AS input, SUM(output_tokens) AS output
+    FROM token_usage GROUP BY provider ORDER BY output DESC
+  `).all();
+
+  const byAction = db.prepare(`
+    SELECT action, SUM(input_tokens+output_tokens) AS total, SUM(output_tokens) AS output
+    FROM token_usage GROUP BY action ORDER BY total DESC
+  `).all();
+
+  res.json({ today: todayRow, allTime: allRow, byProvider, byAction });
+});
+
 module.exports = router;

@@ -81,6 +81,19 @@
     .search-input:focus { border-color:var(--blue); }
 
     .tag-admin { font-size:.7rem; background:var(--blue-bg); color:var(--blue); padding:.1rem .4rem; border-radius:4px; margin-left:.4rem; }
+
+    .section-title { font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:1.75rem 0 .75rem; }
+    .token-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1rem; margin-bottom:1rem; }
+    .stat-card.green .stat-val { color:#4ade80; }
+    .stat-card.purple .stat-val { color:var(--purple); }
+    .breakdown-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:2rem; }
+    .breakdown-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem 1.25rem; }
+    .breakdown-card h4 { font-size:.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:.75rem; }
+    .breakdown-item { display:flex; justify-content:space-between; align-items:center; padding:.35rem 0; border-bottom:1px solid var(--border-sub); font-size:.84rem; }
+    .breakdown-item:last-child { border-bottom:none; }
+    .breakdown-val { font-weight:600; color:var(--blue); font-size:.82rem; }
+    .provider-groq   { color:#f97316; }
+    .provider-deepseek { color:#818cf8; }
   </style>
 </head>
 <body>
@@ -98,6 +111,26 @@
   <div class="stat-card gold"><div class="stat-val" id="s-pro">—</div><div class="stat-lbl">Comptes Pro</div></div>
   <div class="stat-card muted"><div class="stat-val" id="s-free">—</div><div class="stat-lbl">Comptes Gratuit</div></div>
   <div class="stat-card teal"><div class="stat-val" id="s-active">—</div><div class="stat-lbl">Actifs aujourd'hui</div></div>
+</div>
+
+<div class="section-title">Consommation tokens IA</div>
+
+<div class="token-grid">
+  <div class="stat-card blue"><div class="stat-val" id="t-today">—</div><div class="stat-lbl">Tokens aujourd'hui</div></div>
+  <div class="stat-card green"><div class="stat-val" id="t-total">—</div><div class="stat-lbl">Tokens total</div></div>
+  <div class="stat-card teal"><div class="stat-val" id="t-input">—</div><div class="stat-lbl">Input (contexte)</div></div>
+  <div class="stat-card purple"><div class="stat-val" id="t-output">—</div><div class="stat-lbl">Output (généré)</div></div>
+</div>
+
+<div class="breakdown-row">
+  <div class="breakdown-card">
+    <h4>Par provider</h4>
+    <div id="breakdown-provider"><span style="color:var(--muted);font-size:.82rem">Aucune donnée</span></div>
+  </div>
+  <div class="breakdown-card">
+    <h4>Par action</h4>
+    <div id="breakdown-action"><span style="color:var(--muted);font-size:.82rem">Aucune donnée</span></div>
+  </div>
 </div>
 
 <div class="table-wrap">
@@ -214,10 +247,53 @@
 
   function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+  function fmtTokens(n) {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'k';
+    return String(n);
+  }
+
+  const ACTION_LABELS = {
+    summarize: '📄 Résumés', quiz: '❓ Quiz', flashcards: '🃏 Flashcards',
+    chat: '💬 Chat', 'exam-sheet': '📝 Fiches examen',
+    'pharma-chat': '⚕️ Chat pharma', 'pharma-quiz': '⚕️ Quiz pharma', 'pharma-fiche': '⚕️ Fiche pharma'
+  };
+
+  async function loadTokens() {
+    const r = await fetch('/api/admin/tokens');
+    const d = await r.json();
+
+    document.getElementById('t-today').textContent  = fmtTokens(d.today?.total  || 0);
+    document.getElementById('t-total').textContent  = fmtTokens(d.allTime?.total || 0);
+    document.getElementById('t-input').textContent  = fmtTokens(d.allTime?.input || 0);
+    document.getElementById('t-output').textContent = fmtTokens(d.allTime?.output || 0);
+
+    const providerEl = document.getElementById('breakdown-provider');
+    if (d.byProvider?.length) {
+      providerEl.innerHTML = d.byProvider.map(p => {
+        const cls = p.provider === 'Groq' ? 'provider-groq' : p.provider === 'DeepSeek' ? 'provider-deepseek' : '';
+        return `<div class="breakdown-item">
+          <span class="${cls}" style="font-weight:600">${p.provider || 'Inconnu'}</span>
+          <span class="breakdown-val">${fmtTokens((p.input||0)+(p.output||0))} <span style="font-weight:400;color:var(--muted);font-size:.76rem">(↑${fmtTokens(p.input||0)} ↓${fmtTokens(p.output||0)})</span></span>
+        </div>`;
+      }).join('');
+    }
+
+    const actionEl = document.getElementById('breakdown-action');
+    if (d.byAction?.length) {
+      actionEl.innerHTML = d.byAction.map(a =>
+        `<div class="breakdown-item">
+          <span>${ACTION_LABELS[a.action] || a.action}</span>
+          <span class="breakdown-val">${fmtTokens(a.total || 0)}</span>
+        </div>`
+      ).join('');
+    }
+  }
+
   (async () => {
     const ok = await checkAdmin();
     if (!ok) return;
-    await Promise.all([loadStats(), loadUsers()]);
+    await Promise.all([loadStats(), loadUsers(), loadTokens()]);
   })();
 </script>
 </body>

@@ -2,17 +2,24 @@
 let currentUser = null;
 
 async function initAuth() {
+  if (window.__reactUser) {
+    currentUser = window.__reactUser;
+    renderUserMenu();
+    applyPlanRestrictions();
+    showOnboarding();
+    return true;
+  }
   try {
     const res  = await fetch('/api/auth/me');
     const data = await res.json();
-    if (!data.user) { window.location.href = '/login.html'; return false; }
+    if (!data.user) { window.location.href = '/login'; return false; }
     currentUser = data.user;
     renderUserMenu();
     applyPlanRestrictions();
     showOnboarding();
     return true;
   } catch {
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return false;
   }
 }
@@ -49,7 +56,7 @@ function renderUserMenu() {
         <span class="user-plan plan-${currentUser.plan}">${planLabels[currentUser.plan] || currentUser.plan}</span>
       </div>
       <hr class="dropdown-sep"/>
-      <a href="/profile.html" class="dropdown-item" style="display:block;text-decoration:none;color:var(--text)">Mon profil</a>
+      <a href="/profile" class="dropdown-item" style="display:block;text-decoration:none;color:var(--text)">Mon profil</a>
       <button class="dropdown-item" id="logout-btn">Se déconnecter</button>
     </div>`;
   headerRight.prepend(menu);
@@ -61,7 +68,7 @@ function renderUserMenu() {
   document.addEventListener('click', () => document.getElementById('user-dropdown')?.classList.remove('open'));
   document.getElementById('logout-btn').onclick = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    window.location.href = '/login.html';
+    window.location.href = '/login';
   };
 }
 
@@ -2695,8 +2702,8 @@ if (pushToggle) {
   });
 }
 
-// Init
-(async () => {
+// Init — called by React AppPage after mount, or auto-run in vanilla HTML context
+async function startApp() {
   const ok = await initAuth();
   if (!ok) return;
   applyPrefs();
@@ -2704,4 +2711,10 @@ if (pushToggle) {
   notifyDueCardsIfNeeded();
   document.getElementById('back-home-btn').addEventListener('click', () => showPanel('dashboard-panel'));
   document.getElementById('header-logo').addEventListener('click', () => showPanel('dashboard-panel'));
-})();
+}
+
+if (!window.__reactApp) {
+  startApp();
+} else {
+  window.startApp = startApp;
+}

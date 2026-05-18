@@ -51,7 +51,9 @@ function checkQuota(req, action) {
 
   if (used >= limit) return { ok: false, used, limit, action };
 
-  db.prepare(`UPDATE user_quota SET ${action} = ${action} + 1 WHERE user_id = ? AND date = ?`).run(user.id, today);
+  const safeField = { summarize: 'summarize', quiz: 'quiz', flashcards: 'flashcards', chat: 'chat' }[action];
+  if (!safeField) throw new Error('Action invalide');
+  db.prepare(`UPDATE user_quota SET ${safeField} = ${safeField} + 1 WHERE user_id = ? AND date = ?`).run(user.id, today);
   return { ok: true, used: used + 1, limit };
 }
 

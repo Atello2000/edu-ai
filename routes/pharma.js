@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
-const { anthropic, aiComplete } = require('../services/ai');
+const { aiComplete, aiChat } = require('../services/ai');
+const { logTokens } = require('../services/tokens');
 
 function requireMax(req, res, next) {
   if (!req.user || req.user.plan !== 'max')
@@ -27,14 +28,9 @@ Réponds toujours en français. Structure tes réponses avec Markdown (titres, l
 router.post('/chat', async (req, res) => {
   try {
     const { messages } = req.body;
-    const stream = anthropic.messages.stream({
-      model:      'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      system:     [{ type: 'text', text: PHARMA_SYSTEM, cache_control: { type: 'ephemeral' } }],
-      messages:   (messages || []).slice(-10)
-    });
-    const message = await stream.finalMessage();
-    res.json({ success: true, response: message.content[0].text, model: 'Claude Sonnet 4.6' });
+    const { text, model, usage } = await aiChat(PHARMA_SYSTEM, (messages || []).slice(-10), 1500);
+    logTokens(req.user?.id, 'pharma-chat', usage?.provider, usage?.input, usage?.output);
+    res.json({ success: true, response: text, model });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -53,7 +49,7 @@ router.post('/quiz', async (req, res) => {
       difficile: 'Privilégie les cas pratiques, nuances réglementaires, erreurs courantes et scénarios multi-étapes.',
     }[difficulty];
 
-    const { text: raw, model } = await aiComplete(
+    const { text: raw, model, usage: pharmaQuizUsage } = await aiComplete(
       `Génère ${count} questions QCM de niveau ${difficulty} sur le thème "${topic}" en régulation pharmaceutique.
 ${diffGuide}
 
@@ -77,6 +73,7 @@ Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autou
       console.error('[pharma/quiz] JSON parse error:', e.message);
     }
 
+    logTokens(req.user?.id, 'pharma-quiz', pharmaQuizUsage?.provider, pharmaQuizUsage?.input, pharmaQuizUsage?.output);
     res.json({ success: true, questions: quiz.questions || [], model });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -86,7 +83,7 @@ Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autou
 router.post('/fiche', async (req, res) => {
   try {
     const { topic } = req.body;
-    const { text, model } = await aiComplete(
+    const { text, model, usage: ficheUsage } = await aiComplete(
       `Tu es un expert en régulation pharmaceutique. Génère une fiche de référence complète et synthétique pour un étudiant de Master 1 sur : "${topic}".
 
 Structure la fiche en Markdown avec exactement ce plan :
@@ -113,6 +110,7 @@ Réponds en français. Sois précis, cite les références exactes (ex : Règlem
       2200
     );
 
+    logTokens(req.user?.id, 'pharma-fiche', ficheUsage?.provider, ficheUsage?.input, ficheUsage?.output);
     res.json({ success: true, content: text, model });
   } catch (err) {
     res.status(500).json({ error: err.message });

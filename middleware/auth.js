@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
 const db  = require('../db');
 
-const JWT_SECRET = process.env.SESSION_SECRET || 'jangalai-dev-secret-change-in-prod';
+const JWT_SECRET = process.env.SESSION_SECRET;
+if (!JWT_SECRET) throw new Error('SESSION_SECRET non configuré');
 
 function requireAuth(req, res, next) {
   const token = req.cookies?.['jangalai.token'];
