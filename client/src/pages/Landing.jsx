@@ -53,7 +53,7 @@ function FaqItem({ q, a }) {
 
 export default function Landing() {
   const { user } = useAuth();
-  const { theme, toggle } = useTheme();
+  useTheme();
   const navigate = useNavigate();
 
   useEffect(() => { if (user) navigate('/app'); }, [user]);
@@ -70,7 +70,6 @@ export default function Landing() {
           <a href="#faq">FAQ</a>
         </div>
         <div className="nav-actions">
-          <button className="theme-btn" onClick={toggle}>{theme === 'dark' ? '🌙' : '☀️'}</button>
           <Link to="/login" className="btn-outline">Connexion</Link>
           <Link to="/login" className="btn-primary">Commencer</Link>
         </div>

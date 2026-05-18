@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useTheme } from '../hooks/useTheme';
 import Logo from '../components/Logo';
 import './Login.css';
 
 export default function Login() {
   const { login, register } = useAuth();
-  const { theme, toggle } = useTheme();
   const navigate = useNavigate();
   const [tab, setTab] = useState('login');
   const [error, setError] = useState('');
@@ -46,10 +44,6 @@ export default function Login() {
 
   return (
     <>
-      <button className="theme-btn" onClick={toggle} title="Changer de thème">
-        {theme === 'dark' ? '🌙' : '☀️'}
-      </button>
-
       <div className="auth-preview">
         <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500 }}>
           <div className="mockup-wrap">
