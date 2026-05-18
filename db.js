@@ -80,4 +80,17 @@ db.exec(`
   );
 `);
 
+// Migrations — ADD COLUMN is idempotent via try/catch
+const migrations = [
+  "ALTER TABLE users ADD COLUMN google_id TEXT",
+  "ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN verify_token TEXT",
+  "ALTER TABLE users ADD COLUMN verify_expires TEXT",
+  "ALTER TABLE users ADD COLUMN reset_token TEXT",
+  "ALTER TABLE users ADD COLUMN reset_expires TEXT",
+];
+for (const sql of migrations) {
+  try { db.exec(sql); } catch (_) { /* column already exists */ }
+}
+
 module.exports = db;

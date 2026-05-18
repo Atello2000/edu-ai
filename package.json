@@ -26,6 +26,7 @@
     "officeparser": "^4.1.1",
     "openai": "^6.36.0",
     "pdf-parse": "^1.1.1",
+    "resend": "^6.12.3",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
