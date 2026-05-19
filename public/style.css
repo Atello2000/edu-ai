@@ -1158,7 +1158,7 @@ main {
 /* ════════════════════════════════ FLOAT NAV ════════════════════════════════ */
 
 .float-nav {
-  position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%);
+  position:fixed; top:auto; bottom:1.5rem; left:50%; transform:translateX(-50%);
   display:flex; gap:.3rem;
   background:var(--glass); border:1px solid var(--glass-border);
   border-radius:999px; padding:.38rem .48rem;
