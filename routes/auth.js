@@ -173,7 +173,7 @@ router.post('/resend-verify', async (req, res) => {
   const token = genToken();
   const exp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
   await db.prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?').run(token, exp, user.id);
-  sendVerifyEmail(user.email, token).catch(console.error);
+  sendVerifyEmail(user.email, token).catch(err => logger.error('sendVerifyEmail failed (resend)', { email: user.email, message: err.message }));
   res.json({ ok: true });
 });
 

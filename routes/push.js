@@ -3,6 +3,7 @@ const router   = express.Router();
 const webpush  = require('web-push');
 const { prepare } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const logger   = require('../services/logger');
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY;
@@ -14,7 +15,7 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
     webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
     pushEnabled = true;
   } catch (e) {
-    console.warn('[Push] Clés VAPID invalides — push désactivé:', e.message);
+    logger.warn('VAPID keys invalid — push disabled', { message: e.message });
   }
 }
 

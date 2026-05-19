@@ -128,7 +128,7 @@ async function initSchema() {
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}
   }
-  console.log('[DB] PostgreSQL schema ready');
+  require('./services/logger').info('PostgreSQL schema ready');
 }
 
 module.exports = { prepare, exec, pool, initSchema };

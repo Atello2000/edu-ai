@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { aiComplete, aiChat } = require('../services/ai');
 const { logTokens } = require('../services/tokens');
+const logger  = require('../services/logger');
 
 function requireMax(req, res, next) {
   if (!req.user || req.user.plan !== 'max')
@@ -70,7 +71,7 @@ Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autou
       jsonStr = jsonStr.replace(/\r?\n/g, ' ').replace(/\r/g, ' ');
       quiz = JSON.parse(jsonStr);
     } catch (e) {
-      console.error('[pharma/quiz] JSON parse error:', e.message);
+      logger.error('pharma/quiz JSON parse error', { message: e.message });
     }
 
     logTokens(req.user?.id, 'pharma-quiz', pharmaQuizUsage?.provider, pharmaQuizUsage?.input, pharmaQuizUsage?.output);

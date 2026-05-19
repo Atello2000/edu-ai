@@ -1,7 +1,8 @@
 const { initSchema } = require('./db');
-const app  = require('./app');
-const PORT = process.env.PORT || 3001;
+const app    = require('./app');
+const logger = require('./services/logger');
+const PORT   = process.env.PORT || 3001;
 
 initSchema()
-  .then(() => app.listen(PORT, () => console.log(`Jangalai démarré sur http://localhost:${PORT}`)))
-  .catch(err => { console.error('[DB] Init failed:', err); process.exit(1); });
+  .then(() => app.listen(PORT, () => logger.info(`Server started on port ${PORT}`)))
+  .catch(err => { logger.error('DB init failed', { message: err.message, stack: err.stack }); process.exit(1); });

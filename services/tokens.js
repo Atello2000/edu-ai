@@ -1,4 +1,5 @@
 const { prepare } = require('../db');
+const logger = require('./logger');
 
 async function logTokens(userId, action, provider, inputTokens, outputTokens) {
   if (!userId) return;
@@ -9,7 +10,7 @@ async function logTokens(userId, action, provider, inputTokens, outputTokens) {
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(userId, date, action, provider || '', inputTokens || 0, outputTokens || 0);
   } catch (err) {
-    console.warn('[tokens] log échoué', err.message);
+    logger.warn('Token log failed', { message: err.message });
   }
 }
 
