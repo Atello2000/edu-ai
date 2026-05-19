@@ -1,7 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const webpush  = require('web-push');
-const db       = require('../db');
+const { prepare } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
@@ -25,27 +25,28 @@ router.get('/vapid-public-key', (req, res) => {
 });
 
 // POST /api/push/subscribe
-router.post('/subscribe', requireAuth, (req, res) => {
+router.post('/subscribe', requireAuth, async (req, res) => {
   const { endpoint, keys } = req.body?.subscription || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth)
     return res.status(400).json({ error: 'Subscription invalide' });
 
-  db.prepare(`
-    INSERT OR REPLACE INTO push_subscriptions (user_id, endpoint, p256dh, auth)
+  await prepare(`
+    INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
     VALUES (?, ?, ?, ?)
+    ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth
   `).run(req.user.id, endpoint, keys.p256dh, keys.auth);
 
   res.json({ ok: true });
 });
 
 // DELETE /api/push/unsubscribe
-router.delete('/unsubscribe', requireAuth, (req, res) => {
+router.delete('/unsubscribe', requireAuth, async (req, res) => {
   const { endpoint } = req.body || {};
   if (endpoint) {
-    db.prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?')
+    await prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?')
       .run(req.user.id, endpoint);
   } else {
-    db.prepare('DELETE FROM push_subscriptions WHERE user_id = ?').run(req.user.id);
+    await prepare('DELETE FROM push_subscriptions WHERE user_id = ?').run(req.user.id);
   }
   res.json({ ok: true });
 });
@@ -56,14 +57,14 @@ router.post('/notify-due', requireAuth, async (req, res) => {
   const { dueCount } = req.body || {};
   if (!dueCount || dueCount < 1) return res.json({ sent: false });
 
-  const subs = db.prepare('SELECT * FROM push_subscriptions WHERE user_id = ?').all(req.user.id);
+  const subs = await prepare('SELECT * FROM push_subscriptions WHERE user_id = ?').all(req.user.id);
   if (!subs.length) return res.json({ sent: false });
 
   const payload = JSON.stringify({
     title: 'Jangalai — Révision du jour',
     body:  `${dueCount} flashcard${dueCount > 1 ? 's' : ''} à réviser aujourd'hui !`,
     icon:  '/icon.svg',
-    url:   '/app.html'
+    url:   '/app'
   });
 
   const results = await Promise.allSettled(
@@ -74,11 +75,11 @@ router.post('/notify-due', requireAuth, async (req, res) => {
   );
 
   // Supprimer les subscriptions expirées
-  results.forEach((r, i) => {
+  await Promise.all(results.map(async (r, i) => {
     if (r.status === 'rejected' && [404, 410].includes(r.reason?.statusCode)) {
-      db.prepare('DELETE FROM push_subscriptions WHERE id = ?').run(subs[i].id);
+      await prepare('DELETE FROM push_subscriptions WHERE id = ?').run(subs[i].id);
     }
-  });
+  }));
 
   res.json({ sent: true });
 });

@@ -21,7 +21,7 @@ function setToken(res, userId) {
   res.cookie('jangalai.token', token, COOKIE_OPTS);
 }
 
-function getTokenUser(req) {
+async function getTokenUser(req) {
   const token = req.cookies?.['jangalai.token'];
   if (!token) return null;
   try { return jwt.verify(token, JWT_SECRET); }
@@ -45,17 +45,16 @@ router.post('/register', async (req, res) => {
     const verifyToken = genToken();
     const verifyExp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
 
-    const stmt = db.prepare(
+    const info = await db.prepare(
       'INSERT INTO users (email, password, name, verify_token, verify_expires) VALUES (?, ?, ?, ?, ?)'
-    );
-    const info = stmt.run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp);
-    const user = db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
+    ).run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp);
+    const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
 
     sendVerifyEmail(user.email, verifyToken).catch(console.error);
     setToken(res, user.id);
     res.json({ user });
   } catch (err) {
-    if (err.message.includes('UNIQUE')) return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
+    if (err.code === '23505') return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
     throw err;
   }
 });
@@ -66,7 +65,7 @@ router.post('/login', async (req, res) => {
   if (!email || !password)
     return res.status(400).json({ error: 'Email et mot de passe requis.' });
 
-  const row = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
+  const row = await db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
   if (!row) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
 
   if (row.google_id && !row.password)
@@ -86,17 +85,17 @@ router.post('/logout', (req, res) => {
 });
 
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
-router.get('/me', (req, res) => {
-  const decoded = getTokenUser(req);
+router.get('/me', async (req, res) => {
+  const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
-  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
+  const user = await db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   if (!user) return res.status(401).json({ error: 'Session invalide.' });
   res.json({ user });
 });
 
 // ── POST /api/auth/onboarding ─────────────────────────────────────────────────
-router.post('/onboarding', (req, res) => {
-  const decoded = getTokenUser(req);
+router.post('/onboarding', async (req, res) => {
+  const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
   const PRESET_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
@@ -118,24 +117,24 @@ router.post('/onboarding', (req, res) => {
     ? specialty.trim().slice(0, 80)
     : null;
 
-  db.prepare('UPDATE users SET level = ?, domains = ?, specialty = ?, onboarding_done = 1 WHERE id = ?')
+  await db.prepare('UPDATE users SET level = ?, domains = ?, specialty = ?, onboarding_done = 1 WHERE id = ?')
     .run(lvl, doms, spec, decoded.userId);
 
-  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
+  const user = await db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   res.json({ user });
 });
 
 // ── PUT /api/auth/profile ─────────────────────────────────────────────────────
 router.put('/profile', async (req, res) => {
-  const decoded = getTokenUser(req);
+  const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
   const { name, currentPassword, newPassword } = req.body || {};
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
   if (!user) return res.status(401).json({ error: 'Session invalide.' });
 
   if (name && name.trim())
-    db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), user.id);
+    await db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), user.id);
 
   if (newPassword) {
     if (!currentPassword) return res.status(400).json({ error: 'Mot de passe actuel requis.' });
@@ -144,35 +143,35 @@ router.put('/profile', async (req, res) => {
     const match = await bcrypt.compare(currentPassword, user.password);
     if (!match) return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
     const hash = await bcrypt.hash(newPassword, 12);
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, user.id);
+    await db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, user.id);
   }
 
-  const updated = db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(user.id);
+  const updated = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(user.id);
   res.json({ user: updated });
 });
 
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────
-router.get('/verify/:token', (req, res) => {
-  const user = db.prepare('SELECT * FROM users WHERE verify_token = ?').get(req.params.token);
+router.get('/verify/:token', async (req, res) => {
+  const user = await db.prepare('SELECT * FROM users WHERE verify_token = ?').get(req.params.token);
   if (!user) return res.redirect(`${APP_URL}/login?error=invalid_token`);
   if (new Date(user.verify_expires) < new Date())
     return res.redirect(`${APP_URL}/login?error=token_expired`);
 
-  db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
+  await db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
   setToken(res, user.id);
   res.redirect(`${APP_URL}/app?verified=1`);
 });
 
 // ── POST /api/auth/resend-verify ──────────────────────────────────────────────
 router.post('/resend-verify', async (req, res) => {
-  const decoded = getTokenUser(req);
+  const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
+  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
   if (!user || user.email_verified) return res.json({ ok: true });
 
   const token = genToken();
   const exp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-  db.prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?').run(token, exp, user.id);
+  await db.prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?').run(token, exp, user.id);
   sendVerifyEmail(user.email, token).catch(console.error);
   res.json({ ok: true });
 });
@@ -182,12 +181,12 @@ router.post('/forgot-password', async (req, res) => {
   const { email } = req.body || {};
   if (!email) return res.status(400).json({ error: 'Email requis.' });
 
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
+  const user = await db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
   // Always respond ok to avoid email enumeration
   if (user) {
     const token = genToken();
     const exp   = new Date(Date.now() + 3600 * 1000).toISOString();
-    db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?').run(token, exp, user.id);
+    await db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?').run(token, exp, user.id);
     sendResetEmail(user.email, token).catch(console.error);
   }
   res.json({ ok: true });
@@ -199,12 +198,12 @@ router.post('/reset-password', async (req, res) => {
   if (!token || !password) return res.status(400).json({ error: 'Données manquantes.' });
   if (password.length < 8) return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum).' });
 
-  const user = db.prepare('SELECT * FROM users WHERE reset_token = ?').get(token);
+  const user = await db.prepare('SELECT * FROM users WHERE reset_token = ?').get(token);
   if (!user) return res.status(400).json({ error: 'Lien invalide ou expiré.' });
   if (new Date(user.reset_expires) < new Date()) return res.status(400).json({ error: 'Lien expiré.' });
 
   const hash = await bcrypt.hash(password, 12);
-  db.prepare('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL, email_verified = 1 WHERE id = ?').run(hash, user.id);
+  await db.prepare('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL, email_verified = 1 WHERE id = ?').run(hash, user.id);
   setToken(res, user.id);
   res.json({ ok: true });
 });
@@ -255,17 +254,17 @@ router.get('/google/callback', async (req, res) => {
     const profile = await profileRes.json();
 
     // Find or create user
-    let user = db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
+    let user = await db.prepare('SELECT * FROM users WHERE google_id = ?').get(profile.id);
     if (!user) {
-      const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(profile.email?.toLowerCase());
+      const existing = await db.prepare('SELECT * FROM users WHERE email = ?').get(profile.email?.toLowerCase());
       if (existing) {
-        db.prepare('UPDATE users SET google_id = ?, email_verified = 1 WHERE id = ?').run(profile.id, existing.id);
-        user = db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
+        await db.prepare('UPDATE users SET google_id = ?, email_verified = 1 WHERE id = ?').run(profile.id, existing.id);
+        user = await db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
       } else {
-        const r = db.prepare(
+        const r = await db.prepare(
           'INSERT INTO users (email, password, name, google_id, email_verified) VALUES (?, ?, ?, ?, 1)'
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id);
-        user = db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
+        user = await db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
       }
     }
 

@@ -109,9 +109,9 @@ router.get('/users/count', (req, res) => {
   res.json({ online: onlineUsers.size });
 });
 
-router.get('/quota', requireAuth, (req, res) => {
+router.get('/quota', requireAuth, async (req, res) => {
   if (!IS_PROD) return res.json({ unlimited: true });
-  const status = getQuotaStatus(req);
+  const status = await getQuotaStatus(req);
   if (!status) return res.json({ unlimited: true });
   res.json({ unlimited: false, ...status });
 });

@@ -1,4 +1,4 @@
-const db     = require('../db');
+const { prepare } = require('../db');
 
 const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
 
@@ -31,7 +31,7 @@ const QUOTA_DAILY = {
 
 function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 
-function checkQuota(req, action) {
+async function checkQuota(req, action) {
   if (!IS_PROD) return { ok: true };
   const user = req.user;
   if (!user) return { ok: true }; // middleware auth gère ça avant
@@ -41,33 +41,33 @@ function checkQuota(req, action) {
   const limit  = limits[action];
 
   // Upsert la ligne du jour
-  db.prepare(`
+  await prepare(`
     INSERT INTO user_quota (user_id, date) VALUES (?, ?)
     ON CONFLICT (user_id, date) DO NOTHING
   `).run(user.id, today);
 
-  const row = db.prepare('SELECT * FROM user_quota WHERE user_id = ? AND date = ?').get(user.id, today);
+  const row = await prepare('SELECT * FROM user_quota WHERE user_id = ? AND date = ?').get(user.id, today);
   const used = row[action] || 0;
 
   if (used >= limit) return { ok: false, used, limit, action };
 
   const safeField = { summarize: 'summarize', quiz: 'quiz', flashcards: 'flashcards', chat: 'chat' }[action];
   if (!safeField) throw new Error('Action invalide');
-  db.prepare(`UPDATE user_quota SET ${safeField} = ${safeField} + 1 WHERE user_id = ? AND date = ?`).run(user.id, today);
+  await prepare(`UPDATE user_quota SET ${safeField} = ${safeField} + 1 WHERE user_id = ? AND date = ?`).run(user.id, today);
   return { ok: true, used: used + 1, limit };
 }
 
-function getQuotaStatus(req) {
+async function getQuotaStatus(req) {
   if (!IS_PROD || !req.user) return null;
   const today = getTodayStr();
   const limits = QUOTA_DAILY[req.user.plan] || QUOTA_DAILY.free;
 
-  db.prepare(`
+  await prepare(`
     INSERT INTO user_quota (user_id, date) VALUES (?, ?)
     ON CONFLICT (user_id, date) DO NOTHING
   `).run(req.user.id, today);
 
-  const row = db.prepare('SELECT * FROM user_quota WHERE user_id = ? AND date = ?').get(req.user.id, today);
+  const row = await prepare('SELECT * FROM user_quota WHERE user_id = ? AND date = ?').get(req.user.id, today);
   return {
     summarize:  { used: row.summarize,  limit: limits.summarize },
     quiz:       { used: row.quiz,       limit: limits.quiz },

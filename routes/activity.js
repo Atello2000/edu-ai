@@ -1,18 +1,17 @@
 const express = require('express');
 const router  = express.Router();
-const db      = require('../db');
+const { prepare } = require('../db');
 
-function calcStreak(userId) {
-  const rows = db.prepare(
-    `SELECT DISTINCT date(created_at) as d FROM activity WHERE user_id = ? ORDER BY d DESC`
-  ).all(userId).map(r => r.d);
+async function calcStreak(userId) {
+  const rows = (await prepare(
+    `SELECT DISTINCT created_at::date AS d FROM activity WHERE user_id = ? ORDER BY d DESC`
+  ).all(userId)).map(r => r.d instanceof Date ? r.d.toISOString().slice(0, 10) : String(r.d).slice(0, 10));
 
   if (!rows.length) return 0;
 
   const today     = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
-  // If no activity today or yesterday, streak is broken
   if (rows[0] !== today && rows[0] !== yesterday) return 0;
 
   let streak  = 0;
@@ -31,12 +30,12 @@ function calcStreak(userId) {
 }
 
 // ── POST /api/activity ────────────────────────────────────────────────────────
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { topic, type, score, total } = req.body || {};
   if (!topic || !['flashcards', 'quiz'].includes(type))
     return res.status(400).json({ error: 'Paramètres invalides.' });
 
-  db.prepare(
+  await prepare(
     'INSERT INTO activity (user_id, topic, type, score, total) VALUES (?, ?, ?, ?, ?)'
   ).run(req.user.id, topic.trim().slice(0, 120), type, score ?? null, total ?? null);
 
@@ -44,27 +43,27 @@ router.post('/', (req, res) => {
 });
 
 // ── GET /api/activity/summary ─────────────────────────────────────────────────
-router.get('/summary', (req, res) => {
+router.get('/summary', async (req, res) => {
   const uid = req.user.id;
 
-  const totalSessions = db.prepare(
-    'SELECT COUNT(*) as n FROM activity WHERE user_id = ?'
-  ).get(uid).n;
+  const totalRow = await prepare(
+    'SELECT COUNT(*) AS n FROM activity WHERE user_id = ?'
+  ).get(uid);
+  const totalSessions = Number(totalRow?.n || 0);
 
-  const recentActivity = db.prepare(
+  const recentActivity = await prepare(
     `SELECT topic, type, score, total, created_at
      FROM activity WHERE user_id = ?
      ORDER BY created_at DESC LIMIT 7`
   ).all(uid);
 
-  // Top topics by frequency
-  const topTopics = db.prepare(
-    `SELECT topic, COUNT(*) as n FROM activity
+  const topTopics = await prepare(
+    `SELECT topic, COUNT(*) AS n FROM activity
      WHERE user_id = ?
      GROUP BY topic ORDER BY n DESC LIMIT 6`
   ).all(uid);
 
-  const streak = calcStreak(uid);
+  const streak = await calcStreak(uid);
 
   res.json({ streak, totalSessions, recentActivity, topTopics });
 });
