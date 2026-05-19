@@ -402,8 +402,12 @@ libClearSearch?.addEventListener('click', () => {
 });
 
 const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-if (isLocal) loadLibrary();
-else libPanel.classList.add('hidden');
+if (isLocal) {
+  loadLibrary();
+} else {
+  libPanel.classList.add('hidden');
+  document.getElementById('dash-library-btn')?.classList.add('hidden');
+}
 
 const uploadSizeHint = document.getElementById('upload-size-hint');
 if (uploadSizeHint) uploadSizeHint.textContent = isLocal ? '50 Mo' : '20 Mo';
