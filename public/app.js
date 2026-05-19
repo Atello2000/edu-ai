@@ -1991,12 +1991,6 @@ floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
 
 // ── STATS — rendering handled by StatsPanel React component ──────────────────
 const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
-const statsToggle  = document.getElementById('stats-toggle');
-
-statsToggle.addEventListener('click', () => {
-  window.__refreshStats?.();
-  showPanel('stats-panel');
-});
 
 function saveQuizStat(pct, correct, total) {
   const stats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
