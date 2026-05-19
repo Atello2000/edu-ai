@@ -78,6 +78,16 @@ db.exec(`
     created_at TEXT    NOT NULL DEFAULT (datetime('now')),
     UNIQUE(folder_id, filename)
   );
+
+  CREATE TABLE IF NOT EXISTS activity (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    topic      TEXT    NOT NULL,
+    type       TEXT    NOT NULL,
+    score      INTEGER,
+    total      INTEGER,
+    created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Migrations — ADD COLUMN is idempotent via try/catch

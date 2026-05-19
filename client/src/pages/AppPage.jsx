@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import Logo from '../components/Logo.jsx';
 import Onboarding from './Onboarding.jsx';
 import ForYouSection from '../components/ForYouSection.jsx';
+import ActivitySection from '../components/ActivitySection.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -25,6 +26,7 @@ export default function AppPage() {
   const { user } = useAuth();
   const initialized = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [activityKey, setActivityKey] = useState(0);
 
   useEffect(() => {
     if (user && !user.onboarding_done) setShowOnboarding(true);
@@ -117,7 +119,8 @@ export default function AppPage() {
             <button className="dash-link" id="dash-history-btn">Mes cours récents →</button>
             <button className="dash-link" id="dash-stats-btn">Statistiques détaillées →</button>
           </div>
-          <ForYouSection />
+          <ActivitySection refreshKey={activityKey} />
+          <ForYouSection onActivity={() => setActivityKey(k => k + 1)} />
         </div>
 
         {/* STATISTIQUES */}

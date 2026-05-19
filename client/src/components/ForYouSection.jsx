@@ -18,7 +18,7 @@ function getTopics(domains) {
   for (const d of domains) {
     const list = DOMAIN_TOPICS[d];
     if (list) topics.push(...list.slice(0, 4));
-    else topics.push(d); // custom domain
+    else topics.push(d);
   }
   return [...new Set(topics)].slice(0, 8);
 }
@@ -28,16 +28,24 @@ function levelLabel(level) {
   return map[level] || level || '';
 }
 
-export default function ForYouSection() {
+async function postActivity(topic, type, score = null, total = null) {
+  await fetch('/api/activity', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic, type, score, total }),
+  }).catch(() => {});
+}
+
+export default function ForYouSection({ onActivity }) {
   const { user } = useAuth();
-  const [active, setActive]       = useState(null);
-  const [custom, setCustom]       = useState('');
-  const [loading, setLoading]     = useState(false);
-  const [result, setResult]       = useState(null);
-  const [resultType, setResultType] = useState('');
+  const [active, setActive]           = useState(null);
+  const [custom, setCustom]           = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [result, setResult]           = useState(null);
+  const [resultType, setResultType]   = useState('');
   const [resultTopic, setResultTopic] = useState('');
-  const [fcIdx, setFcIdx]         = useState(0);
-  const [flipped, setFlipped]     = useState(false);
+  const [fcIdx, setFcIdx]             = useState(0);
+  const [flipped, setFlipped]         = useState(false);
 
   if (!user?.onboarding_done) return null;
 
@@ -59,6 +67,11 @@ export default function ForYouSection() {
       setResultType(type);
       setResultTopic(topic);
       setFcIdx(0); setFlipped(false);
+
+      // Log flashcards immediately; quiz is logged on completion
+      if (type === 'flashcards') {
+        postActivity(topic, 'flashcards').then(() => onActivity?.());
+      }
     } catch (err) { alert(err.message); }
     finally { setLoading(false); setActive(null); }
   }
@@ -66,6 +79,10 @@ export default function ForYouSection() {
   function handleTopicClick(t) {
     setActive(active === t ? null : t);
     setCustom('');
+  }
+
+  function handleQuizComplete(score, total) {
+    postActivity(resultTopic, 'quiz', score, total).then(() => onActivity?.());
   }
 
   return (
@@ -166,11 +183,7 @@ export default function ForYouSection() {
             )}
 
             {resultType === 'quiz' && result.questions?.length > 0 && (
-              <div className="fy-quiz-area">
-                {result.questions.map((q, i) => (
-                  <QuizQuestion key={i} q={q} idx={i} />
-                ))}
-              </div>
+              <QuizArea questions={result.questions} onComplete={handleQuizComplete} />
             )}
           </div>
         </div>
@@ -179,8 +192,35 @@ export default function ForYouSection() {
   );
 }
 
-function QuizQuestion({ q, idx }) {
-  const [selected, setSelected] = useState(null);
+function QuizArea({ questions, onComplete }) {
+  const [answers, setAnswers] = useState({});
+  const [logged, setLogged]   = useState(false);
+
+  function handleSelect(idx, letter) {
+    if (answers[idx] !== undefined) return;
+    const newAnswers = { ...answers, [idx]: letter };
+    setAnswers(newAnswers);
+    if (!logged && Object.keys(newAnswers).length === questions.length) {
+      setLogged(true);
+      const score = questions.filter((q, i) => q.answer?.charAt(0) === newAnswers[i]).length;
+      onComplete?.(score, questions.length);
+    }
+  }
+
+  return (
+    <div className="fy-quiz-area">
+      {questions.map((q, i) => (
+        <QuizQuestion
+          key={i} q={q} idx={i}
+          selected={answers[i]}
+          onSelect={letter => handleSelect(i, letter)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function QuizQuestion({ q, idx, selected, onSelect }) {
   const correct = q.answer?.charAt(0);
   return (
     <div className="fy-quiz-q">
@@ -193,7 +233,7 @@ function QuizQuestion({ q, idx }) {
           let cls = 'fy-quiz-opt';
           if (selected) cls += isCorrect ? ' correct' : isSelected ? ' wrong' : '';
           return (
-            <button key={i} className={cls} onClick={() => !selected && setSelected(letter)}>
+            <button key={i} className={cls} onClick={() => !selected && onSelect(letter)}>
               {opt}
             </button>
           );

@@ -1,0 +1,146 @@
+.activity-section {
+  margin-top: 1.5rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.activity-empty {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  color: var(--muted);
+  font-family: 'Outfit', sans-serif;
+  font-size: .85rem;
+}
+.act-empty-icon { font-size: 1.2rem; }
+.activity-empty p { margin: 0; }
+
+/* Stats row */
+.act-stats-row {
+  display: flex;
+  gap: .75rem;
+  margin-bottom: 1rem;
+}
+
+.act-stat-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .7rem .9rem;
+}
+
+.act-stat-card.act-streak.active {
+  border-color: rgba(255,160,50,.3);
+  background: rgba(255,160,50,.07);
+}
+
+.act-stat-icon { font-size: 1.3rem; line-height: 1; }
+
+.act-stat-val {
+  display: block;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1;
+}
+
+.act-stat-lbl {
+  display: block;
+  font-family: 'Outfit', sans-serif;
+  font-size: .7rem;
+  color: var(--muted);
+  margin-top: .1rem;
+}
+
+/* Recent list */
+.act-recent-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin-bottom: .55rem;
+}
+
+.act-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+
+.act-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .45rem .6rem;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-family: 'Outfit', sans-serif;
+  font-size: .83rem;
+}
+
+.act-item-icon { font-size: .9rem; flex-shrink: 0; }
+
+.act-item-topic {
+  flex: 1;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.act-item-score {
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .1rem .4rem;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+.act-item-score.good { background: rgba(29,209,161,.12); color: var(--teal); }
+.act-item-score.low  { background: rgba(255,107,129,.12); color: var(--rose); }
+
+.act-item-time {
+  font-size: .72rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* Top topics */
+.act-top-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .35rem;
+  margin-top: .85rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border);
+}
+
+.act-topic-badge {
+  font-family: 'Outfit', sans-serif;
+  font-size: .72rem;
+  padding: .18rem .55rem;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.act-topic-badge em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--blue);
+  margin-left: .25rem;
+}
+
+@media (max-width: 480px) {
+  .activity-section { padding: .9rem 1rem; }
+  .act-stat-val { font-size: 1.35rem; }
+}
