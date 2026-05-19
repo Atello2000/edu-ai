@@ -7,6 +7,7 @@ import ActivitySection from '../components/ActivitySection.jsx';
 import FoldersPanel from '../components/FoldersPanel.jsx';
 import StatsPanel from '../components/StatsPanel.jsx';
 import HistoryPanel from '../components/HistoryPanel.jsx';
+import SettingsDrawer from '../components/SettingsDrawer.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -29,6 +30,7 @@ export default function AppPage() {
   const { user } = useAuth();
   const initialized = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSettings,   setShowSettings]   = useState(false);
   const [activityKey, setActivityKey] = useState(0);
 
   useEffect(() => {
@@ -65,6 +67,11 @@ export default function AppPage() {
   return (
     <>
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
+      <SettingsDrawer
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onResetOnboarding={() => setShowOnboarding(true)}
+      />
       <header>
         <button className="back-home-btn hidden" id="back-home-btn" title="Tableau de bord">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -76,7 +83,7 @@ export default function AppPage() {
           <button className="stats-toggle" id="stats-toggle" title="Statistiques">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg>
           </button>
-          <button className="settings-btn" id="settings-btn" title="Paramètres">
+          <button className="settings-btn" id="settings-btn" title="Paramètres" onClick={() => setShowSettings(true)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -469,107 +476,6 @@ export default function AppPage() {
         </button>
       </nav>
 
-      {/* Settings Drawer */}
-      <div className="drawer-overlay hidden" id="settings-overlay"></div>
-      <aside className="settings-drawer hidden" id="settings-drawer">
-        <div className="drawer-header">
-          <h2>Paramètres</h2>
-          <button className="drawer-close" id="settings-close">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div className="drawer-body">
-          <section className="settings-section">
-            <h3 className="settings-section-title">Mon compte</h3>
-            <div className="settings-account-card" id="settings-account-card">
-              <div className="sac-avatar" id="sac-avatar">?</div>
-              <div className="sac-info">
-                <strong id="sac-name">—</strong>
-                <span id="sac-email">—</span>
-                <span className="sac-plan" id="sac-plan"></span>
-              </div>
-              <a href="/profile" className="sac-edit-btn">Modifier</a>
-            </div>
-          </section>
-          <section className="settings-section">
-            <h3 className="settings-section-title">Apparence</h3>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Thème</span><small>Clair ou sombre</small></div>
-              <div className="theme-switch" id="theme-switch">
-                <button className="ts-btn" data-theme="light">☀️ Clair</button>
-                <button className="ts-btn" data-theme="dark">🌙 Sombre</button>
-              </div>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Réduire les animations</span><small>Désactive les transitions</small></div>
-              <label className="toggle-switch">
-                <input type="checkbox" id="pref-reduce-motion" />
-                <span className="toggle-track"></span>
-              </label>
-            </div>
-          </section>
-          <section className="settings-section">
-            <h3 className="settings-section-title">Préférences IA</h3>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Langue des réponses</span><small>Langue utilisée par l&apos;IA</small></div>
-              <select className="settings-select" id="pref-lang">
-                <option value="fr">🇫🇷 Français</option>
-                <option value="en">🇬🇧 English</option>
-                <option value="ar">🇸🇦 العربية</option>
-              </select>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Questions quiz par défaut</span><small>Nombre pré-rempli au lancement</small></div>
-              <input type="number" className="settings-number" id="pref-quiz-count" min="3" max="20" defaultValue="5" />
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Difficulté par défaut</span><small>Niveau pré-sélectionné</small></div>
-              <select className="settings-select" id="pref-quiz-difficulty">
-                <option value="facile">Facile</option>
-                <option value="moyen">Moyen</option>
-                <option value="difficile">Difficile</option>
-              </select>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Flashcards par défaut</span><small>Nombre de cartes générées</small></div>
-              <input type="number" className="settings-number" id="pref-fc-count" min="5" max="40" defaultValue="10" />
-            </div>
-          </section>
-          <section className="settings-section">
-            <h3 className="settings-section-title">Notifications</h3>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Rappels de révision</span><small>Notification quand des flashcards sont dues</small></div>
-              <label className="toggle-switch">
-                <input type="checkbox" id="pref-push-notif" />
-                <span className="toggle-track"></span>
-              </label>
-            </div>
-          </section>
-          <section className="settings-section">
-            <h3 className="settings-section-title">Données &amp; vie privée</h3>
-            <div className="settings-danger-row">
-              <div className="settings-row-label"><span>Historique des sessions</span><small>Sessions sauvegardées localement</small></div>
-              <button className="settings-danger-btn" id="clear-history-btn">Effacer</button>
-            </div>
-            <div className="settings-danger-row">
-              <div className="settings-row-label"><span>Statistiques quiz</span><small>Scores et progression</small></div>
-              <button className="settings-danger-btn" id="clear-stats-btn">Réinitialiser</button>
-            </div>
-            <div className="settings-danger-row">
-              <div className="settings-row-label"><span>Tutoriel d&apos;accueil</span><small>Réafficher le guide de démarrage</small></div>
-              <button className="settings-neutral-btn" id="reset-onboarding-btn">Réafficher</button>
-            </div>
-          </section>
-          <section className="settings-section settings-section-last">
-            <h3 className="settings-section-title">À propos</h3>
-            <div className="settings-about">
-              <span className="about-logo"><Logo /></span>
-              <span className="about-version">v1.0 · Plateforme IA pédagogique</span>
-              <a href="/" className="about-link">Page d&apos;accueil ↗</a>
-            </div>
-          </section>
-        </div>
-      </aside>
 
       {/* Mindmap Modal */}
       <div className="mindmap-overlay hidden" id="mindmap-overlay">

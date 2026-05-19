@@ -2203,51 +2203,6 @@ const PREFS_KEY = 'jangalai-prefs';
 function getPrefs() { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
 function savePrefs(patch) { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...getPrefs(), ...patch })); }
 
-function openSettings() {
-  const drawer  = document.getElementById('settings-drawer');
-  const overlay = document.getElementById('settings-overlay');
-  populateSettings();
-  drawer.classList.remove('hidden');
-  overlay.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeSettings() {
-  document.getElementById('settings-drawer').classList.add('hidden');
-  document.getElementById('settings-overlay').classList.add('hidden');
-  document.body.style.overflow = '';
-}
-
-function populateSettings() {
-  const prefs = getPrefs();
-
-  // Account
-  if (currentUser) {
-    document.getElementById('sac-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-    document.getElementById('sac-name').textContent   = currentUser.name;
-    document.getElementById('sac-email').textContent  = currentUser.email;
-    const planEl = document.getElementById('sac-plan');
-    const planLabels = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
-    planEl.textContent = planLabels[currentUser.plan] || currentUser.plan;
-    planEl.className = `sac-plan plan-${currentUser.plan}`;
-  }
-
-  // Theme
-  const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-  document.querySelectorAll('.ts-btn').forEach(btn =>
-    btn.classList.toggle('active', btn.dataset.theme === currentTheme)
-  );
-
-  // Reduce motion
-  document.getElementById('pref-reduce-motion').checked = !!prefs.reduceMotion;
-
-  // AI prefs
-  document.getElementById('pref-lang').value            = prefs.lang || 'fr';
-  document.getElementById('pref-quiz-count').value      = prefs.quizCount || 5;
-  document.getElementById('pref-quiz-difficulty').value = prefs.quizDifficulty || 'moyen';
-  document.getElementById('pref-fc-count').value        = prefs.fcCount || 10;
-}
-
 function applyPrefs() {
   const prefs = getPrefs();
   if (prefs.reduceMotion) document.documentElement.classList.add('reduce-motion');
@@ -2256,63 +2211,7 @@ function applyPrefs() {
   if (prefs.quizDifficulty) { const el = document.getElementById('quiz-difficulty'); if (el) el.value = prefs.quizDifficulty; }
   if (prefs.fcCount)        { const el = document.getElementById('fc-count'); if (el) el.value = prefs.fcCount; }
 }
-
-// Open / close
-document.getElementById('settings-btn').addEventListener('click', openSettings);
-document.getElementById('settings-close').addEventListener('click', closeSettings);
-document.getElementById('settings-overlay').addEventListener('click', closeSettings);
-
-// Theme buttons
-document.querySelectorAll('.ts-btn').forEach(btn =>
-  btn.addEventListener('click', () => {
-    const t = btn.dataset.theme;
-    document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('jangalai-theme', t);
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) themeToggle.textContent = t === 'dark' ? '🌙' : '☀️';
-    document.querySelectorAll('.ts-btn').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
-  })
-);
-
-// Reduce motion
-document.getElementById('pref-reduce-motion').addEventListener('change', e => {
-  savePrefs({ reduceMotion: e.target.checked });
-  applyPrefs();
-});
-
-// AI prefs — save on change
-['pref-lang','pref-quiz-count','pref-quiz-difficulty','pref-fc-count'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => {
-    savePrefs({
-      lang:           document.getElementById('pref-lang').value,
-      quizCount:      parseInt(document.getElementById('pref-quiz-count').value) || 5,
-      quizDifficulty: document.getElementById('pref-quiz-difficulty').value,
-      fcCount:        parseInt(document.getElementById('pref-fc-count').value) || 10,
-    });
-    applyPrefs();
-  });
-});
-
-// Data management
-document.getElementById('clear-history-btn').addEventListener('click', () => {
-  if (!confirm('Effacer tout l\'historique des sessions ?')) return;
-  localStorage.removeItem(HISTORY_KEY);
-  renderDashboard();
-  alert('Historique effacé.');
-});
-
-document.getElementById('clear-stats-btn').addEventListener('click', () => {
-  if (!confirm('Réinitialiser toutes les statistiques quiz ?')) return;
-  localStorage.removeItem(QUIZ_STATS_KEY);
-  alert('Statistiques réinitialisées.');
-});
-
-document.getElementById('reset-onboarding-btn').addEventListener('click', () => {
-  localStorage.removeItem('jangalai-onboarded');
-  closeSettings();
-  const modal = document.getElementById('onboarding-modal');
-  if (modal) modal.classList.remove('hidden');
-});
+window.__applyPrefs = applyPrefs;
 
 // ── MINDMAP ───────────────────────────────────────────────────────────────────
 let markmapInstance = null;
