@@ -2421,3 +2421,64 @@ main {
   flex: 1; width: 100%;
   background: var(--surface);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Mobile-specific improvements
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 640px) {
+  main { padding: 0 .9rem 6rem; }
+
+  /* Panel header: allow wrapping on narrow screens */
+  .panel-header { flex-wrap: wrap; gap: .5rem; }
+
+  /* Quiz navigation: tighter spacing */
+  .quiz-step-nav { gap: .25rem; }
+  .quiz-nav-btn  { padding: .4rem .6rem; font-size: .78rem; }
+
+  /* Chat input row: less gap */
+  .chat-input-row { gap: .3rem; }
+
+  /* TTS bar on mobile */
+  .tts-bar { flex-wrap: wrap; gap: .5rem; }
+
+  /* File select area */
+  .file-select-area { padding: .75rem .8rem; }
+  .fsa-header { flex-wrap: wrap; gap: .3rem; }
+
+  /* No-files notice: stack on small screens */
+  .no-files-notice { flex-direction: column; align-items: flex-start; gap: .65rem; }
+}
+
+@media (max-width: 480px) {
+  main { padding: 0 .75rem 6.5rem; }
+
+  /* Panel: reduce side padding */
+  .panel { padding: .85rem .9rem; }
+
+  /* Modal: reduce padding */
+  .modal-box { padding: 1.5rem 1.1rem; }
+  .modal-overlay { padding: .75rem; }
+
+  /* Onboarding steps: tighter */
+  .ob-step { padding: .75rem .85rem; gap: .75rem; }
+
+  /* Drop zone: reduce padding */
+  .drop-zone { padding: 1.8rem 1.25rem; }
+
+  /* Dashboard greeting */
+  .dash-greeting-sub { font-size: .82rem; }
+
+  /* Dash bottom links: stack */
+  .dash-bottom-links { display: flex; flex-direction: column; gap: .15rem; }
+
+  /* Summary file header: stack on very small */
+  .summary-file-actions { flex-wrap: wrap; }
+}
+
+/* Float nav: account for iPhone home indicator */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .float-nav {
+    bottom: calc(.75rem + env(safe-area-inset-bottom));
+  }
+}

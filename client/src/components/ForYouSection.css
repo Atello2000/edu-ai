@@ -421,4 +421,21 @@
   .foryou-grid { grid-template-columns: 1fr; }
   .fy-result-modal { padding: 1.2rem 1rem; }
   .fy-fc-card { height: 175px; }
+  .foryou-header { flex-wrap: wrap; gap: .5rem; }
+  .fy-featured-actions { flex-wrap: wrap; }
+  .fy-action-btn { flex: 1; justify-content: center; min-height: 40px; }
+  .fy-card-btn { min-height: 34px; }
+}
+
+@media (max-width: 430px) {
+  .fy-result-overlay { align-items: flex-end; padding: 0; }
+  .fy-result-modal {
+    max-height: 88vh;
+    max-width: 100%;
+    border-radius: 18px 18px 0 0;
+    padding: 1.25rem 1rem 2rem;
+  }
+  .foryou-title { font-size: 1.1rem; }
+  .fy-fc-card { height: 160px; }
+  .fy-fc-front p, .fy-fc-back p { font-size: .88rem; }
 }

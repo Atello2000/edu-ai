@@ -143,4 +143,13 @@
 @media (max-width: 480px) {
   .activity-section { padding: .9rem 1rem; }
   .act-stat-val { font-size: 1.35rem; }
+  .act-stat-card { padding: .6rem .7rem; gap: .4rem; }
+  .act-item-time { display: none; }
+}
+
+@media (max-width: 360px) {
+  .act-stats-row { gap: .4rem; }
+  .act-stat-icon { font-size: 1.1rem; }
+  .act-stat-val { font-size: 1.2rem; }
+  .act-stat-lbl { font-size: .65rem; }
 }

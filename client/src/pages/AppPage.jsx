@@ -30,6 +30,7 @@ export default function AppPage() {
 
   useEffect(() => {
     if (user && !user.onboarding_done) setShowOnboarding(true);
+    window.__editProfile = () => setShowOnboarding(true);
   }, [user]);
 
   useEffect(() => {
