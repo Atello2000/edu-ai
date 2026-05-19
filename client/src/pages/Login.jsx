@@ -52,7 +52,7 @@ export default function Login() {
   }
 
   return (
-    <>
+    <div className="auth-layout">
       <div className="auth-preview">
         <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 500 }}>
           <div className="mockup-wrap">
@@ -164,6 +164,6 @@ export default function Login() {
         </div>
         <p className="landing-link">Découvrir la plateforme → <Link to="/">En savoir plus</Link></p>
       </div>
-    </>
+    </div>
   );
 }
