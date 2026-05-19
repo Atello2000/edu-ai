@@ -46,24 +46,26 @@ function getSpecialtySuggestions(selectedDomains) {
 
 export default function Onboarding({ onDone }) {
   const { setUser } = useAuth();
-  const [step, setStep]                   = useState(1);
-  const [level, setLevel]                 = useState('');
-  const [levelCustom, setLevelCustom]     = useState('');
-  const [domains, setDomains]             = useState([]);
-  const [domainCustom, setDomainCustom]   = useState('');
-  const [specialty, setSpecialty]         = useState('');
-  const [specCustom, setSpecCustom]       = useState('');
-  const [loading, setLoading]             = useState(false);
+  const [step, setStep]                 = useState(1);
+  const [level, setLevel]               = useState('');
+  const [levelCustom, setLevelCustom]   = useState('');
+  const [domains, setDomains]           = useState([]);
+  const [domainCustom, setDomainCustom] = useState('');
+  const [specialty, setSpecialty]       = useState('');
+  const [specCustom, setSpecCustom]     = useState('');
+  const [loading, setLoading]           = useState(false);
 
   function toggleDomain(d) {
-    setDomains(prev =>
-      prev.includes(d) ? prev.filter(x => x !== d) : prev.length < 4 ? [...prev, d] : prev
-    );
+    setDomains(prev => {
+      const next = prev.includes(d) ? prev.filter(x => x !== d) : prev.length < 4 ? [...prev, d] : prev;
+      // Reset specialty if no longer relevant
+      if (!next.some(x => x !== 'autre') && specialty && specialty !== '__autre__') setSpecialty('');
+      return next;
+    });
   }
 
   function getFinalLevel() {
-    if (level === 'autre') return levelCustom.trim() || 'autre';
-    return level;
+    return level === 'autre' ? (levelCustom.trim() || 'autre') : level;
   }
 
   function getFinalDomains() {
@@ -71,19 +73,14 @@ export default function Onboarding({ onDone }) {
   }
 
   function getFinalSpecialty() {
-    if (specialty === '__autre__') return specCustom.trim() || '';
-    return specialty;
+    if (!specialty) return null;
+    return specialty === '__autre__' ? (specCustom.trim() || null) : specialty;
   }
 
   const canProceedStep1 = level && (level !== 'autre' || levelCustom.trim());
   const canProceedStep2 = domains.length > 0 && (!domains.includes('autre') || domainCustom.trim());
-  const canProceedStep3 = specialty && (specialty !== '__autre__' || specCustom.trim());
 
-  const suggestions = getSpecialtySuggestions(
-    domains.filter(d => d !== 'autre').length > 0
-      ? domains.filter(d => d !== 'autre')
-      : domains
-  );
+  const suggestions = getSpecialtySuggestions(domains.filter(d => d !== 'autre'));
 
   async function submit(skip = false) {
     setLoading(true);
@@ -94,7 +91,7 @@ export default function Onboarding({ onDone }) {
         body: JSON.stringify(skip ? { level: null, domains: [], specialty: null } : {
           level:     getFinalLevel(),
           domains:   getFinalDomains(),
-          specialty: getFinalSpecialty() || null,
+          specialty: getFinalSpecialty(),
         }),
       });
       const data = await r.json();
@@ -110,7 +107,6 @@ export default function Onboarding({ onDone }) {
         <div className="ob-progress">
           <div className={`ob-dot ${step >= 1 ? 'active' : ''}`} />
           <div className={`ob-dot ${step >= 2 ? 'active' : ''}`} />
-          <div className={`ob-dot ${step >= 3 ? 'active' : ''}`} />
         </div>
 
         {/* ── Step 1 : Niveau ── */}
@@ -153,13 +149,14 @@ export default function Onboarding({ onDone }) {
           </>
         )}
 
-        {/* ── Step 2 : Domaines ── */}
+        {/* ── Step 2 : Domaine + Spécialité ── */}
         {step === 2 && (
           <>
             <div className="ob-header">
               <h2>Votre <em>domaine</em> ?</h2>
               <p>Choisissez jusqu'à 4 domaines — l'IA s'adaptera à votre spécialité.</p>
             </div>
+
             <div className="ob-grid ob-grid-3">
               {DOMAINS.map(d => (
                 <div
@@ -172,6 +169,7 @@ export default function Onboarding({ onDone }) {
                 </div>
               ))}
             </div>
+
             {domains.includes('autre') && (
               <input
                 className="ob-custom-input"
@@ -179,74 +177,60 @@ export default function Onboarding({ onDone }) {
                 placeholder="Ex : Architecture, Pharmacie, Marketing…"
                 value={domainCustom}
                 onChange={e => setDomainCustom(e.target.value)}
-                autoFocus
                 maxLength={60}
               />
             )}
+
+            {/* Specialty — appears when at least 1 non-custom domain selected */}
+            {suggestions.length > 0 && (
+              <div className="ob-spec-section">
+                <div className="ob-spec-label">
+                  Spécialité <span className="ob-spec-optional">(optionnel)</span>
+                </div>
+                <div className="ob-spec-chips">
+                  {suggestions.map(s => (
+                    <button
+                      key={s}
+                      className={`ob-spec-chip ${specialty === s ? 'selected' : ''}`}
+                      onClick={() => { setSpecialty(specialty === s ? '' : s); setSpecCustom(''); }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                  <button
+                    className={`ob-spec-chip ob-spec-other ${specialty === '__autre__' ? 'selected' : ''}`}
+                    onClick={() => setSpecialty(specialty === '__autre__' ? '' : '__autre__')}
+                  >
+                    ✏️ Autre…
+                  </button>
+                </div>
+                {specialty === '__autre__' && (
+                  <input
+                    className="ob-custom-input"
+                    type="text"
+                    placeholder="Ex : Neurochirurgie, Finance islamique, Cyberdroit…"
+                    value={specCustom}
+                    onChange={e => setSpecCustom(e.target.value)}
+                    autoFocus
+                    maxLength={80}
+                  />
+                )}
+              </div>
+            )}
+
             {domains.length > 0 && (
               <p className="ob-hint">{domains.length} domaine{domains.length > 1 ? 's' : ''} sélectionné{domains.length > 1 ? 's' : ''}</p>
             )}
+
             <div className="ob-actions">
               <button className="ob-btn-back" onClick={() => setStep(1)}>← Retour</button>
-              <button className="ob-btn-primary" disabled={!canProceedStep2} onClick={() => setStep(3)}>
-                Continuer →
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* ── Step 3 : Spécialité ── */}
-        {step === 3 && (
-          <>
-            <div className="ob-header">
-              <h2>Votre <em>spécialité</em> ?</h2>
-              <p>Précisez votre filière pour que l'IA cible ses exemples et explications.</p>
-            </div>
-
-            <div className="ob-spec-chips">
-              {suggestions.map(s => (
-                <button
-                  key={s}
-                  className={`ob-spec-chip ${specialty === s ? 'selected' : ''}`}
-                  onClick={() => { setSpecialty(s); setSpecCustom(''); }}
-                >
-                  {s}
-                </button>
-              ))}
               <button
-                className={`ob-spec-chip ob-spec-other ${specialty === '__autre__' ? 'selected' : ''}`}
-                onClick={() => setSpecialty('__autre__')}
+                className="ob-btn-primary"
+                disabled={!canProceedStep2 || loading}
+                onClick={() => submit(false)}
               >
-                ✏️ Autre…
+                {loading ? 'Enregistrement…' : 'Commencer →'}
               </button>
-            </div>
-
-            {specialty === '__autre__' && (
-              <input
-                className="ob-custom-input"
-                type="text"
-                placeholder="Ex : Neurochirurgie, Finance islamique, Cyberdroit…"
-                value={specCustom}
-                onChange={e => setSpecCustom(e.target.value)}
-                autoFocus
-                maxLength={80}
-              />
-            )}
-
-            <div className="ob-actions">
-              <button className="ob-btn-back" onClick={() => setStep(2)}>← Retour</button>
-              <div style={{ display: 'flex', gap: '.6rem', alignItems: 'center' }}>
-                <button className="ob-btn-skip" onClick={() => submit(false)}>
-                  Passer
-                </button>
-                <button
-                  className="ob-btn-primary"
-                  disabled={!canProceedStep3 || loading}
-                  onClick={() => submit(false)}
-                >
-                  {loading ? 'Enregistrement…' : 'Commencer →'}
-                </button>
-              </div>
             </div>
           </>
         )}

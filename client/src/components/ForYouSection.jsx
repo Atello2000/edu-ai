@@ -13,6 +13,21 @@ const DOMAIN_TOPICS = {
   'histoire':     ['Histoire moderne','Géopolitique','Sociologie','Philosophie','Relations internationales','Anthropologie'],
 };
 
+const TOPIC_ICONS = {
+  'Algorithmique':'⚙️','Structures de données':'🗂️','Réseaux':'🌐','Base de données':'🗄️',
+  'Programmation objet':'📦','Sécurité':'🔒','Anatomie':'🦴','Physiologie':'💓',
+  'Pharmacologie':'💊','Biochimie':'🧬','Séméiologie':'🩺','Pathologie générale':'🔬',
+  'Droit civil':'📋','Droit pénal':'⚖️','Droit constitutionnel':'🏛️','Droit des contrats':'✍️',
+  'Procédure civile':'📜','Microéconomie':'📈','Macroéconomie':'🌍','Finance d\'entreprise':'💰',
+  'Comptabilité':'🔢','Management':'👔','Marketing':'📣','Mathématiques':'📐',
+  'Physique':'⚡','Chimie organique':'⚗️','Biologie cellulaire':'🔬','Thermodynamique':'🌡️',
+  'Statistiques':'📊','Grammaire':'📝','Conjugaison':'✏️','Vocabulaire':'📖',
+  'Littérature':'📚','Phonétique':'🎙️','Linguistique':'🗣️','Mécanique des fluides':'💧',
+  'Électronique':'⚡','Résistance des matériaux':'🏗️','Automatique':'🤖',
+  'Histoire moderne':'📜','Géopolitique':'🗺️','Sociologie':'👥','Philosophie':'🧠',
+  'Relations internationales':'🤝','Anthropologie':'🏺',
+};
+
 function getTopics(domains) {
   const topics = [];
   for (const d of domains) {
@@ -24,7 +39,7 @@ function getTopics(domains) {
 }
 
 function levelLabel(level) {
-  const map = { licence:'Licence', master:'Master', doctorat:'Doctorat', professionnel:'Pro', autre: level };
+  const map = { licence:'Licence', master:'Master', doctorat:'Doctorat', professionnel:'Pro' };
   return map[level] || level || '';
 }
 
@@ -38,9 +53,8 @@ async function postActivity(topic, type, score = null, total = null) {
 
 export default function ForYouSection({ onActivity }) {
   const { user } = useAuth();
-  const [active, setActive]           = useState(null);
   const [custom, setCustom]           = useState('');
-  const [loading, setLoading]         = useState(false);
+  const [loadingKey, setLoadingKey]   = useState('');
   const [result, setResult]           = useState(null);
   const [resultType, setResultType]   = useState('');
   const [resultTopic, setResultTopic] = useState('');
@@ -52,9 +66,12 @@ export default function ForYouSection({ onActivity }) {
   let domains = [];
   try { domains = JSON.parse(user.domains || '[]'); } catch {}
   const topics = getTopics(domains);
+  const featuredTopic = topics[0] || null;
 
   async function generate(topic, type) {
-    setLoading(true); setResult(null);
+    const key = `${topic}|${type}`;
+    setLoadingKey(key);
+    setResult(null);
     try {
       const r = await fetch('/api/topic', {
         method: 'POST', credentials: 'include',
@@ -67,32 +84,29 @@ export default function ForYouSection({ onActivity }) {
       setResultType(type);
       setResultTopic(topic);
       setFcIdx(0); setFlipped(false);
-
-      // Log flashcards immediately; quiz is logged on completion
       if (type === 'flashcards') {
         postActivity(topic, 'flashcards').then(() => onActivity?.());
       }
     } catch (err) { alert(err.message); }
-    finally { setLoading(false); setActive(null); }
-  }
-
-  function handleTopicClick(t) {
-    setActive(active === t ? null : t);
-    setCustom('');
+    finally { setLoadingKey(''); }
   }
 
   function handleQuizComplete(score, total) {
     postActivity(resultTopic, 'quiz', score, total).then(() => onActivity?.());
   }
 
+  const isLoading = loadingKey !== '';
+
   return (
     <div className="foryou-section">
+
+      {/* Header */}
       <div className="foryou-header">
         <div className="foryou-title">
           <span>Pour vous</span>
           <div className="foryou-badges">
             {user.level && <span className="fy-badge fy-level">{levelLabel(user.level)}</span>}
-            {domains.slice(0, 2).map(d => <span key={d} className="fy-badge fy-domain">{d}</span>)}
+            {domains.slice(0,2).map(d => <span key={d} className="fy-badge fy-domain">{d}</span>)}
             {user.specialty && <span className="fy-badge fy-specialty">{user.specialty}</span>}
           </div>
         </div>
@@ -101,57 +115,93 @@ export default function ForYouSection({ onActivity }) {
         </button>
       </div>
 
+      {/* Custom search */}
       <div className="foryou-search">
         <input
           className="fy-search-input"
           type="text"
           placeholder="🔍  Tapez un sujet personnalisé…"
           value={custom}
-          onChange={e => { setCustom(e.target.value); setActive(null); }}
-          onKeyDown={e => { if (e.key === 'Enter' && custom.trim()) setActive('__custom__'); }}
+          onChange={e => setCustom(e.target.value)}
         />
         {custom.trim() && (
           <div className="fy-action-bar">
-            <button className="fy-action-btn fy-flash" onClick={() => generate(custom.trim(), 'flashcards')}>
-              🃏 Flashcards
+            <button
+              className="fy-action-btn fy-flash"
+              disabled={isLoading}
+              onClick={() => generate(custom.trim(), 'flashcards')}
+            >
+              {loadingKey === `${custom.trim()}|flashcards` ? <span className="fy-btn-spinner" /> : '🃏'} Flashcards
             </button>
-            <button className="fy-action-btn fy-quiz" onClick={() => generate(custom.trim(), 'quiz')}>
-              ❓ Quiz
+            <button
+              className="fy-action-btn fy-quiz"
+              disabled={isLoading}
+              onClick={() => generate(custom.trim(), 'quiz')}
+            >
+              {loadingKey === `${custom.trim()}|quiz` ? <span className="fy-btn-spinner" /> : '❓'} Quiz
             </button>
           </div>
         )}
       </div>
 
-      <div className="foryou-chips">
-        {topics.map(t => (
-          <div key={t} className="fy-chip-wrap">
-            <button
-              className={`fy-chip ${active === t ? 'active' : ''}`}
-              onClick={() => handleTopicClick(t)}
-            >
-              {t}
-            </button>
-            {active === t && (
-              <div className="fy-action-bar">
-                <button className="fy-action-btn fy-flash" onClick={() => generate(t, 'flashcards')}>
-                  🃏 Flashcards
-                </button>
-                <button className="fy-action-btn fy-quiz" onClick={() => generate(t, 'quiz')}>
-                  ❓ Quiz
-                </button>
-              </div>
-            )}
+      {/* Featured topic */}
+      {featuredTopic && !custom.trim() && (
+        <div className="fy-featured">
+          <div className="fy-featured-label">✨ Suggestion du jour</div>
+          <div className="fy-featured-body">
+            <span className="fy-featured-icon">{TOPIC_ICONS[featuredTopic] || '📌'}</span>
+            <span className="fy-featured-name">{featuredTopic}</span>
           </div>
-        ))}
-      </div>
-
-      {loading && (
-        <div className="fy-loading">
-          <span className="fy-spinner" />
-          Génération en cours…
+          <div className="fy-featured-actions">
+            <button
+              className="fy-action-btn fy-flash"
+              disabled={isLoading}
+              onClick={() => generate(featuredTopic, 'flashcards')}
+            >
+              {loadingKey === `${featuredTopic}|flashcards` ? <span className="fy-btn-spinner" /> : '🃏'} Flashcards
+            </button>
+            <button
+              className="fy-action-btn fy-quiz"
+              disabled={isLoading}
+              onClick={() => generate(featuredTopic, 'quiz')}
+            >
+              {loadingKey === `${featuredTopic}|quiz` ? <span className="fy-btn-spinner" /> : '❓'} Quiz
+            </button>
+          </div>
         </div>
       )}
 
+      {/* Topic cards grid */}
+      {topics.length > 1 && (
+        <div className="foryou-grid">
+          {topics.slice(1).map(t => (
+            <div key={t} className="fy-card">
+              <div className="fy-card-top">
+                <span className="fy-card-icon">{TOPIC_ICONS[t] || '📌'}</span>
+                <span className="fy-card-name">{t}</span>
+              </div>
+              <div className="fy-card-actions">
+                <button
+                  className="fy-card-btn fy-flash"
+                  disabled={isLoading}
+                  onClick={() => generate(t, 'flashcards')}
+                >
+                  {loadingKey === `${t}|flashcards` ? <span className="fy-btn-spinner" /> : '🃏'} Flash
+                </button>
+                <button
+                  className="fy-card-btn fy-quiz"
+                  disabled={isLoading}
+                  onClick={() => generate(t, 'quiz')}
+                >
+                  {loadingKey === `${t}|quiz` ? <span className="fy-btn-spinner" /> : '❓'} Quiz
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Result modal */}
       {result && (
         <div className="fy-result-overlay" onClick={e => { if (e.target === e.currentTarget) setResult(null); }}>
           <div className="fy-result-modal">
@@ -208,8 +258,24 @@ function QuizArea({ questions, onComplete }) {
     }
   }
 
+  const answered = Object.keys(answers).length;
+  const total    = questions.length;
+
   return (
     <div className="fy-quiz-area">
+      {answered === total && (
+        <div className="fy-quiz-score">
+          {answers && (() => {
+            const score = questions.filter((q, i) => q.answer?.charAt(0) === answers[i]).length;
+            const pct   = Math.round(score / total * 100);
+            return (
+              <span className={pct >= 70 ? 'good' : 'low'}>
+                {score}/{total} — {pct}%
+              </span>
+            );
+          })()}
+        </div>
+      )}
       {questions.map((q, i) => (
         <QuizQuestion
           key={i} q={q} idx={i}
@@ -228,7 +294,7 @@ function QuizQuestion({ q, idx, selected, onSelect }) {
       <p className="fy-quiz-question"><strong>{idx + 1}.</strong> {q.question}</p>
       <div className="fy-quiz-options">
         {q.options?.map((opt, i) => {
-          const letter = String.fromCharCode(65 + i);
+          const letter    = String.fromCharCode(65 + i);
           const isCorrect = letter === correct;
           const isSelected = selected === letter;
           let cls = 'fy-quiz-opt';
