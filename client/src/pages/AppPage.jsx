@@ -4,6 +4,7 @@ import Logo from '../components/Logo.jsx';
 import Onboarding from './Onboarding.jsx';
 import ForYouSection from '../components/ForYouSection.jsx';
 import ActivitySection from '../components/ActivitySection.jsx';
+import FoldersPanel from '../components/FoldersPanel.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -150,31 +151,7 @@ export default function AppPage() {
 
         {/* MES MATIÈRES */}
         <div className="panel hidden" id="folders-panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Organisation</div>
-              <h2 className="panel-title">Mes <em>matières</em></h2>
-            </div>
-            <button className="ghost-btn" id="folder-create-btn">+ Nouvelle matière</button>
-          </div>
-          <p className="panel-desc">Classez vos cours par matière pour les retrouver et les réutiliser facilement</p>
-          <div id="folders-list"></div>
-          <div className="hidden" id="folder-detail">
-            <div className="folder-detail-header">
-              <button className="ghost-btn" id="folder-back-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg> Retour
-              </button>
-              <h3 className="folder-detail-title" id="folder-detail-title"></h3>
-              <div className="folder-detail-actions">
-                <button className="ghost-btn" id="folder-rename-btn" title="Renommer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>
-                <button className="ghost-btn" id="folder-delete-btn" title="Supprimer"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-              </div>
-            </div>
-            <div id="folder-files-list"></div>
-            <div className="folder-actions-bar hidden" id="folder-actions-bar">
-              <button className="act-btn purple" id="folder-use-btn">Utiliser ces cours →</button>
-            </div>
-          </div>
+          <FoldersPanel />
         </div>
 
         {/* BIBLIOTHÈQUE */}
@@ -626,25 +603,6 @@ export default function AppPage() {
           <div className="spinner"></div>
           <p id="loader-text">Traitement en cours…</p>
           <span className="loader-hint">Cela peut prendre quelques secondes</span>
-        </div>
-      </div>
-
-      {/* Create/Rename Folder Modal */}
-      <div className="modal-overlay hidden" id="folder-modal">
-        <div className="modal-box modal-sm">
-          <div className="modal-header">
-            <h2 id="folder-modal-title">Nouvelle <em>matière</em></h2>
-          </div>
-          <div className="folder-modal-body">
-            <label className="folder-modal-label">Nom</label>
-            <input type="text" id="folder-modal-name" placeholder="Ex : Biochimie S3" className="input-field" autoComplete="off" />
-            <label className="folder-modal-label" id="folder-modal-icon-label">Icône</label>
-            <div className="folder-icon-grid" id="folder-icon-grid"></div>
-          </div>
-          <div className="folder-modal-actions">
-            <button className="ghost-btn" id="folder-modal-cancel">Annuler</button>
-            <button className="act-btn purple" id="folder-modal-confirm">Créer</button>
-          </div>
         </div>
       </div>
 

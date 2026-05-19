@@ -92,7 +92,7 @@ function showPanel(id) {
   const backBtn = document.getElementById('back-home-btn');
   if (backBtn) backBtn.classList.toggle('hidden', id === 'dashboard-panel');
   if (id === 'actions-section') refreshActionsAvailability();
-  if (id === 'folders-panel') fetchFolders().then(renderFoldersPanel);
+  if (id === 'folders-panel') window.__refreshFolders?.();
   refreshFloatNav();
 }
 
@@ -136,6 +136,15 @@ const summaryTabs     = document.getElementById('summary-tabs');
 
 let selectedFiles    = [];
 let uploadedFilesMeta = [];
+
+// Bridge called by FoldersPanel React component
+window.__setFolderFiles = function(files) {
+  uploadedFilesMeta = files;
+  renderUploadedFiles();
+  summaryAllResults = []; summaryActiveTab = 0; examSheetMd = '';
+  updateSummarizeBtnState(); updateExamSheetBtnState();
+  showPanel('actions-section');
+};
 
 // ── THEME ────────────────────────────────────────────────────────────────────
 const themeToggle = document.getElementById('theme-toggle');
@@ -1907,9 +1916,8 @@ document.getElementById('history-clear-all').addEventListener('click', () => {
   localStorage.removeItem(HISTORY_KEY); renderHistoryPanel(); renderDashboard();
 });
 
-// ── MES MATIÈRES (FOLDERS) ───────────────────────────────────────────────────
+// ── MES MATIÈRES (FOLDERS) — rendering handled by FoldersPanel React component ─
 let userFolders = [];
-let currentFolderId = null;
 
 async function fetchFolders() {
   try {
@@ -1918,186 +1926,6 @@ async function fetchFolders() {
     userFolders = data.folders || [];
   } catch { userFolders = []; }
 }
-
-function renderFoldersPanel() {
-  const list = document.getElementById('folders-list');
-  const detail = document.getElementById('folder-detail');
-  if (!list) return;
-  detail.classList.add('hidden');
-  list.classList.remove('hidden');
-
-  if (!userFolders.length) {
-    list.innerHTML = '<div class="folders-empty">Aucune matière créée.<br>Cliquez sur « + Nouvelle matière » pour commencer.</div>';
-    return;
-  }
-  list.innerHTML = `<div class="folder-grid">${userFolders.map(f => `
-    <div class="folder-card" data-id="${f.id}">
-      <span class="folder-card-icon">${f.icon}</span>
-      <span class="folder-card-name">${f.name}</span>
-      <span class="folder-card-count">${f.file_count} fichier${f.file_count > 1 ? 's' : ''}</span>
-    </div>
-  `).join('')}</div>`;
-
-  list.querySelectorAll('.folder-card').forEach(card => {
-    card.addEventListener('click', () => openFolderDetail(+card.dataset.id));
-  });
-}
-
-async function openFolderDetail(folderId) {
-  currentFolderId = folderId;
-  const folder = userFolders.find(f => f.id === folderId);
-  if (!folder) return;
-
-  document.getElementById('folders-list').classList.add('hidden');
-  const detail = document.getElementById('folder-detail');
-  detail.classList.remove('hidden');
-  document.getElementById('folder-detail-title').textContent = `${folder.icon} ${folder.name}`;
-
-  const filesList = document.getElementById('folder-files-list');
-  filesList.innerHTML = '<p style="color:var(--muted);text-align:center;padding:1rem">Chargement...</p>';
-
-  try {
-    const res = await fetch(`/api/folders/${folderId}/files`);
-    const data = await res.json();
-    const files = data.files || [];
-
-    if (!files.length) {
-      filesList.innerHTML = '<div class="folders-empty">Aucun fichier dans cette matière.<br>Chargez un cours et enregistrez-le ici.</div>';
-      document.getElementById('folder-actions-bar').classList.add('hidden');
-      return;
-    }
-
-    filesList.innerHTML = files.map(f => {
-      const ext = f.orig_name.split('.').pop().toUpperCase();
-      const date = new Date(f.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
-      return `<div class="folder-file-item" data-id="${f.id}">
-        <span class="file-ext">${ext}</span>
-        <span class="folder-file-name">${f.orig_name}</span>
-        <span class="folder-file-date">${date}</span>
-        <button class="folder-file-del" data-id="${f.id}" title="Retirer">✕</button>
-      </div>`;
-    }).join('');
-
-    document.getElementById('folder-actions-bar').classList.remove('hidden');
-
-    filesList.querySelectorAll('.folder-file-del').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        await fetch(`/api/folders/${folderId}/files/${btn.dataset.id}`, { method: 'DELETE' });
-        openFolderDetail(folderId);
-        fetchFolders().then(renderFoldersPanel);
-      });
-    });
-
-    document.getElementById('folder-use-btn').onclick = () => {
-      uploadedFilesMeta = files.map(f => ({
-        id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size
-      }));
-      renderUploadedFiles();
-      summaryAllResults = []; summaryActiveTab = 0; examSheetMd = '';
-      updateSummarizeBtnState(); updateExamSheetBtnState();
-      showPanel('actions-section');
-    };
-  } catch (err) {
-    filesList.innerHTML = `<p style="color:var(--rose);text-align:center">${err.message}</p>`;
-  }
-}
-
-document.getElementById('folder-back-btn')?.addEventListener('click', () => {
-  document.getElementById('folder-detail').classList.add('hidden');
-  document.getElementById('folders-list').classList.remove('hidden');
-});
-
-// ── Folder create/rename modal ───────────────────────────────────────────────
-const folderModal      = document.getElementById('folder-modal');
-const folderModalTitle = document.getElementById('folder-modal-title');
-const folderModalName  = document.getElementById('folder-modal-name');
-const folderModalGrid  = document.getElementById('folder-icon-grid');
-const folderModalConf  = document.getElementById('folder-modal-confirm');
-const FOLDER_ICONS = ['📁','📂','💊','🧬','⚗️','⚡','📐','💻','🔬','⚖️','🏛️','📿','💉','🧪','📜','🎵','🌍','🩺','📊','🧮'];
-let folderModalIcon = '📁';
-let folderModalMode = 'create'; // 'create' | 'rename'
-
-function openFolderModal(mode, existing) {
-  folderModalMode = mode;
-  if (mode === 'rename' && existing) {
-    folderModalTitle.innerHTML = 'Renommer la <em>matière</em>';
-    folderModalName.value = existing.name;
-    folderModalIcon = existing.icon || '📁';
-    folderModalConf.textContent = 'Enregistrer';
-  } else {
-    folderModalTitle.innerHTML = 'Nouvelle <em>matière</em>';
-    folderModalName.value = '';
-    folderModalIcon = '📁';
-    folderModalConf.textContent = 'Créer';
-  }
-  folderModalGrid.innerHTML = FOLDER_ICONS.map(ic =>
-    `<div class="folder-icon-opt${ic === folderModalIcon ? ' selected' : ''}" data-icon="${ic}">${ic}</div>`
-  ).join('');
-  folderModalGrid.querySelectorAll('.folder-icon-opt').forEach(el => {
-    el.addEventListener('click', () => {
-      folderModalGrid.querySelectorAll('.folder-icon-opt').forEach(x => x.classList.remove('selected'));
-      el.classList.add('selected');
-      folderModalIcon = el.dataset.icon;
-    });
-  });
-  folderModal.classList.remove('hidden');
-  folderModalName.focus();
-}
-
-function closeFolderModal() { folderModal.classList.add('hidden'); }
-
-document.getElementById('folder-modal-cancel')?.addEventListener('click', closeFolderModal);
-folderModal?.addEventListener('click', (e) => { if (e.target === folderModal) closeFolderModal(); });
-folderModalName?.addEventListener('keydown', (e) => { if (e.key === 'Enter') folderModalConf.click(); });
-
-folderModalConf?.addEventListener('click', async () => {
-  const name = folderModalName.value.trim();
-  if (!name) return;
-  try {
-    if (folderModalMode === 'rename') {
-      const res = await fetch(`/api/folders/${currentFolderId}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, icon: folderModalIcon })
-      });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      await fetchFolders();
-      renderFoldersPanel();
-      openFolderDetail(currentFolderId);
-    } else {
-      const res = await fetch('/api/folders', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, icon: folderModalIcon })
-      });
-      const data = await res.json();
-      if (data.error) { alert(data.error); return; }
-      await fetchFolders();
-      renderFoldersPanel();
-    }
-    closeFolderModal();
-  } catch (err) { alert(err.message); }
-});
-
-document.getElementById('folder-rename-btn')?.addEventListener('click', () => {
-  const folder = userFolders.find(f => f.id === currentFolderId);
-  if (!folder) return;
-  openFolderModal('rename', folder);
-});
-
-document.getElementById('folder-delete-btn')?.addEventListener('click', async () => {
-  const folder = userFolders.find(f => f.id === currentFolderId);
-  if (!folder) return;
-  if (!confirm(`Supprimer la matière « ${folder.name} » et tous ses fichiers ?`)) return;
-  await fetch(`/api/folders/${currentFolderId}`, { method: 'DELETE' });
-  currentFolderId = null;
-  await fetchFolders();
-  renderFoldersPanel();
-});
-
-document.getElementById('folder-create-btn')?.addEventListener('click', () => {
-  openFolderModal('create');
-});
 
 // ── Save-to-folder modal ─────────────────────────────────────────────────────
 const saveFolderModal = document.getElementById('save-folder-modal');
