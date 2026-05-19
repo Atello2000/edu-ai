@@ -6,6 +6,7 @@ import ForYouSection from '../components/ForYouSection.jsx';
 import ActivitySection from '../components/ActivitySection.jsx';
 import FoldersPanel from '../components/FoldersPanel.jsx';
 import StatsPanel from '../components/StatsPanel.jsx';
+import HistoryPanel from '../components/HistoryPanel.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -133,14 +134,7 @@ export default function AppPage() {
 
         {/* HISTORIQUE */}
         <div className="panel hidden" id="history-panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Sessions récentes</div>
-              <h2 className="panel-title">Mes <em>cours</em></h2>
-            </div>
-            <button className="ghost-btn" id="history-clear-all">Tout effacer</button>
-          </div>
-          <div id="history-list"></div>
+          <HistoryPanel />
         </div>
 
         {/* MES MATIÈRES */}

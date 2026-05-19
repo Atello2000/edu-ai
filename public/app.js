@@ -1824,41 +1824,8 @@ function saveSession(update) {
   }
   Object.assign(sessions[idx], update, { timestamp: Date.now() });
   localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
-  renderHistoryPanel();
+  window.__refreshHistory?.();
   renderDashboard();
-}
-
-function renderHistoryPanel() {
-  const sessions = getSessions();
-  const panel    = document.getElementById('history-panel');
-  const list     = document.getElementById('history-list');
-  list.innerHTML = '';
-  if (!sessions.length) { list.innerHTML = '<p style="color:var(--muted);text-align:center;padding:2rem">Aucune session sauvegardée.</p>'; return; }
-  sessions.forEach(s => {
-    const el   = document.createElement('div');
-    el.className = 'history-item';
-    const date = new Date(s.timestamp).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-    el.innerHTML = `
-      <div class="history-left">
-        <div class="history-files">${s.files.join(' · ')}</div>
-        <div class="history-meta">${date}</div>
-        <div class="history-tags">
-          ${s.summaries  ? '<span class="htag hs">Résumés</span>'    : ''}
-          ${s.quiz       ? '<span class="htag hq">Quiz</span>'       : ''}
-          ${s.flashcards ? '<span class="htag hf">Flashcards</span>' : ''}
-          ${s.examSheet  ? '<span class="htag he">Fiche</span>'      : ''}
-        </div>
-      </div>
-      <button class="history-del" data-id="${s.id}" title="Supprimer">✕</button>`;
-    el.addEventListener('click', e => { if (e.target.classList.contains('history-del')) return; restoreSession(s); });
-    el.querySelector('.history-del').addEventListener('click', e => {
-      e.stopPropagation();
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(getSessions().filter(x=>x.id!==s.id)));
-      renderHistoryPanel();
-      renderDashboard();
-    });
-    list.appendChild(el);
-  });
 }
 
 function restoreSession(s) {
@@ -1911,10 +1878,8 @@ function restoreSession(s) {
   updateExamSheetBtnState();
   showPanel(firstPanel);
 }
+window.__restoreSession = restoreSession;
 
-document.getElementById('history-clear-all').addEventListener('click', () => {
-  localStorage.removeItem(HISTORY_KEY); renderHistoryPanel(); renderDashboard();
-});
 
 // ── MES MATIÈRES (FOLDERS) — rendering handled by FoldersPanel React component ─
 let userFolders = [];
@@ -2131,13 +2096,15 @@ dashUploadBtn?.addEventListener('click', () => showPanel('upload-section'));
 document.getElementById('no-files-upload-btn')?.addEventListener('click', () => showPanel('upload-section'));
 dashLibraryBtn?.addEventListener('click', () => showPanel('library-panel'));
 document.getElementById('dash-history-btn')?.addEventListener('click', () => {
-  renderHistoryPanel(); showPanel('history-panel');
+  showPanel('history-panel');
 });
 dashStatsBtn?.addEventListener('click', () => {
-  renderStatsPanel(); showPanel('stats-panel');
+  window.__refreshStats?.();
+  showPanel('stats-panel');
 });
 document.getElementById('dash-folders-btn')?.addEventListener('click', () => {
-  fetchFolders().then(() => { renderFoldersPanel(); showPanel('folders-panel'); });
+  window.__refreshFolders?.();
+  showPanel('folders-panel');
 });
 
 fetchFolders();
