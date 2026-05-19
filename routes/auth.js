@@ -89,8 +89,29 @@ router.post('/logout', (req, res) => {
 router.get('/me', (req, res) => {
   const decoded = getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
-  const user = db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(decoded.userId);
+  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   if (!user) return res.status(401).json({ error: 'Session invalide.' });
+  res.json({ user });
+});
+
+// ── POST /api/auth/onboarding ─────────────────────────────────────────────────
+router.post('/onboarding', (req, res) => {
+  const decoded = getTokenUser(req);
+  if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
+
+  const VALID_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
+  const VALID_DOMAINS = ['santé','informatique','droit','économie','sciences','langues','ingénierie','histoire','autre'];
+
+  const { level, domains } = req.body || {};
+  const lvl = VALID_LEVELS.includes(level) ? level : null;
+  const doms = Array.isArray(domains)
+    ? JSON.stringify(domains.filter(d => VALID_DOMAINS.includes(d)).slice(0, 4))
+    : '[]';
+
+  db.prepare('UPDATE users SET level = ?, domains = ?, onboarding_done = 1 WHERE id = ?')
+    .run(lvl, doms, decoded.userId);
+
+  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   res.json({ user });
 });
 

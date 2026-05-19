@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Logo from '../components/Logo.jsx';
+import Onboarding from './Onboarding.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -22,6 +23,11 @@ function loadScript({ src, id }) {
 export default function AppPage() {
   const { user } = useAuth();
   const initialized = useRef(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (user && !user.onboarding_done) setShowOnboarding(true);
+  }, [user]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -51,6 +57,7 @@ export default function AppPage() {
 
   return (
     <>
+      {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
       <header>
         <button className="back-home-btn hidden" id="back-home-btn" title="Tableau de bord">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>

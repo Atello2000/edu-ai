@@ -10,6 +10,24 @@ function langLabel(lang) {
   return { fr: 'en français', en: 'in English', ar: 'باللغة العربية' }[lang] || 'en français';
 }
 
+function userContext(user) {
+  if (!user?.level && !user?.domains) return '';
+  const levelLabels = {
+    licence:       'étudiant en Licence (Bac+3)',
+    master:        'étudiant en Master (Bac+5)',
+    doctorat:      'doctorant (PhD)',
+    professionnel: 'professionnel en activité',
+    autre:         'apprenant',
+  };
+  const level = levelLabels[user.level] || '';
+  let domains = [];
+  try { domains = JSON.parse(user.domains || '[]'); } catch {}
+  const domStr = domains.length ? domains.join(', ') : '';
+  if (!level && !domStr) return '';
+  const parts = [level, domStr ? `spécialisé en ${domStr}` : ''].filter(Boolean).join(', ');
+  return `[Profil : ${parts}. Adapte ton vocabulaire, tes exemples et ton niveau d'explication en conséquence.]\n\n`;
+}
+
 async function getFileText(file) {
   if (file.text) return file.text;
   if (!file.path) throw new Error(`Contenu du fichier "${file.name}" indisponible. Veuillez le re-charger.`);
@@ -43,7 +61,7 @@ router.post('/summarize', async (req, res) => {
       send({ type: 'start', name: file.name });
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
-      const prompt = `Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}, structuré en Markdown, avec exactement ce plan :
+      const prompt = `${userContext(req.user)}Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}, structuré en Markdown, avec exactement ce plan :
 
 ## 🎯 Objectifs du cours
 (2-3 phrases sur ce que l'étudiant va apprendre)
@@ -111,7 +129,7 @@ Varie obligatoirement les types de questions parmi :
 N'utilise pas deux fois le même type de question consécutivement.`;
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
-      const prompt = `Génère ${count} questions QCM de niveau ${difficulty} ${inLang} basées sur ce cours.
+      const prompt = `${userContext(req.user)}Génère ${count} questions QCM de niveau ${difficulty} ${inLang} basées sur ce cours.
 ${difficultyGuide}
 ${questionTypes}
 
@@ -180,7 +198,7 @@ router.post('/exam-sheet', async (req, res) => {
       context += `\n\n=== ${file.name} ===\n${text.slice(0, 18000)}`;
     }
 
-    const { text, model, usage: sheetUsage } = await aiComplete(`Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
+    const { text, model, usage: sheetUsage } = await aiComplete(`${userContext(req.user)}Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
 
 À partir des cours fournis, produis une fiche de révision dense, claire et directement exploitable avant un contrôle.
 
@@ -231,7 +249,7 @@ router.post('/flashcards', async (req, res) => {
       const truncated = text.slice(0, LIMITS.flashChars);
 
       const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
-      const prompt = `Tu es un assistant pédagogique. Génère ${count} flashcards ${inLang} pour aider à mémoriser les concepts essentiels.
+      const prompt = `${userContext(req.user)}Tu es un assistant pédagogique. Génère ${count} flashcards ${inLang} pour aider à mémoriser les concepts essentiels.
 
 Chaque flashcard doit avoir :
 - Un RECTO : une question courte, un terme, ou un concept clé
@@ -293,11 +311,12 @@ router.post('/chat', async (req, res) => {
       ? `\n\nL'étudiant a également joint une image. Analyse-la en lien avec les cours.`
       : '';
 
+    const ctx = userContext(req.user);
     const systemPrompt = attachedFile
-      ? `Tu es un assistant pédagogique expert. L'étudiant a joint un document (devoir, QCM, liste de questions, exercices…). Réponds à chaque question ou exercice de ce document en t'appuyant UNIQUEMENT sur les cours fournis. Structure ta réponse clairement (une section par question si possible), explique ton raisonnement, cite les notions du cours. Réponds toujours en français. Utilise du markdown (titres, gras, listes).
+      ? `${ctx}Tu es un assistant pédagogique expert. L'étudiant a joint un document (devoir, QCM, liste de questions, exercices…). Réponds à chaque question ou exercice de ce document en t'appuyant UNIQUEMENT sur les cours fournis. Structure ta réponse clairement (une section par question si possible), explique ton raisonnement, cite les notions du cours. Réponds toujours en français. Utilise du markdown (titres, gras, listes).
 
 Cours de référence :${context}${attachedContext}${imageNote}`
-      : `Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
+      : `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
 
 Cours disponibles :${context}${imageNote}`;
 
