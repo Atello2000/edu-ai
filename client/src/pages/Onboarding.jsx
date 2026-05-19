@@ -33,43 +33,30 @@ const SPECIALTY_SUGGESTIONS = {
   'histoire':     ['Histoire contemporaine', 'Philosophie', 'Sociologie', 'Géographie', 'Sciences politiques', 'Anthropologie', 'Psychologie'],
 };
 
-function getSpecialtySuggestions(selectedDomains) {
-  const seen = new Set();
-  const result = [];
-  for (const d of selectedDomains) {
-    for (const s of (SPECIALTY_SUGGESTIONS[d] || [])) {
-      if (!seen.has(s)) { seen.add(s); result.push(s); }
-    }
-  }
-  return result.slice(0, 9);
-}
-
 export default function Onboarding({ onDone }) {
   const { setUser } = useAuth();
-  const [step, setStep]                 = useState(1);
-  const [level, setLevel]               = useState('');
-  const [levelCustom, setLevelCustom]   = useState('');
-  const [domains, setDomains]           = useState([]);
+  const [step, setStep]               = useState(1);
+  const [level, setLevel]             = useState('');
+  const [levelCustom, setLevelCustom] = useState('');
+  const [domain, setDomain]           = useState('');
   const [domainCustom, setDomainCustom] = useState('');
-  const [specialty, setSpecialty]       = useState('');
-  const [specCustom, setSpecCustom]     = useState('');
-  const [loading, setLoading]           = useState(false);
+  const [specialty, setSpecialty]     = useState('');
+  const [specCustom, setSpecCustom]   = useState('');
+  const [loading, setLoading]         = useState(false);
 
-  function toggleDomain(d) {
-    setDomains(prev => {
-      const next = prev.includes(d) ? prev.filter(x => x !== d) : prev.length < 4 ? [...prev, d] : prev;
-      // Reset specialty if no longer relevant
-      if (!next.some(x => x !== 'autre') && specialty && specialty !== '__autre__') setSpecialty('');
-      return next;
-    });
+  function selectDomain(d) {
+    if (domain === d) return;
+    setDomain(d);
+    setSpecialty('');
+    setSpecCustom('');
   }
 
   function getFinalLevel() {
     return level === 'autre' ? (levelCustom.trim() || 'autre') : level;
   }
 
-  function getFinalDomains() {
-    return domains.map(d => d === 'autre' ? (domainCustom.trim() || 'autre') : d);
+  function getFinalDomain() {
+    return domain === 'autre' ? (domainCustom.trim() || 'autre') : domain;
   }
 
   function getFinalSpecialty() {
@@ -78,19 +65,20 @@ export default function Onboarding({ onDone }) {
   }
 
   const canProceedStep1 = level && (level !== 'autre' || levelCustom.trim());
-  const canProceedStep2 = domains.length > 0 && (!domains.includes('autre') || domainCustom.trim());
+  const canProceedStep2 = domain && (domain !== 'autre' || domainCustom.trim());
 
-  const suggestions = getSpecialtySuggestions(domains.filter(d => d !== 'autre'));
+  const suggestions = SPECIALTY_SUGGESTIONS[domain] || [];
 
   async function submit(skip = false) {
     setLoading(true);
     try {
+      const finalDomain = getFinalDomain();
       const r = await fetch('/api/auth/onboarding', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(skip ? { level: null, domains: [], specialty: null } : {
           level:     getFinalLevel(),
-          domains:   getFinalDomains(),
+          domains:   finalDomain ? [finalDomain] : [],
           specialty: getFinalSpecialty(),
         }),
       });
@@ -149,20 +137,20 @@ export default function Onboarding({ onDone }) {
           </>
         )}
 
-        {/* ── Step 2 : Domaine + Spécialité ── */}
+        {/* ── Step 2 : Domaine principal + Spécialité ── */}
         {step === 2 && (
           <>
             <div className="ob-header">
-              <h2>Votre <em>domaine</em> ?</h2>
-              <p>Choisissez jusqu'à 4 domaines — l'IA s'adaptera à votre spécialité.</p>
+              <h2>Votre <em>domaine</em> principal ?</h2>
+              <p>Choisissez celui qui correspond le mieux à vos études.</p>
             </div>
 
             <div className="ob-grid ob-grid-3">
               {DOMAINS.map(d => (
                 <div
                   key={d.value}
-                  className={`ob-card ${domains.includes(d.value) ? 'selected' : ''}`}
-                  onClick={() => toggleDomain(d.value)}
+                  className={`ob-card ${domain === d.value ? 'selected' : ''}`}
+                  onClick={() => selectDomain(d.value)}
                 >
                   <div className="ob-icon">{d.icon}</div>
                   <div className="ob-label">{d.label}</div>
@@ -170,18 +158,19 @@ export default function Onboarding({ onDone }) {
               ))}
             </div>
 
-            {domains.includes('autre') && (
+            {domain === 'autre' && (
               <input
                 className="ob-custom-input"
                 type="text"
                 placeholder="Ex : Architecture, Pharmacie, Marketing…"
                 value={domainCustom}
                 onChange={e => setDomainCustom(e.target.value)}
+                autoFocus
                 maxLength={60}
               />
             )}
 
-            {/* Specialty — appears when at least 1 non-custom domain selected */}
+            {/* Spécialité — apparaît si le domaine a des suggestions */}
             {suggestions.length > 0 && (
               <div className="ob-spec-section">
                 <div className="ob-spec-label">
@@ -216,10 +205,6 @@ export default function Onboarding({ onDone }) {
                   />
                 )}
               </div>
-            )}
-
-            {domains.length > 0 && (
-              <p className="ob-hint">{domains.length} domaine{domains.length > 1 ? 's' : ''} sélectionné{domains.length > 1 ? 's' : ''}</p>
             )}
 
             <div className="ob-actions">
