@@ -7,7 +7,7 @@ const LEVELS = [
   { value: 'master',        icon: '🎓', label: 'Master',        sub: 'Bac+5' },
   { value: 'doctorat',      icon: '🔬', label: 'Doctorat',      sub: 'PhD' },
   { value: 'professionnel', icon: '💼', label: 'Professionnel', sub: 'En activité' },
-  { value: 'autre',         icon: '📚', label: 'Autre',         sub: 'Autodidacte…' },
+  { value: 'autre',         icon: '📚', label: 'Autre',         sub: 'Précisez…' },
 ];
 
 const DOMAINS = [
@@ -24,10 +24,12 @@ const DOMAINS = [
 
 export default function Onboarding({ onDone }) {
   const { setUser } = useAuth();
-  const [step, setStep]       = useState(1);
-  const [level, setLevel]     = useState('');
-  const [domains, setDomains] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [step, setStep]           = useState(1);
+  const [level, setLevel]         = useState('');
+  const [levelCustom, setLevelCustom] = useState('');
+  const [domains, setDomains]     = useState([]);
+  const [domainCustom, setDomainCustom] = useState('');
+  const [loading, setLoading]     = useState(false);
 
   function toggleDomain(d) {
     setDomains(prev =>
@@ -35,13 +37,28 @@ export default function Onboarding({ onDone }) {
     );
   }
 
+  function getFinalLevel() {
+    if (level === 'autre') return levelCustom.trim() || 'autre';
+    return level;
+  }
+
+  function getFinalDomains() {
+    return domains.map(d => d === 'autre' ? (domainCustom.trim() || 'autre') : d);
+  }
+
+  const canProceedStep1 = level && (level !== 'autre' || levelCustom.trim());
+  const canProceedStep2 = domains.length > 0 && (!domains.includes('autre') || domainCustom.trim());
+
   async function submit(skip = false) {
     setLoading(true);
     try {
       const r = await fetch('/api/auth/onboarding', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(skip ? { level: null, domains: [] } : { level, domains }),
+        body: JSON.stringify(skip ? { level: null, domains: [] } : {
+          level: getFinalLevel(),
+          domains: getFinalDomains(),
+        }),
       });
       const data = await r.json();
       if (data.user) setUser(data.user);
@@ -77,9 +94,20 @@ export default function Onboarding({ onDone }) {
                 </div>
               ))}
             </div>
+            {level === 'autre' && (
+              <input
+                className="ob-custom-input"
+                type="text"
+                placeholder="Ex : BTS, Terminale, Formation pro…"
+                value={levelCustom}
+                onChange={e => setLevelCustom(e.target.value)}
+                autoFocus
+                maxLength={60}
+              />
+            )}
             <div className="ob-actions">
               <button className="ob-btn-skip" onClick={() => submit(true)}>Passer</button>
-              <button className="ob-btn-primary" disabled={!level} onClick={() => setStep(2)}>
+              <button className="ob-btn-primary" disabled={!canProceedStep1} onClick={() => setStep(2)}>
                 Continuer →
               </button>
             </div>
@@ -92,7 +120,7 @@ export default function Onboarding({ onDone }) {
               <h2>Votre <em>domaine</em> ?</h2>
               <p>Choisissez jusqu'à 4 domaines — l'IA s'adaptera à votre spécialité.</p>
             </div>
-            <div className={`ob-grid ob-grid-3`}>
+            <div className="ob-grid ob-grid-3">
               {DOMAINS.map(d => (
                 <div
                   key={d.value}
@@ -104,12 +132,23 @@ export default function Onboarding({ onDone }) {
                 </div>
               ))}
             </div>
+            {domains.includes('autre') && (
+              <input
+                className="ob-custom-input"
+                type="text"
+                placeholder="Ex : Architecture, Pharmacie, Marketing…"
+                value={domainCustom}
+                onChange={e => setDomainCustom(e.target.value)}
+                autoFocus
+                maxLength={60}
+              />
+            )}
             {domains.length > 0 && (
               <p className="ob-hint">{domains.length} domaine{domains.length > 1 ? 's' : ''} sélectionné{domains.length > 1 ? 's' : ''}</p>
             )}
             <div className="ob-actions">
               <button className="ob-btn-back" onClick={() => setStep(1)}>← Retour</button>
-              <button className="ob-btn-primary" disabled={domains.length === 0 || loading} onClick={() => submit(false)}>
+              <button className="ob-btn-primary" disabled={!canProceedStep2 || loading} onClick={() => submit(false)}>
                 {loading ? 'Enregistrement…' : 'Commencer →'}
               </button>
             </div>

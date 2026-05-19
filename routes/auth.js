@@ -99,13 +99,21 @@ router.post('/onboarding', (req, res) => {
   const decoded = getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
-  const VALID_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
-  const VALID_DOMAINS = ['santé','informatique','droit','économie','sciences','langues','ingénierie','histoire','autre'];
+  const PRESET_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
+  const PRESET_DOMAINS = ['santé','informatique','droit','économie','sciences','langues','ingénierie','histoire','autre'];
 
   const { level, domains } = req.body || {};
-  const lvl = VALID_LEVELS.includes(level) ? level : null;
+  // Accept preset values or any non-empty custom string (max 60 chars)
+  const lvl = (typeof level === 'string' && level.trim())
+    ? level.trim().slice(0, 60)
+    : null;
   const doms = Array.isArray(domains)
-    ? JSON.stringify(domains.filter(d => VALID_DOMAINS.includes(d)).slice(0, 4))
+    ? JSON.stringify(
+        domains
+          .filter(d => typeof d === 'string' && d.trim())
+          .map(d => d.trim().slice(0, 60))
+          .slice(0, 4)
+      )
     : '[]';
 
   db.prepare('UPDATE users SET level = ?, domains = ?, onboarding_done = 1 WHERE id = ?')
