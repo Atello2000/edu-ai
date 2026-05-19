@@ -5,6 +5,7 @@ import Onboarding from './Onboarding.jsx';
 import ForYouSection from '../components/ForYouSection.jsx';
 import ActivitySection from '../components/ActivitySection.jsx';
 import FoldersPanel from '../components/FoldersPanel.jsx';
+import StatsPanel from '../components/StatsPanel.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -127,14 +128,7 @@ export default function AppPage() {
 
         {/* STATISTIQUES */}
         <div className="panel hidden" id="stats-panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Progression</div>
-              <h2 className="panel-title">Mes <em>statistiques</em></h2>
-            </div>
-            <button className="ghost-btn" id="stats-reset-btn">Réinitialiser quiz</button>
-          </div>
-          <div id="stats-content"></div>
+          <StatsPanel />
         </div>
 
         {/* HISTORIQUE */}

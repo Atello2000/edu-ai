@@ -2024,85 +2024,21 @@ floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
   btn.addEventListener('click', () => showPanel(btn.dataset.target))
 );
 
-// ── STATS ─────────────────────────────────────────────────────────────────────
+// ── STATS — rendering handled by StatsPanel React component ──────────────────
 const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
-const statsPanel   = document.getElementById('stats-panel');
-const statsContent = document.getElementById('stats-content');
 const statsToggle  = document.getElementById('stats-toggle');
 
 statsToggle.addEventListener('click', () => {
-  renderStatsPanel();
+  window.__refreshStats?.();
   showPanel('stats-panel');
-});
-
-document.getElementById('stats-reset-btn').addEventListener('click', () => {
-  if (!confirm('Réinitialiser l\'historique des quiz ?')) return;
-  localStorage.removeItem(QUIZ_STATS_KEY);
-  renderStatsPanel();
-  renderDashboard();
 });
 
 function saveQuizStat(pct, correct, total) {
   const stats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
   stats.unshift({ date: Date.now(), pct, correct, total });
   localStorage.setItem(QUIZ_STATS_KEY, JSON.stringify(stats.slice(0, 50)));
-  renderStatsPanel();
+  window.__refreshStats?.();
   renderDashboard();
-}
-
-function renderStatsPanel() {
-  const quizStats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
-  const sessions  = getSessions();
-  const srsData   = getSRSData();
-
-  const quizDone = quizStats.length;
-  const avgPct   = quizDone ? Math.round(quizStats.reduce((s,x)=>s+x.pct,0)/quizDone) : null;
-  const bestPct  = quizDone ? Math.max(...quizStats.map(x=>x.pct)) : null;
-
-  const allSRS     = Object.values(srsData);
-  const fcSeen     = allSRS.length;
-  const fcMastered = allSRS.filter(c=>c.interval>=7).length;
-  const fcDue      = allSRS.filter(c=>c.nextReview<=Date.now()).length;
-
-  const sessCount = sessions.length;
-  const sumCount  = sessions.filter(s=>s.summaries).length;
-  const qzCount   = sessions.filter(s=>s.quiz).length;
-  const flCount   = sessions.filter(s=>s.flashcards).length;
-
-  const cls = p => p>=80?'good':p>=60?'mid':'low';
-
-  statsContent.innerHTML = `
-    <div class="stats-section">
-      <div class="stats-section-title">Quiz</div>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-number stat-blue">${quizDone}</div><div class="stat-label">quiz complétés</div></div>
-        <div class="stat-card"><div class="stat-number stat-${avgPct!==null?cls(avgPct):'muted-num'}">${avgPct!==null?avgPct+'%':'—'}</div><div class="stat-label">score moyen</div></div>
-        <div class="stat-card"><div class="stat-number stat-${bestPct!==null?cls(bestPct):'muted-num'}">${bestPct!==null?bestPct+'%':'—'}</div><div class="stat-label">meilleur score</div></div>
-      </div>
-      <div class="quiz-history">
-        ${quizStats.slice(0,6).map(s=>{
-          const d=new Date(s.date).toLocaleDateString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-          return `<div class="quiz-history-item"><span>${d}</span><span>${s.correct}/${s.total} correctes</span><span class="quiz-score-badge quiz-score-${cls(s.pct)}">${s.pct}%</span></div>`;
-        }).join('')}
-      </div>
-    </div>
-    <div class="stats-section">
-      <div class="stats-section-title">Flashcards · révision espacée</div>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-number stat-purple">${fcSeen}</div><div class="stat-label">cartes vues</div></div>
-        <div class="stat-card"><div class="stat-number stat-good">${fcMastered}</div><div class="stat-label">maîtrisées (≥7j)</div></div>
-        <div class="stat-card"><div class="stat-number stat-${fcDue>0?'low':'good'}">${fcDue}</div><div class="stat-label">dues aujourd'hui</div></div>
-      </div>
-    </div>
-    <div class="stats-section">
-      <div class="stats-section-title">Sessions</div>
-      <div class="stats-grid">
-        <div class="stat-card"><div class="stat-number stat-blue">${sessCount}</div><div class="stat-label">sessions</div></div>
-        <div class="stat-card"><div class="stat-number stat-muted-num">${sumCount}</div><div class="stat-label">résumés</div></div>
-        <div class="stat-card"><div class="stat-number stat-muted-num">${qzCount}</div><div class="stat-label">quiz</div></div>
-        <div class="stat-card"><div class="stat-number stat-muted-num">${flCount}</div><div class="stat-label">flashcards</div></div>
-      </div>
-    </div>`;
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -2185,6 +2121,7 @@ function renderDashboard() {
   }
 }
 
+window.__renderDashboard = renderDashboard;
 dashboardRefreshBtn?.addEventListener('click', renderDashboard);
 dashContinueBtn?.addEventListener('click', () => {
   const lastSession = getSessions()[0];
