@@ -29,37 +29,48 @@ const QUOTA_DAILY = {
   max:  { summarize: 50, quiz: 100, flashcards: 100, chat: 60 },
 };
 
+const SAFE_FIELDS = { summarize: 'summarize', quiz: 'quiz', flashcards: 'flashcards', chat: 'chat' };
+
 function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 
 async function checkQuota(req, action) {
   if (!IS_PROD) return { ok: true };
   const user = req.user;
-  if (!user) return { ok: true }; // middleware auth gère ça avant
+  if (!user) return { ok: true };
+
+  const safeField = SAFE_FIELDS[action];
+  if (!safeField) throw new Error('Action invalide');
 
   const today  = getTodayStr();
   const limits = QUOTA_DAILY[user.plan] || QUOTA_DAILY.free;
   const limit  = limits[action];
 
-  // Upsert la ligne du jour
-  await prepare(`
-    INSERT INTO user_quota (user_id, date) VALUES (?, ?)
-    ON CONFLICT (user_id, date) DO NOTHING
-  `).run(user.id, today);
+  // Atomic: insert row for today or increment only if still under limit.
+  // ON CONFLICT DO UPDATE ... WHERE ensures the read-check-write is a single
+  // operation — no race condition between concurrent requests.
+  const row = await prepare(`
+    INSERT INTO user_quota (user_id, date, ${safeField})
+    VALUES (?, ?, 1)
+    ON CONFLICT (user_id, date) DO UPDATE
+      SET ${safeField} = user_quota.${safeField} + 1
+      WHERE user_quota.${safeField} < ?
+    RETURNING ${safeField} AS used
+  `).get(user.id, today, limit);
 
-  const row = await prepare('SELECT * FROM user_quota WHERE user_id = ? AND date = ?').get(user.id, today);
-  const used = row[action] || 0;
+  if (!row) {
+    // WHERE blocked the update — quota reached
+    const cur = await prepare(
+      `SELECT ${safeField} AS used FROM user_quota WHERE user_id = ? AND date = ?`
+    ).get(user.id, today);
+    return { ok: false, used: cur?.used ?? limit, limit, action };
+  }
 
-  if (used >= limit) return { ok: false, used, limit, action };
-
-  const safeField = { summarize: 'summarize', quiz: 'quiz', flashcards: 'flashcards', chat: 'chat' }[action];
-  if (!safeField) throw new Error('Action invalide');
-  await prepare(`UPDATE user_quota SET ${safeField} = ${safeField} + 1 WHERE user_id = ? AND date = ?`).run(user.id, today);
-  return { ok: true, used: used + 1, limit };
+  return { ok: true, used: row.used, limit };
 }
 
 async function getQuotaStatus(req) {
   if (!IS_PROD || !req.user) return null;
-  const today = getTodayStr();
+  const today  = getTodayStr();
   const limits = QUOTA_DAILY[req.user.plan] || QUOTA_DAILY.free;
 
   await prepare(`
@@ -67,7 +78,10 @@ async function getQuotaStatus(req) {
     ON CONFLICT (user_id, date) DO NOTHING
   `).run(req.user.id, today);
 
-  const row = await prepare('SELECT * FROM user_quota WHERE user_id = ? AND date = ?').get(req.user.id, today);
+  const row = await prepare(
+    'SELECT * FROM user_quota WHERE user_id = ? AND date = ?'
+  ).get(req.user.id, today);
+
   return {
     summarize:  { used: row.summarize,  limit: limits.summarize },
     quiz:       { used: row.quiz,       limit: limits.quiz },
