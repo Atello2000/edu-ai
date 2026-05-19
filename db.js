@@ -101,6 +101,7 @@ const migrations = [
   "ALTER TABLE users ADD COLUMN level TEXT",
   "ALTER TABLE users ADD COLUMN domains TEXT NOT NULL DEFAULT '[]'",
   "ALTER TABLE users ADD COLUMN onboarding_done INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE users ADD COLUMN specialty TEXT",
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch (_) { /* column already exists */ }

@@ -93,6 +93,7 @@ export default function ForYouSection({ onActivity }) {
           <div className="foryou-badges">
             {user.level && <span className="fy-badge fy-level">{levelLabel(user.level)}</span>}
             {domains.slice(0, 2).map(d => <span key={d} className="fy-badge fy-domain">{d}</span>)}
+            {user.specialty && <span className="fy-badge fy-specialty">{user.specialty}</span>}
           </div>
         </div>
         <button className="fy-edit-btn" onClick={() => window.__editProfile?.()}>

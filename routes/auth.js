@@ -89,7 +89,7 @@ router.post('/logout', (req, res) => {
 router.get('/me', (req, res) => {
   const decoded = getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
-  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
+  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   if (!user) return res.status(401).json({ error: 'Session invalide.' });
   res.json({ user });
 });
@@ -102,8 +102,7 @@ router.post('/onboarding', (req, res) => {
   const PRESET_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
   const PRESET_DOMAINS = ['santé','informatique','droit','économie','sciences','langues','ingénierie','histoire','autre'];
 
-  const { level, domains } = req.body || {};
-  // Accept preset values or any non-empty custom string (max 60 chars)
+  const { level, domains, specialty } = req.body || {};
   const lvl = (typeof level === 'string' && level.trim())
     ? level.trim().slice(0, 60)
     : null;
@@ -115,11 +114,14 @@ router.post('/onboarding', (req, res) => {
           .slice(0, 4)
       )
     : '[]';
+  const spec = (typeof specialty === 'string' && specialty.trim())
+    ? specialty.trim().slice(0, 80)
+    : null;
 
-  db.prepare('UPDATE users SET level = ?, domains = ?, onboarding_done = 1 WHERE id = ?')
-    .run(lvl, doms, decoded.userId);
+  db.prepare('UPDATE users SET level = ?, domains = ?, specialty = ?, onboarding_done = 1 WHERE id = ?')
+    .run(lvl, doms, spec, decoded.userId);
 
-  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
+  const user = db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   res.json({ user });
 });
 

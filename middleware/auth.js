@@ -9,7 +9,7 @@ function requireAuth(req, res, next) {
   if (!token) return res.status(401).json({ error: 'Connexion requise.' });
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT id, email, name, plan, level, domains, onboarding_done FROM users WHERE id = ?').get(decoded.userId);
+    const user = db.prepare('SELECT id, email, name, plan, level, domains, specialty, onboarding_done FROM users WHERE id = ?').get(decoded.userId);
     if (!user) return res.status(401).json({ error: 'Session expirée.' });
     req.user = user;
     next();

@@ -11,7 +11,7 @@ function langLabel(lang) {
 }
 
 function userContext(user) {
-  if (!user?.level && !user?.domains) return '';
+  if (!user?.level && !user?.domains && !user?.specialty) return '';
   const levelLabels = {
     licence:       'étudiant en Licence (Bac+3)',
     master:        'étudiant en Master (Bac+5)',
@@ -22,9 +22,14 @@ function userContext(user) {
   const level = levelLabels[user.level] || '';
   let domains = [];
   try { domains = JSON.parse(user.domains || '[]'); } catch {}
-  const domStr = domains.length ? domains.join(', ') : '';
-  if (!level && !domStr) return '';
-  const parts = [level, domStr ? `spécialisé en ${domStr}` : ''].filter(Boolean).join(', ');
+  const domStr    = domains.length ? domains.join(', ') : '';
+  const specialty = user.specialty?.trim() || '';
+  if (!level && !domStr && !specialty) return '';
+  const parts = [
+    level,
+    domStr    ? `spécialisé en ${domStr}` : '',
+    specialty ? `avec une spécialité en ${specialty}` : '',
+  ].filter(Boolean).join(', ');
   return `[Profil : ${parts}. Adapte ton vocabulaire, tes exemples et ton niveau d'explication en conséquence.]\n\n`;
 }
 

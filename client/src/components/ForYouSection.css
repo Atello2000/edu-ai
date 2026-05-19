@@ -50,6 +50,12 @@
   border: 1px solid rgba(167,139,250,.2);
 }
 
+.fy-specialty {
+  background: var(--teal-bg);
+  color: var(--teal);
+  border: 1px solid rgba(29,209,161,.2);
+}
+
 .fy-edit-btn {
   font-family: 'Outfit', sans-serif;
   font-size: .78rem;
