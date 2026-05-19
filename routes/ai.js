@@ -4,6 +4,7 @@ const { aiComplete, aiStream, aiChat, calcMaxTokens, MODEL_LABEL } = require('..
 const { extractText } = require('../services/text');
 const { checkQuota, LIMITS } = require('../middleware/quota');
 const { logTokens } = require('../services/tokens');
+const logger = require('../services/logger');
 
 const VALID_LANGS = ['fr', 'en', 'ar'];
 function langLabel(lang) {
@@ -94,6 +95,7 @@ router.post('/summarize', async (req, res) => {
     send({ type: 'model', name: streamModel });
     send({ type: 'end' });
   } catch (err) {
+    logger.error('AI summarize error', { userId: req.user?.id, message: err.message });
     send({ type: 'error', message: err.message });
   }
   res.end();
@@ -182,6 +184,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
     results.forEach(r => delete r._model);
     res.json({ success: true, results, model: quizModel });
   } catch (err) {
+    logger.error('AI quiz error', { userId: req.user?.id, message: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -233,6 +236,7 @@ ${context}`, 4200);
     logTokens(req.user?.id, 'exam-sheet', sheetUsage?.provider, sheetUsage?.input, sheetUsage?.output);
     res.json({ success: true, sheet: text, model });
   } catch (err) {
+    logger.error('AI exam-sheet error', { userId: req.user?.id, message: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -288,6 +292,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
     results.forEach(r => delete r._model);
     res.json({ success: true, results, model: flashModel });
   } catch (err) {
+    logger.error('AI flashcards error', { userId: req.user?.id, message: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -343,6 +348,7 @@ Cours disponibles :${context}${imageNote}`;
     logTokens(req.user?.id, 'chat', chatUsage?.provider, chatUsage?.input, chatUsage?.output);
     res.json({ success: true, response: text, model });
   } catch (err) {
+    logger.error('AI chat error', { userId: req.user?.id, message: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -417,6 +423,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
 
     return res.json({ questions: data.questions || [] });
   } catch (err) {
+    logger.error('AI topic error', { userId: req.user?.id, message: err.message });
     res.status(500).json({ error: err.message });
   }
 });

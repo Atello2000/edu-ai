@@ -6,6 +6,7 @@ const router   = express.Router();
 const db       = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
 const { sendVerifyEmail, sendResetEmail } = require('../services/email');
+const logger   = require('../services/logger');
 
 const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_OPTS = {
@@ -50,7 +51,7 @@ router.post('/register', async (req, res) => {
     ).run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp);
     const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
 
-    sendVerifyEmail(user.email, verifyToken).catch(console.error);
+    sendVerifyEmail(user.email, verifyToken).catch(err => logger.error('sendVerifyEmail failed', { email: user.email, message: err.message }));
     setToken(res, user.id);
     res.json({ user });
   } catch (err) {
@@ -187,7 +188,7 @@ router.post('/forgot-password', async (req, res) => {
     const token = genToken();
     const exp   = new Date(Date.now() + 3600 * 1000).toISOString();
     await db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?').run(token, exp, user.id);
-    sendResetEmail(user.email, token).catch(console.error);
+    sendResetEmail(user.email, token).catch(err => logger.error('sendResetEmail failed', { email: user.email, message: err.message }));
   }
   res.json({ ok: true });
 });
@@ -271,7 +272,7 @@ router.get('/google/callback', async (req, res) => {
     setToken(res, user.id);
     res.redirect(`${APP_URL}/app`);
   } catch (err) {
-    console.error('Google OAuth error:', err);
+    logger.error('Google OAuth error', { message: err.message, stack: err.stack });
     res.redirect(`${APP_URL}/login?error=google_error`);
   }
 });

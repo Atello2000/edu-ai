@@ -8,6 +8,7 @@ const { globalLimiter, aiLimiter } = require('./middleware/rateLimit');
 const { requireAuth } = require('./middleware/auth');
 
 const helmet = require('helmet');
+const logger = require('./services/logger');
 
 const app = express();
 app.set('trust proxy', 1); // Railway reverse proxy
@@ -64,7 +65,7 @@ if (fs.existsSync(reactDist)) {
 }
 
 app.use((err, req, res, next) => {
-  console.error(err);
+  logger.error('Unhandled error', { method: req.method, url: req.url, userId: req.user?.id, message: err.message, stack: err.stack });
   const isDev = !process.env.RAILWAY_ENVIRONMENT;
   res.status(500).json({ error: isDev ? err.message : 'Erreur serveur' });
 });

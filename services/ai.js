@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { OpenAI } = require('openai');
+const logger = require('./logger');
 
 const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
 
@@ -26,7 +27,7 @@ async function primary(messages, maxTokens) {
       const r = await groq.chat.completions.create({ model: GROQ_MODEL, max_tokens: maxTokens, messages });
       return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: usage(r, 'Groq') };
     } catch (err) {
-      console.warn('[Groq] erreur', err?.status ?? err?.message, '→ fallback DeepSeek');
+      logger.warn('Groq fallback (complete)', { status: err?.status, message: err?.message });
     }
   }
   if (!deepseek) throw new Error('Aucune clé IA configurée (GROQ_API_KEY ou DEEPSEEK_API_KEY requise)');
@@ -55,7 +56,7 @@ async function* aiStream(prompt, maxTokens = 4096, cachedContent = null) {
       }
       return;
     } catch (err) {
-      console.warn('[Groq] erreur stream', err?.status ?? err?.message, '→ fallback DeepSeek');
+      logger.warn('Groq fallback (stream)', { status: err?.status, message: err?.message });
     }
   }
 
@@ -92,7 +93,7 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
       const r = await groq.chat.completions.create({ model: GROQ_MODEL, max_tokens: maxTokens, messages: allMsgs });
       return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: usage(r, 'Groq') };
     } catch (err) {
-      console.warn('[Groq] erreur chat', err?.status ?? err?.message, '→ fallback DeepSeek');
+      logger.warn('Groq fallback (chat)', { status: err?.status, message: err?.message });
     }
   }
 
