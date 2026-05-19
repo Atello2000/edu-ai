@@ -2,6 +2,12 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import './ForYouSection.css';
 
+const IconCards  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 2H8a2 2 0 0 0-2 2v2h12V4a2 2 0 0 0-2-2z"/></svg>;
+const IconQuiz   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>;
+const IconSearch = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
+const IconSpark  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.8 5.5H20l-4.6 3.4 1.8 5.5L12 13l-5.2 3.4 1.8-5.5L4 7.5h6.2z"/></svg>;
+const IconPin    = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>;
+
 const DOMAIN_TOPICS = {
   'santé':        ['Anatomie','Physiologie','Pharmacologie','Biochimie','Séméiologie','Pathologie générale'],
   'informatique': ['Algorithmique','Structures de données','Réseaux','Base de données','Programmation objet','Sécurité'],
@@ -117,13 +123,16 @@ export default function ForYouSection({ onActivity }) {
 
       {/* Custom search */}
       <div className="foryou-search">
-        <input
-          className="fy-search-input"
-          type="text"
-          placeholder="🔍  Tapez un sujet personnalisé…"
-          value={custom}
-          onChange={e => setCustom(e.target.value)}
-        />
+        <div className="fy-search-wrap">
+          <span className="fy-search-icon"><IconSearch /></span>
+          <input
+            className="fy-search-input"
+            type="text"
+            placeholder="Tapez un sujet personnalisé…"
+            value={custom}
+            onChange={e => setCustom(e.target.value)}
+          />
+        </div>
         {custom.trim() && (
           <div className="fy-action-bar">
             <button
@@ -131,14 +140,14 @@ export default function ForYouSection({ onActivity }) {
               disabled={isLoading}
               onClick={() => generate(custom.trim(), 'flashcards')}
             >
-              {loadingKey === `${custom.trim()}|flashcards` ? <span className="fy-btn-spinner" /> : '🃏'} Flashcards
+              {loadingKey === `${custom.trim()}|flashcards` ? <span className="fy-btn-spinner" /> : <IconCards />} Flashcards
             </button>
             <button
               className="fy-action-btn fy-quiz"
               disabled={isLoading}
               onClick={() => generate(custom.trim(), 'quiz')}
             >
-              {loadingKey === `${custom.trim()}|quiz` ? <span className="fy-btn-spinner" /> : '❓'} Quiz
+              {loadingKey === `${custom.trim()}|quiz` ? <span className="fy-btn-spinner" /> : <IconQuiz />} Quiz
             </button>
           </div>
         )}
@@ -147,9 +156,9 @@ export default function ForYouSection({ onActivity }) {
       {/* Featured topic */}
       {featuredTopic && !custom.trim() && (
         <div className="fy-featured">
-          <div className="fy-featured-label">✨ Suggestion du jour</div>
+          <div className="fy-featured-label"><IconSpark /> Suggestion du jour</div>
           <div className="fy-featured-body">
-            <span className="fy-featured-icon">{TOPIC_ICONS[featuredTopic] || '📌'}</span>
+            <span className="fy-featured-icon">{TOPIC_ICONS[featuredTopic] || <IconPin />}</span>
             <span className="fy-featured-name">{featuredTopic}</span>
           </div>
           <div className="fy-featured-actions">
@@ -158,14 +167,14 @@ export default function ForYouSection({ onActivity }) {
               disabled={isLoading}
               onClick={() => generate(featuredTopic, 'flashcards')}
             >
-              {loadingKey === `${featuredTopic}|flashcards` ? <span className="fy-btn-spinner" /> : '🃏'} Flashcards
+              {loadingKey === `${featuredTopic}|flashcards` ? <span className="fy-btn-spinner" /> : <IconCards />} Flashcards
             </button>
             <button
               className="fy-action-btn fy-quiz"
               disabled={isLoading}
               onClick={() => generate(featuredTopic, 'quiz')}
             >
-              {loadingKey === `${featuredTopic}|quiz` ? <span className="fy-btn-spinner" /> : '❓'} Quiz
+              {loadingKey === `${featuredTopic}|quiz` ? <span className="fy-btn-spinner" /> : <IconQuiz />} Quiz
             </button>
           </div>
         </div>
@@ -186,14 +195,14 @@ export default function ForYouSection({ onActivity }) {
                   disabled={isLoading}
                   onClick={() => generate(t, 'flashcards')}
                 >
-                  {loadingKey === `${t}|flashcards` ? <span className="fy-btn-spinner" /> : '🃏'} Flash
+                  {loadingKey === `${t}|flashcards` ? <span className="fy-btn-spinner" /> : <IconCards />} Flash
                 </button>
                 <button
                   className="fy-card-btn fy-quiz"
                   disabled={isLoading}
                   onClick={() => generate(t, 'quiz')}
                 >
-                  {loadingKey === `${t}|quiz` ? <span className="fy-btn-spinner" /> : '❓'} Quiz
+                  {loadingKey === `${t}|quiz` ? <span className="fy-btn-spinner" /> : <IconQuiz />} Quiz
                 </button>
               </div>
             </div>
@@ -207,7 +216,7 @@ export default function ForYouSection({ onActivity }) {
           <div className="fy-result-modal">
             <div className="fy-result-header">
               <div>
-                <span className="fy-result-type">{resultType === 'flashcards' ? '🃏 Flashcards' : '❓ Quiz'}</span>
+                <span className="fy-result-type">{resultType === 'flashcards' ? <><IconCards /> Flashcards</> : <><IconQuiz /> Quiz</>}</span>
                 <span className="fy-result-topic">{resultTopic}</span>
               </div>
               <button className="fy-close-btn" onClick={() => setResult(null)}>✕</button>

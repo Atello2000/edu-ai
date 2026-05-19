@@ -1741,15 +1741,19 @@ kbd {
 .dash-rose { border-color:rgba(255,107,129,.32); }
 
 .dash-bottom-links {
-  display:flex; gap:1rem; padding-top:1rem;
-  border-top:1px solid var(--border);
+  display: flex; gap: .5rem; padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 .dash-link {
-  background:none; border:none; cursor:pointer;
-  font:500 .78rem 'Outfit',sans-serif; color:var(--muted);
-  padding:.35rem 0; transition:color .2s;
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 20px; cursor: pointer;
+  font: 500 .78rem 'Outfit', sans-serif; color: var(--muted);
+  padding: .3rem .75rem; transition: color .18s, border-color .18s, background .18s;
 }
-.dash-link:hover { color:var(--gold); }
+.dash-link svg { opacity: .7; }
+.dash-link:hover { color: var(--blue); border-color: var(--blue); background: var(--surface); }
+.dash-link:hover svg { opacity: 1; }
 
 /* ── Library search ────────────────────────────────────────────────────────── */
 .library-search-row {

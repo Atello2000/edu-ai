@@ -124,8 +124,14 @@ export default function AppPage() {
             <div className="dashboard-grid" id="dashboard-grid"></div>
           </div>
           <div className="dash-bottom-links">
-            <button className="dash-link" id="dash-history-btn">Mes cours récents →</button>
-            <button className="dash-link" id="dash-stats-btn">Statistiques détaillées →</button>
+            <button className="dash-link" id="dash-history-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+              Mes cours récents
+            </button>
+            <button className="dash-link" id="dash-stats-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="1"/><rect x="12" y="7" width="3" height="11" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg>
+              Statistiques
+            </button>
           </div>
           <ActivitySection refreshKey={activityKey} />
           <ForYouSection onActivity={() => setActivityKey(k => k + 1)} />
