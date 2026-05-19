@@ -342,4 +342,78 @@ Cours disponibles :${context}${imageNote}`;
   }
 });
 
+// ── Topic: flashcards or quiz without a file ──────────────────────────────────
+router.post('/topic', async (req, res) => {
+  const { topic, type, count: rawCount, lang: rawLang } = req.body || {};
+  if (!topic || !['flashcards', 'quiz'].includes(type))
+    return res.status(400).json({ error: 'Paramètres invalides.' });
+
+  const quotaKey = type === 'flashcards' ? 'flashcards' : 'quiz';
+  const quota = checkQuota(req, quotaKey);
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
+
+  const lang    = VALID_LANGS.includes(rawLang) ? rawLang : 'fr';
+  const inLang  = langLabel(lang);
+  const count   = Math.min(parseInt(rawCount) || (type === 'quiz' ? 5 : 8), type === 'quiz' ? LIMITS.quizMaxCount : LIMITS.flashMaxCount);
+  const ctx     = userContext(req.user);
+
+  try {
+    if (type === 'flashcards') {
+      const prompt = `${ctx}Tu es un assistant pédagogique. Génère ${count} flashcards ${inLang} sur le sujet : "${topic}".
+
+Chaque flashcard doit avoir :
+- Un RECTO : une question courte, un terme, ou un concept clé
+- Un VERSO : la réponse claire et concise (2-4 phrases max)
+
+Réponds UNIQUEMENT avec ce JSON, sans texte autour :
+{
+  "flashcards": [
+    { "front": "...", "back": "..." }
+  ]
+}`;
+
+      const { text: raw, usage } = await aiComplete(prompt, calcMaxTokens('flash', 0, count));
+      logTokens(req.user?.id, 'flashcards', usage?.provider, usage?.input, usage?.output);
+
+      let data;
+      try {
+        const match = raw.trim().match(/\{[\s\S]*\}/);
+        data = JSON.parse(match ? match[0] : raw.trim());
+      } catch { data = { flashcards: [] }; }
+
+      return res.json({ flashcards: data.flashcards || [] });
+    }
+
+    // quiz
+    const prompt = `${ctx}Génère ${count} questions QCM de niveau moyen ${inLang} sur le sujet : "${topic}".
+
+Pour chaque question, donne exactement ce format JSON :
+{
+  "questions": [
+    {
+      "question": "...",
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "answer": "A",
+      "explanation": "Explique clairement pourquoi la bonne réponse est correcte."
+    }
+  ]
+}
+
+Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
+
+    const { text: raw, usage } = await aiComplete(prompt, calcMaxTokens('quiz', 0, count));
+    logTokens(req.user?.id, 'quiz', usage?.provider, usage?.input, usage?.output);
+
+    let data;
+    try {
+      const match = raw.trim().match(/\{[\s\S]*\}/);
+      data = JSON.parse(match ? match[0] : raw.trim());
+    } catch { data = { questions: [] }; }
+
+    return res.json({ questions: data.questions || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

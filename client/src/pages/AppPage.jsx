@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Logo from '../components/Logo.jsx';
 import Onboarding from './Onboarding.jsx';
+import ForYouSection from '../components/ForYouSection.jsx';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -116,6 +117,7 @@ export default function AppPage() {
             <button className="dash-link" id="dash-history-btn">Mes cours récents →</button>
             <button className="dash-link" id="dash-stats-btn">Statistiques détaillées →</button>
           </div>
+          <ForYouSection />
         </div>
 
         {/* STATISTIQUES */}
