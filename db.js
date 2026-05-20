@@ -7,8 +7,14 @@ const pool = new Pool({
     ? { rejectUnauthorized: false }
     : false,
   max: 10,
-  idleTimeoutMillis: 30000,
+  idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 5000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
+});
+
+pool.on('error', (err) => {
+  require('./services/logger').error('PostgreSQL pool error', { message: err.message });
 });
 
 function toPg(sql) {
