@@ -22,30 +22,46 @@ function toPg(sql) {
   return sql.replace(/\?/g, () => `$${++i}`);
 }
 
+const RETRYABLE = /connection timeout|terminating connection|Connection terminated|ECONNRESET|ENOTFOUND/i;
+
+async function query(sql, params, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await pool.query(sql, params);
+    } catch (err) {
+      if (i < retries && RETRYABLE.test(err.message)) {
+        await new Promise(r => setTimeout(r, 300 * (i + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 function prepare(sql) {
   const pgSql = toPg(sql);
   const isInsert = /^\s*INSERT/i.test(pgSql);
   return {
     async get(...params) {
-      const { rows } = await pool.query(pgSql, params);
+      const { rows } = await query(pgSql, params);
       return rows[0] || null;
     },
     async all(...params) {
-      const { rows } = await pool.query(pgSql, params);
+      const { rows } = await query(pgSql, params);
       return rows;
     },
     async run(...params) {
       const finalSql = isInsert && !pgSql.toUpperCase().includes('RETURNING')
         ? pgSql + ' RETURNING id'
         : pgSql;
-      const { rows, rowCount } = await pool.query(finalSql, params);
+      const { rows, rowCount } = await query(finalSql, params);
       return { lastInsertRowid: rows[0]?.id, rowCount, changes: rowCount };
     },
   };
 }
 
 async function exec(sql) {
-  await pool.query(sql);
+  await query(sql, []);
 }
 
 async function initSchema() {
