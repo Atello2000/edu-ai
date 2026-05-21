@@ -1,4 +1,4 @@
-const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 const COLORS = { info: '\x1b[36m', warn: '\x1b[33m', error: '\x1b[31m', reset: '\x1b[0m' };
 

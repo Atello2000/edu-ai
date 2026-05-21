@@ -96,4 +96,18 @@ setInterval(() => {
   for (const [p] of textCache) if (!fs.existsSync(p)) textCache.delete(p);
 }, 3600000);
 
-module.exports = { extractText, textCache };
+async function extractTextFromBuffer(buffer, originalName) {
+  const ext = path.extname(originalName).toLowerCase();
+  if (ext === '.pdf') {
+    const data = await pdfParse(buffer);
+    return data.text;
+  }
+  return new Promise((resolve, reject) => {
+    officeParser.parseOffice(buffer, (data, err) => {
+      if (err) reject(new Error(String(err)));
+      else resolve(data);
+    });
+  });
+}
+
+module.exports = { extractText, extractTextFromBuffer, textCache };

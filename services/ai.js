@@ -2,7 +2,7 @@ require('dotenv').config();
 const { OpenAI } = require('openai');
 const logger = require('./logger');
 
-const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 const groq = process.env.GROQ_API_KEY
   ? new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: 'https://api.groq.com/openai/v1' })

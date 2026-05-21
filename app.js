@@ -22,7 +22,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
 // Sert sw.js avec la version du déploiement injectée + no-cache pour détection instantanée
-const SW_VERSION = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_DEPLOYMENT_ID || String(Date.now());
+const SW_VERSION = process.env.VERCEL_GIT_COMMIT_SHA || process.env.RAILWAY_GIT_COMMIT_SHA || String(Date.now());
 app.get('/sw.js', (req, res) => {
   const swPath = path.join(__dirname, 'public', 'sw.js');
   const content = fs.readFileSync(swPath, 'utf8').replace('__CACHE_VERSION__', SW_VERSION);
@@ -66,7 +66,7 @@ if (fs.existsSync(reactDist)) {
 
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { method: req.method, url: req.url, userId: req.user?.id, message: err.message, stack: err.stack });
-  const isDev = !process.env.RAILWAY_ENVIRONMENT;
+  const isDev = process.env.NODE_ENV !== 'production';
   res.status(500).json({ error: isDev ? err.message : 'Erreur serveur' });
 });
 

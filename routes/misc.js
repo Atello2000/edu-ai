@@ -5,26 +5,15 @@ const fs       = require('fs');
 const multer   = require('multer');
 const { IS_PROD, LIMITS, getQuotaStatus } = require('../middleware/quota');
 const { requireAuth } = require('../middleware/auth');
-const { extractText } = require('../services/text');
+const { extractText, extractTextFromBuffer } = require('../services/text');
 
 const MAX_TEXT_UPLOAD = 80000;
 
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
-const uploadsDir  = path.join(__dirname, '..', 'uploads');
 const coursesDir  = path.join(__dirname, '..', 'courses');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename:    (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeExt = ['.pdf', '.ppt', '.pptx', '.docx'].includes(ext) ? ext : '';
-    const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, unique + safeExt);
-  }
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (['.pdf', '.ppt', '.pptx', '.docx'].includes(ext)) {
@@ -83,10 +72,11 @@ router.post('/upload', (req, res, next) => {
   const files = await Promise.all(req.files.map(async f => {
     let text = '';
     try {
-      const raw = await extractText(f.path, f.originalname);
+      const raw = await extractTextFromBuffer(f.buffer, f.originalname);
       text = raw.slice(0, MAX_TEXT_UPLOAD);
     } catch (e) {}
-    return { id: f.filename, name: f.originalname, path: f.path, size: f.size, text };
+    const id = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    return { id, name: f.originalname, size: f.size, text };
   }));
   res.json({ success: true, files });
 });

@@ -11,7 +11,7 @@ const logger   = require('../services/logger');
 const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COOKIE_OPTS = {
   httpOnly: true,
-  secure:   !!process.env.RAILWAY_ENVIRONMENT,
+  secure:   process.env.NODE_ENV === 'production',
   sameSite: 'lax',
   maxAge:   7 * 24 * 60 * 60 * 1000,
 };
@@ -81,7 +81,7 @@ router.post('/login', async (req, res) => {
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
 router.post('/logout', (req, res) => {
-  res.clearCookie('jangalai.token', { httpOnly: true, secure: !!process.env.RAILWAY_ENVIRONMENT, sameSite: 'lax' });
+  res.clearCookie('jangalai.token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
   res.json({ ok: true });
 });
 
@@ -213,7 +213,7 @@ router.post('/reset-password', async (req, res) => {
 router.get('/google', (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID) return res.status(503).json({ error: 'Google OAuth non configuré.' });
   const state = genToken();
-  res.cookie('oauth_state', state, { httpOnly: true, maxAge: 600000, secure: !!process.env.RAILWAY_ENVIRONMENT, sameSite: 'lax' });
+  res.cookie('oauth_state', state, { httpOnly: true, maxAge: 600000, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
   const params = new URLSearchParams({
     client_id:     process.env.GOOGLE_CLIENT_ID,
     redirect_uri:  process.env.GOOGLE_CALLBACK_URL,

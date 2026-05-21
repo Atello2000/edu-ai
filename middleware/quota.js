@@ -1,6 +1,6 @@
 const { prepare } = require('../db');
 
-const IS_PROD = !!process.env.RAILWAY_ENVIRONMENT;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
 const LIMITS = IS_PROD ? {
   fileSize:      20 * 1024 * 1024,
