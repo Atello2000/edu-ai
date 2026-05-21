@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import './ForYouSection.css';
 
@@ -59,23 +59,93 @@ async function postActivity(topic, type, score = null, total = null) {
 
 export default function ForYouSection({ onActivity }) {
   const { user } = useAuth();
-  const [custom, setCustom]           = useState('');
-  const [loadingKey, setLoadingKey]   = useState('');
-  const [result, setResult]           = useState(null);
-  const [resultType, setResultType]   = useState('');
-  const [resultTopic, setResultTopic] = useState('');
-  const [fcIdx, setFcIdx]             = useState(0);
-  const [flipped, setFlipped]         = useState(false);
+  const [custom, setCustom]             = useState('');
+  const [loadingKey, setLoadingKey]     = useState('');
+  const [result, setResult]             = useState(null);
+  const [resultType, setResultType]     = useState('');
+  const [resultTopic, setResultTopic]   = useState('');
+  const [fcIdx, setFcIdx]               = useState(0);
+  const [flipped, setFlipped]           = useState(false);
+  const [activityData, setActivityData] = useState(null);
+
+  // Cache mémoire : évite de re-appeler l'API pour un sujet déjà généré
+  const cache = useRef(new Map());
+
+  // Sujets de base depuis le profil
+  const baseTopics = useMemo(() => {
+    let doms = [];
+    try { doms = JSON.parse(user?.domains || '[]'); } catch {}
+    return getTopics(doms);
+  }, [user?.domains]);
+
+  // Charger l'historique d'activité une fois au montage
+  useEffect(() => {
+    if (!user?.onboarding_done) return;
+    fetch('/api/activity/summary', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => setActivityData(d))
+      .catch(() => {});
+  }, [user?.id]);
+
+  // Trier les sujets : faibles scores en premier, sujets récents en dernier
+  const sortedTopics = useMemo(() => {
+    if (!activityData) return baseTopics;
+    const { recentActivity = [] } = activityData;
+
+    // Score quiz le plus bas par sujet
+    const quizScores = {};
+    recentActivity.forEach(a => {
+      if (a.type === 'quiz' && a.total > 0) {
+        const pct = a.score / a.total;
+        if (quizScores[a.topic] === undefined || pct < quizScores[a.topic])
+          quizScores[a.topic] = pct;
+      }
+    });
+
+    // Sujets étudiés dans les 4 dernières heures → à déprioritiser
+    const recentSet = new Set(
+      recentActivity
+        .filter(a => Date.now() - new Date(a.created_at).getTime() < 4 * 3600 * 1000)
+        .map(a => a.topic)
+    );
+
+    return [...baseTopics].sort((a, b) => {
+      const priority = t => {
+        let s = 0;
+        if (quizScores[t] !== undefined && quizScores[t] < 0.6) s -= 2; // mauvais score → remonte
+        if (quizScores[t] !== undefined && quizScores[t] >= 0.8) s += 1; // maîtrisé → descend
+        if (recentSet.has(t)) s += 3;                                    // vu récemment → descend
+        return s;
+      };
+      return priority(a) - priority(b);
+    });
+  }, [baseTopics, activityData]);
+
+  // Suggestion du jour : rotation quotidienne (change chaque jour)
+  const featuredTopic = useMemo(() => {
+    if (!sortedTopics.length) return null;
+    const dayIdx = Math.floor(Date.now() / 86400000);
+    return sortedTopics[dayIdx % sortedTopics.length];
+  }, [sortedTopics]);
 
   if (!user?.onboarding_done) return null;
 
   let domains = [];
   try { domains = JSON.parse(user.domains || '[]'); } catch {}
-  const topics = getTopics(domains);
-  const featuredTopic = topics[0] || null;
 
   async function generate(topic, type) {
     const key = `${topic}|${type}`;
+
+    // Résultat en cache → affichage instantané
+    if (cache.current.has(key)) {
+      const cached = cache.current.get(key);
+      setResult(cached);
+      setResultType(type);
+      setResultTopic(topic);
+      setFcIdx(0); setFlipped(false);
+      return;
+    }
+
     setLoadingKey(key);
     setResult(null);
     try {
@@ -86,6 +156,9 @@ export default function ForYouSection({ onActivity }) {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
+
+      cache.current.set(key, data); // Mettre en cache
+
       setResult(data);
       setResultType(type);
       setResultTopic(topic);
@@ -98,7 +171,15 @@ export default function ForYouSection({ onActivity }) {
   }
 
   function handleQuizComplete(score, total) {
-    postActivity(resultTopic, 'quiz', score, total).then(() => onActivity?.());
+    postActivity(resultTopic, 'quiz', score, total).then(() => {
+      onActivity?.();
+      // Invalider le cache de l'activité pour que le tri se mette à jour
+      setActivityData(null);
+      fetch('/api/activity/summary', { credentials: 'include' })
+        .then(r => r.json())
+        .then(d => setActivityData(d))
+        .catch(() => {});
+    });
   }
 
   const isLoading = loadingKey !== '';
@@ -181,9 +262,9 @@ export default function ForYouSection({ onActivity }) {
       )}
 
       {/* Topic cards grid */}
-      {topics.length > 1 && (
+      {sortedTopics.length > 1 && (
         <div className="foryou-grid">
-          {topics.slice(1).map(t => (
+          {sortedTopics.filter(t => t !== featuredTopic).slice(0, 6).map(t => (
             <div key={t} className="fy-card">
               <div className="fy-card-top">
                 <span className="fy-card-icon">{TOPIC_ICONS[t] || '📌'}</span>
@@ -274,7 +355,7 @@ function QuizArea({ questions, onComplete }) {
     <div className="fy-quiz-area">
       {answered === total && (
         <div className="fy-quiz-score">
-          {answers && (() => {
+          {(() => {
             const score = questions.filter((q, i) => q.answer?.charAt(0) === answers[i]).length;
             const pct   = Math.round(score / total * 100);
             return (

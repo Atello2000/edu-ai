@@ -370,11 +370,17 @@ router.post('/topic', async (req, res) => {
 
   try {
     if (type === 'flashcards') {
-      const prompt = `${ctx}Tu es un assistant pédagogique. Génère ${count} flashcards ${inLang} sur le sujet : "${topic}".
+      const prompt = `${ctx}Tu es un tuteur pédagogique expert. Génère ${count} flashcards ${inLang} sur le sujet : "${topic}".
 
-Chaque flashcard doit avoir :
-- Un RECTO : une question courte, un terme, ou un concept clé
-- Un VERSO : la réponse claire et concise (2-4 phrases max)
+Consignes :
+- Adapte le contenu au profil de l'étudiant indiqué dans [Profil] (niveau, domaine, spécialité)
+- Couvre les notions clés les plus souvent évaluées en examen
+- Varie les types : définitions, mécanismes, applications pratiques, exemples concrets
+- Privilégie les liens avec la spécialité de l'étudiant quand c'est pertinent
+
+Chaque flashcard :
+- RECTO : terme, concept clé ou question courte et précise
+- VERSO : réponse concise (2-3 phrases max) avec un exemple pratique si applicable
 
 Réponds UNIQUEMENT avec ce JSON, sans texte autour :
 {
@@ -396,21 +402,25 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
     }
 
     // quiz
-    const prompt = `${ctx}Génère ${count} questions QCM de niveau moyen ${inLang} sur le sujet : "${topic}".
+    const prompt = `${ctx}Tu es un tuteur pédagogique expert. Génère ${count} QCM ${inLang} sur le sujet : "${topic}".
 
-Pour chaque question, donne exactement ce format JSON :
+Consignes :
+- Adapte les questions au profil indiqué dans [Profil] (niveau, domaine, spécialité)
+- Varie les niveaux : connaissance pure, compréhension, application pratique
+- Les distracteurs (mauvaises réponses) doivent être plausibles et correspondre aux erreurs fréquentes
+- L'explication doit être pédagogique : pourquoi la bonne réponse est correcte ET pourquoi les autres sont fausses
+
+Format JSON strict, sans texte autour :
 {
   "questions": [
     {
       "question": "...",
       "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
       "answer": "A",
-      "explanation": "Explique clairement pourquoi la bonne réponse est correcte."
+      "explanation": "..."
     }
   ]
-}
-
-Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
+}`;
 
     const { text: raw, usage } = await aiComplete(prompt, calcMaxTokens('quiz', 0, count));
     logTokens(req.user?.id, 'quiz', usage?.provider, usage?.input, usage?.output);
