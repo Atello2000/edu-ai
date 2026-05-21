@@ -41,8 +41,10 @@ app.use(express.static('public'));
 app.use('/api', globalLimiter);
 
 ['uploads', 'courses', 'data'].forEach(dir => {
-  const p = path.join(__dirname, dir);
-  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+  try {
+    const p = path.join(__dirname, dir);
+    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+  } catch (_) {}
 });
 
 // ── Routes publiques ──────────────────────────────────────────────────────────
