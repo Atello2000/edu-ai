@@ -2,6 +2,45 @@ const path = require('path');
 const fs   = require('fs');
 const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
+const { Mistral }  = require('@mistralai/mistralai');
+
+// Client Mistral OCR (optionnel — fallback si PDF scanné)
+const mistral = process.env.MISTRAL_API_KEY
+  ? new Mistral({ apiKey: process.env.MISTRAL_API_KEY })
+  : null;
+
+const OCR_THRESHOLD = 200; // Si le PDF extrait moins de N chars → probablement scanné
+
+async function ocrWithMistral(buffer, originalName) {
+  if (!mistral) return null;
+  let fileId = null;
+  try {
+    // 1. Upload du fichier
+    const uploaded = await mistral.files.upload({
+      file: { fileName: originalName, content: buffer },
+      purpose: 'ocr',
+    });
+    fileId = uploaded.id;
+
+    // 2. Signed URL
+    const signed = await mistral.files.getSignedUrl({ fileId });
+
+    // 3. OCR
+    const result = await mistral.ocr.process({
+      model: 'mistral-ocr-latest',
+      document: { type: 'document_url', documentUrl: signed.url },
+    });
+
+    const text = (result.pages || []).map(p => p.markdown || '').join('\n\n').trim();
+    return text.length > 0 ? text : null;
+  } catch (err) {
+    require('./logger').warn('Mistral OCR failed', { message: err?.message });
+    return null;
+  } finally {
+    // Nettoyage asynchrone du fichier uploadé
+    if (fileId) mistral.files.delete({ fileId }).catch(() => {});
+  }
+}
 
 const ROOT       = path.resolve(__dirname, '..');
 const uploadsDir = path.join(ROOT, 'uploads');
@@ -100,7 +139,13 @@ async function extractTextFromBuffer(buffer, originalName) {
   const ext = path.extname(originalName).toLowerCase();
   if (ext === '.pdf') {
     const data = await pdfParse(buffer);
-    return data.text;
+    const text = data.text?.trim() || '';
+    // PDF scanné détecté → essayer l'OCR Mistral
+    if (text.length < OCR_THRESHOLD && mistral) {
+      const ocrText = await ocrWithMistral(buffer, originalName);
+      if (ocrText) return ocrText;
+    }
+    return text;
   }
   return new Promise((resolve, reject) => {
     officeParser.parseOffice(buffer, (data, err) => {
