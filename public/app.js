@@ -5,7 +5,6 @@ async function initAuth() {
   if (window.__reactUser) {
     currentUser = window.__reactUser;
     renderUserMenu();
-    applyPlanRestrictions();
     showOnboarding();
     return true;
   }
@@ -15,19 +14,11 @@ async function initAuth() {
     if (!data.user) { window.location.href = '/login'; return false; }
     currentUser = data.user;
     renderUserMenu();
-    applyPlanRestrictions();
     showOnboarding();
     return true;
   } catch {
     window.location.href = '/login';
     return false;
-  }
-}
-
-function applyPlanRestrictions() {
-  // Bibliothèque : cacher le bouton dashboard en prod
-  if (!isLocal) {
-    document.getElementById('dash-library-btn')?.classList.add('hidden');
   }
 }
 
@@ -77,7 +68,7 @@ const ALL_PANELS = [
   'dashboard-panel','upload-section','actions-section',
   'summary-section','quiz-section','flashcard-section',
   'chat-section','exam-sheet-section',
-  'stats-panel','history-panel','folders-panel','library-panel'
+  'stats-panel','history-panel','folders-panel'
 ];
 const generatedSections = new Set();
 
@@ -234,29 +225,13 @@ selectAll.addEventListener('change', () =>
 );
 
 function getSelectedUploadedFiles() {
-  const uploaded = Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'))
+  return Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'))
     .map(c => {
       const meta = uploadedFilesMeta.find(f => f.id === c.value || f.name === c.dataset.name);
       return { id: c.value, name: c.dataset.name, path: c.dataset.path || '', text: meta?.text || '' };
     });
-  const library = [];
-  libAllSections.forEach(section => section.subjects.forEach(subject =>
-    subject.files.forEach(f => { if (libSelectedIds.has(f.id)) library.push(f); })
-  ));
-  return [...library, ...uploaded];
 }
 
-// ── BIBLIOTHÈQUE ─────────────────────────────────────────────────────────────
-const libPanel        = document.getElementById('library-panel');
-const libSubjects     = document.getElementById('library-subjects');
-const libCount        = document.getElementById('lib-count');
-const libSelectionBar = document.getElementById('lib-selection-bar');
-const libSelectionLbl = document.getElementById('lib-selection-label');
-const libGoBtn        = document.getElementById('lib-go-btn');
-const libSearch       = document.getElementById('library-search');
-const libClearSearch  = document.getElementById('library-clear-search');
-let libAllSections    = [];
-let libSelectedIds    = new Set();
 
 const SECTION_ICONS = {
   'pharmacie': '💊', 'sciences islamiques': '🕌', 'biologie': '🧬',
@@ -287,136 +262,7 @@ function normalizeSearch(text) {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
-function buildSubjectEl(subject) {
-  const sec = document.createElement('div');
-  sec.className = 'lib-subject';
-  sec.innerHTML = `
-    <div class="lib-subject-header">
-      <span class="lib-subject-icon">${subjectIcon(subject.name)}</span>
-      ${subject.name}
-      <span class="lib-subject-count">${subject.files.length} fichier${subject.files.length>1?'s':''}</span>
-    </div>
-    <div class="lib-files"></div>`;
-  const filesEl = sec.querySelector('.lib-files');
-  subject.files.forEach(f => {
-    const ext = f.name.split('.').pop().toUpperCase();
-    const row = document.createElement('label');
-    row.className = 'lib-file';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.value = f.id;
-    cb.checked = libSelectedIds.has(f.id);
-    cb.dataset.name = f.name; cb.dataset.path = f.path;
-    cb.addEventListener('change', onLibraryChange);
-    const extSpan  = document.createElement('span');
-    extSpan.className = 'file-ext'; extSpan.textContent = ext;
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'lib-file-name'; nameSpan.textContent = f.name;
-    row.append(cb, extSpan, nameSpan);
-    filesEl.appendChild(row);
-  });
-  return sec;
-}
-
-async function loadLibrary() {
-  try {
-    const res  = await fetch('/api/library');
-    const data = await res.json();
-    libAllSections = data.sections || [];
-    renderLibrary();
-  } catch(e) { console.warn('Library load failed', e); }
-}
-
-function renderLibrary() {
-  libSubjects.innerHTML = '';
-  const query = normalizeSearch(libSearch?.value || '');
-  const filteredSections = libAllSections.map(section => {
-    const sectionMatch = normalizeSearch(section.name).includes(query);
-    const subjects = section.subjects.map(subject => {
-      const subjectMatch = normalizeSearch(subject.name).includes(query);
-      const files = subject.files.filter(f =>
-        !query ||
-        sectionMatch ||
-        subjectMatch ||
-        normalizeSearch(f.name).includes(query)
-      );
-      return { ...subject, files };
-    }).filter(subject => subject.files.length);
-    return { ...section, subjects };
-  }).filter(section => section.subjects.length);
-
-  const total = libAllSections.reduce((a, s) =>
-      a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
-  const shown = filteredSections.reduce((a, s) =>
-    a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
-
-  if (!total) {
-    libSubjects.innerHTML = `<div class="lib-empty">Aucun cours dans la bibliothèque.<br>Déposez vos fichiers dans <code>courses/Section/Matière/</code></div>`;
-    libCount.textContent = '0 cours';
-    libPanel.classList.remove('hidden');
-    renderDashboard();
-    return;
-  }
-
-  libCount.textContent = query ? `${shown}/${total} cours` : `${total} cours`;
-  if (query && !shown) {
-    libSubjects.innerHTML = `<div class="lib-empty">Aucun cours ne correspond à “${libSearch.value}”.</div>`;
-    libPanel.classList.remove('hidden');
-    renderDashboard();
-    return;
-  }
-
-  filteredSections.forEach(section => {
-    const sectionEl = document.createElement('div');
-    sectionEl.className = 'lib-section';
-    const sFileCount = section.subjects.reduce((a, m) => a + m.files.length, 0);
-    sectionEl.innerHTML = `
-      <div class="lib-section-header">
-        <span class="lib-section-icon">${sectionIcon(section.name)}</span>
-        <span class="lib-section-name">${section.name}</span>
-        <span class="lib-subject-count">${sFileCount} fichier${sFileCount>1?'s':''}</span>
-      </div>`;
-    const subjectsEl = document.createElement('div');
-    subjectsEl.className = 'lib-section-subjects';
-    section.subjects.forEach(subject => subjectsEl.appendChild(buildSubjectEl(subject)));
-    sectionEl.appendChild(subjectsEl);
-    libSubjects.appendChild(sectionEl);
-  });
-
-  onLibraryChange();
-  libPanel.classList.remove('hidden');
-  renderDashboard();
-}
-
-function onLibraryChange() {
-  libSubjects.querySelectorAll('input[type=checkbox]').forEach(cb => {
-    if (cb.checked) libSelectedIds.add(cb.value);
-    else libSelectedIds.delete(cb.value);
-  });
-  const checked = libSelectedIds.size;
-  libSelectionBar.classList.toggle('hidden', checked === 0);
-  libSelectionLbl.textContent = `${checked} cours sélectionné${checked>1?'s':''}`;
-  // Afficher la section d'actions dès qu'un fichier est coché
-  if (checked > 0) {
-    showPanel('actions-section');
-  }
-}
-
-libGoBtn.addEventListener('click', () => showPanel('actions-section'));
-
-libSearch?.addEventListener('input', renderLibrary);
-libClearSearch?.addEventListener('click', () => {
-  libSearch.value = '';
-  renderLibrary();
-  libSearch.focus();
-});
-
 const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-if (isLocal) {
-  loadLibrary();
-} else {
-  libPanel.classList.add('hidden');
-  document.getElementById('dash-library-btn')?.classList.add('hidden');
-}
 
 const uploadSizeHint = document.getElementById('upload-size-hint');
 if (uploadSizeHint) uploadSizeHint.textContent = isLocal ? '50 Mo' : '20 Mo';
@@ -2005,7 +1851,6 @@ const dashboardGrid       = document.getElementById('dashboard-grid');
 const dashboardRefreshBtn = document.getElementById('dashboard-refresh-btn');
 const dashContinueBtn     = document.getElementById('dash-continue-btn');
 const dashUploadBtn       = document.getElementById('dash-upload-btn');
-const dashLibraryBtn      = document.getElementById('dash-library-btn');
 const dashStatsBtn        = document.getElementById('dash-stats-btn');
 
 function renderDashboard() {
@@ -2024,13 +1869,10 @@ function renderDashboard() {
   const dueCards = srsData.filter(c => c.nextReview <= Date.now()).length;
   const avgPct = quizStats.length ? Math.round(quizStats.reduce((sum, s) => sum + s.pct, 0) / quizStats.length) : null;
   const lastSession = sessions[0];
-  const libraryCount = libAllSections.reduce((a, s) => a + s.subjects.reduce((b, m) => b + m.files.length, 0), 0);
-
   const cardIcon = {
     session: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     quiz: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>',
     srs: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>',
-    lib: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>'
   };
 
   const cards = [
@@ -2055,13 +1897,6 @@ function renderDashboard() {
       note: dueCards ? "cartes dues aujourd'hui" : 'aucune carte due',
       cls: dueCards ? 'rose' : 'green'
     },
-    {
-      label: 'Bibliothèque',
-      icon: cardIcon.lib,
-      value: libraryCount,
-      note: `cours disponible${libraryCount>1?'s':''} en local`,
-      cls: 'purple'
-    }
   ];
 
   dashboardGrid.innerHTML = cards.map(c => `
@@ -2088,7 +1923,6 @@ dashContinueBtn?.addEventListener('click', () => {
 });
 dashUploadBtn?.addEventListener('click', () => showPanel('upload-section'));
 document.getElementById('no-files-upload-btn')?.addEventListener('click', () => showPanel('upload-section'));
-dashLibraryBtn?.addEventListener('click', () => showPanel('library-panel'));
 document.getElementById('dash-history-btn')?.addEventListener('click', () => {
   showPanel('history-panel');
 });

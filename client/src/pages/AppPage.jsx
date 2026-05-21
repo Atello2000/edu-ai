@@ -110,11 +110,6 @@ export default function AppPage() {
               <span className="dash-qaction-label">Mes matières</span>
               <span className="dash-qaction-hint">Cours classés</span>
             </button>
-            <button className="dash-qaction dq-teal" id="dash-library-btn">
-              <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-              <span className="dash-qaction-label">Bibliothèque</span>
-              <span className="dash-qaction-hint">Cours partagés</span>
-            </button>
           </div>
           <div className="dash-stats-row">
             <div className="panel-header" style={{marginBottom:'.5rem'}}>
@@ -150,27 +145,6 @@ export default function AppPage() {
         {/* MES MATIÈRES */}
         <div className="panel hidden" id="folders-panel">
           <FoldersPanel />
-        </div>
-
-        {/* BIBLIOTHÈQUE */}
-        <div className="panel hidden" id="library-panel">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Bibliothèque</div>
-              <h2 className="panel-title">Cours <em>disponibles</em></h2>
-            </div>
-            <span className="mono-tag" id="lib-count"></span>
-          </div>
-          <p className="panel-desc">Cochez les cours à utiliser — ils sont immédiatement disponibles pour les résumés, quiz et flashcards</p>
-          <div className="library-search-row">
-            <input className="library-search" id="library-search" type="search" placeholder="Rechercher un cours, une matière, une section..." />
-            <button className="ghost-btn" id="library-clear-search">Effacer</button>
-          </div>
-          <div id="library-subjects"></div>
-          <div className="lib-selection-bar hidden" id="lib-selection-bar">
-            <span id="lib-selection-label">0 cours sélectionné</span>
-            <button className="act-btn gold" id="lib-go-btn">Utiliser ↓</button>
-          </div>
         </div>
 
         {/* UPLOAD */}

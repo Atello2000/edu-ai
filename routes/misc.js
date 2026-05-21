@@ -27,38 +27,6 @@ const upload = multer({
   limits: { fileSize: LIMITS.fileSize }
 });
 
-// Bibliothèque de cours permanents (2 niveaux : section → matière → fichiers)
-router.get('/library', (req, res) => {
-  if (!fs.existsSync(coursesDir)) return res.json({ sections: [] });
-
-  function getFiles(dir, sectionName, subjectName) {
-    if (!fs.existsSync(dir)) return [];
-    return fs.readdirSync(dir)
-      .filter(f => COURSE_EXTS.includes(path.extname(f).toLowerCase()))
-      .map(f => ({
-        id:      `lib__${sectionName}__${subjectName}__${f}`,
-        name:    f,
-        path:    path.join('courses', sectionName, subjectName, f),
-        subject: subjectName,
-        section: sectionName
-      }));
-  }
-
-  const sections = [];
-  for (const sEntry of fs.readdirSync(coursesDir, { withFileTypes: true })) {
-    if (!sEntry.isDirectory()) continue;
-    const subjects = [];
-    for (const mEntry of fs.readdirSync(path.join(coursesDir, sEntry.name), { withFileTypes: true })) {
-      if (!mEntry.isDirectory()) continue;
-      subjects.push({
-        name:  mEntry.name,
-        files: getFiles(path.join(coursesDir, sEntry.name, mEntry.name), sEntry.name, mEntry.name)
-      });
-    }
-    sections.push({ name: sEntry.name, subjects });
-  }
-  res.json({ sections });
-});
 
 // Upload multiple files
 router.post('/upload', (req, res, next) => {
