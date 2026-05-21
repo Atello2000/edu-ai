@@ -49,7 +49,7 @@ router.post('/summarize', async (req, res) => {
 
   const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
 
-  const quota = checkQuota(req, 'summarize');
+  const quota = await checkQuota(req, 'summarize');
   if (!quota.ok) {
     send({ type: 'error', message: `Quota journalier atteint (${quota.limit} résumés/jour). Revenez demain.` });
     return res.end();
@@ -103,7 +103,7 @@ router.post('/summarize', async (req, res) => {
 
 // ── Quiz (traitement parallèle) ───────────────────────────────────────────────
 router.post('/quiz', async (req, res) => {
-  const quota = checkQuota(req, 'quiz');
+  const quota = await checkQuota(req, 'quiz');
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} quiz/jour). Revenez demain.` });
 
   try {
@@ -191,7 +191,7 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
 
 // ── Fiche d'examen ────────────────────────────────────────────────────────────
 router.post('/exam-sheet', async (req, res) => {
-  const quota = checkQuota(req, 'summarize');
+  const quota = await checkQuota(req, 'summarize');
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} fiches/jour). Revenez demain.` });
 
   try {
@@ -243,7 +243,7 @@ ${context}`, 4200);
 
 // ── Flashcards (traitement parallèle) ────────────────────────────────────────
 router.post('/flashcards', async (req, res) => {
-  const quota = checkQuota(req, 'flashcards');
+  const quota = await checkQuota(req, 'flashcards');
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} flashcards/jour). Revenez demain.` });
 
   try {
@@ -299,7 +299,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
 
 // ── Chat avec le cours ────────────────────────────────────────────────────────
 router.post('/chat', async (req, res) => {
-  const quota = checkQuota(req, 'chat');
+  const quota = await checkQuota(req, 'chat');
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
 
   try {
@@ -360,7 +360,7 @@ router.post('/topic', async (req, res) => {
     return res.status(400).json({ error: 'Paramètres invalides.' });
 
   const quotaKey = type === 'flashcards' ? 'flashcards' : 'quiz';
-  const quota = checkQuota(req, quotaKey);
+  const quota = await checkQuota(req, quotaKey);
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
 
   const lang    = VALID_LANGS.includes(rawLang) ? rawLang : 'fr';
