@@ -12,8 +12,9 @@ const deepseek = process.env.DEEPSEEK_API_KEY
   ? new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1' })
   : null;
 
-const GROQ_MODEL     = 'llama-3.3-70b-versatile';
-const DEEPSEEK_MODEL = 'deepseek-chat';
+const GROQ_MODEL      = 'llama-3.3-70b-versatile';
+const GROQ_FAST_MODEL = 'llama-3.1-8b-instant';   // tâches simples (topics, flashcards sans fichier)
+const DEEPSEEK_MODEL  = 'deepseek-chat';
 
 const MODEL_LABEL = groq ? 'Groq · Llama 3.3' : 'DeepSeek · Chat';
 
@@ -38,6 +39,23 @@ async function primary(messages, maxTokens) {
 async function aiComplete(prompt, maxTokens = 3000, cachedContent = null) {
   const fullPrompt = cachedContent ? `${cachedContent}\n\n${prompt}` : prompt;
   return primary([{ role: 'user', content: fullPrompt }], maxTokens);
+}
+
+// Modèle rapide pour tâches simples (génération de topics sans fichier)
+async function aiCompleteFast(prompt, maxTokens = 2000) {
+  if (groq) {
+    try {
+      const r = await groq.chat.completions.create({
+        model: GROQ_FAST_MODEL,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.1-8b', usage: usage(r, 'Groq') };
+    } catch (err) {
+      logger.warn('Groq fast fallback to primary', { message: err?.message });
+    }
+  }
+  return primary([{ role: 'user', content: prompt }], maxTokens);
 }
 
 // Yields { text, model } pour le contenu, puis { usage } en dernier chunk
@@ -114,4 +132,4 @@ function calcMaxTokens(type, textLen, count = 0) {
   return 2048;
 }
 
-module.exports = { IS_PROD, MODEL_LABEL, deepseek, DEEPSEEK_MODEL, aiComplete, aiStream, aiChat, calcMaxTokens };
+module.exports = { IS_PROD, MODEL_LABEL, deepseek, DEEPSEEK_MODEL, aiComplete, aiCompleteFast, aiStream, aiChat, calcMaxTokens };

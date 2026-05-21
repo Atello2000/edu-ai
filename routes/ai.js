@@ -1,10 +1,37 @@
 const express = require('express');
 const router  = express.Router();
-const { aiComplete, aiStream, aiChat, calcMaxTokens, MODEL_LABEL } = require('../services/ai');
+const crypto  = require('crypto');
+const { aiComplete, aiCompleteFast, aiStream, aiChat, calcMaxTokens, MODEL_LABEL } = require('../services/ai');
 const { extractText } = require('../services/text');
 const { checkQuota, LIMITS } = require('../middleware/quota');
 const { logTokens } = require('../services/tokens');
 const logger = require('../services/logger');
+const db     = require('../db');
+
+// Clé de cache pour les topics (partagée entre utilisateurs ayant le même profil)
+function topicCacheKey(topic, type, lang, user) {
+  const data = `${topic}|${type}|${lang}|${user?.level || ''}|${user?.specialty || ''}`;
+  return 'topic:' + crypto.createHash('sha256').update(data).digest('hex').slice(0, 40);
+}
+
+async function getCachedTopic(key) {
+  try {
+    const row = await db.prepare(
+      'SELECT result FROM ai_cache WHERE cache_key = ? AND expires_at > NOW()'
+    ).get(key);
+    return row ? JSON.parse(row.result) : null;
+  } catch { return null; }
+}
+
+async function setCachedTopic(key, data) {
+  try {
+    const expiresAt = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(); // 3 jours
+    await db.prepare(
+      `INSERT INTO ai_cache (cache_key, result, expires_at) VALUES (?, ?, ?)
+       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at`
+    ).run(key, JSON.stringify(data), expiresAt);
+  } catch { /* cache non critique */ }
+}
 
 const VALID_LANGS = ['fr', 'en', 'ar'];
 function langLabel(lang) {
@@ -359,14 +386,19 @@ router.post('/topic', async (req, res) => {
   if (!topic || !['flashcards', 'quiz'].includes(type))
     return res.status(400).json({ error: 'Paramètres invalides.' });
 
-  const quotaKey = type === 'flashcards' ? 'flashcards' : 'quiz';
-  const quota = await checkQuota(req, quotaKey);
-  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
-
   const lang    = VALID_LANGS.includes(rawLang) ? rawLang : 'fr';
   const inLang  = langLabel(lang);
   const count   = Math.min(parseInt(rawCount) || (type === 'quiz' ? 5 : 8), type === 'quiz' ? LIMITS.quizMaxCount : LIMITS.flashMaxCount);
   const ctx     = userContext(req.user);
+
+  // Vérifier le cache DB avant de consommer un quota
+  const cacheKey = topicCacheKey(topic, type, lang, req.user);
+  const cached   = await getCachedTopic(cacheKey);
+  if (cached) return res.json(cached);
+
+  const quotaKey = type === 'flashcards' ? 'flashcards' : 'quiz';
+  const quota = await checkQuota(req, quotaKey);
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
 
   try {
     if (type === 'flashcards') {
@@ -389,7 +421,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
   ]
 }`;
 
-      const { text: raw, usage } = await aiComplete(prompt, calcMaxTokens('flash', 0, count));
+      const { text: raw, usage } = await aiCompleteFast(prompt, calcMaxTokens('flash', 0, count));
       logTokens(req.user?.id, 'flashcards', usage?.provider, usage?.input, usage?.output);
 
       let data;
@@ -398,7 +430,9 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
         data = JSON.parse(match ? match[0] : raw.trim());
       } catch { data = { flashcards: [] }; }
 
-      return res.json({ flashcards: data.flashcards || [] });
+      const result = { flashcards: data.flashcards || [] };
+      await setCachedTopic(cacheKey, result);
+      return res.json(result);
     }
 
     // quiz
@@ -422,7 +456,7 @@ Format JSON strict, sans texte autour :
   ]
 }`;
 
-    const { text: raw, usage } = await aiComplete(prompt, calcMaxTokens('quiz', 0, count));
+    const { text: raw, usage } = await aiCompleteFast(prompt, calcMaxTokens('quiz', 0, count));
     logTokens(req.user?.id, 'quiz', usage?.provider, usage?.input, usage?.output);
 
     let data;
@@ -431,7 +465,9 @@ Format JSON strict, sans texte autour :
       data = JSON.parse(match ? match[0] : raw.trim());
     } catch { data = { questions: [] }; }
 
-    return res.json({ questions: data.questions || [] });
+    const result = { questions: data.questions || [] };
+    await setCachedTopic(cacheKey, result);
+    return res.json(result);
   } catch (err) {
     logger.error('AI topic error', { userId: req.user?.id, message: err.message });
     res.status(500).json({ error: err.message });

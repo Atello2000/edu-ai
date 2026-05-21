@@ -133,6 +133,13 @@ async function initSchema() {
       total      INTEGER,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+    CREATE TABLE IF NOT EXISTS ai_cache (
+      cache_key  TEXT PRIMARY KEY,
+      result     TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_cache_expires ON ai_cache(expires_at);
   `);
 
   const migrations = [
