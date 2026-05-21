@@ -1,2 +1,12 @@
+const { initSchema } = require('../db');
 const app = require('../app');
-module.exports = app;
+
+let initialized = false;
+
+module.exports = async (req, res) => {
+  if (!initialized) {
+    await initSchema();
+    initialized = true;
+  }
+  return app(req, res);
+};
