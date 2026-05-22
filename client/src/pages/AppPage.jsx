@@ -286,7 +286,10 @@ export default function AppPage() {
               <div className="panel-label">Révision ciblée</div>
               <h2 className="panel-title">Fiche <em>d&apos;examen</em></h2>
             </div>
-            <button className="ghost-btn" id="exam-sheet-copy-btn">Copier</button>
+            <div style={{display:'flex',gap:'.5rem',alignItems:'center',flexWrap:'wrap'}}>
+              <button className="ghost-btn" id="exam-sheet-copy-btn">Copier</button>
+              <button className="ghost-btn" id="exam-sheet-pdf-btn">Exporter PDF</button>
+            </div>
           </div>
           <div id="exam-sheet-result"></div>
         </div>
