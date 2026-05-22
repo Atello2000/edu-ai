@@ -517,11 +517,8 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
       const bandH = isFirst ? 40 : 13;
       fillRect(0, 0, PW, bandH, C.dark);
 
-      // 3-segment accent bar
-      const seg = PW / 3;
-      fillRect(0,     bandH, seg, 1.5, C.blue);
-      fillRect(seg,   bandH, seg, 1.5, C.purple);
-      fillRect(seg*2, bandH, seg, 1.5, C.teal);
+      // accent line — violet (couleur résumé)
+      fillRect(0, bandH, PW, 1.5, C.purple);
 
       if (isFirst) {
         pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
@@ -754,8 +751,8 @@ async function exportExamSheetToPDF(title, md) {
     function drawHeader(isFirst) {
       const bH = isFirst ? 40 : 13;
       fillRect(0,0,PW,bH,C.dark);
-      const seg = PW/3;
-      fillRect(0,bH,seg,1.5,C.gold); fillRect(seg,bH,seg,1.5,C.teal); fillRect(seg*2,bH,seg,1.5,C.purple);
+      // accent line — gold (couleur fiche)
+      fillRect(0, bH, PW, 1.5, C.gold);
       if (isFirst) {
         pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5); setRgb([212,169,76]);
         pdf.text('JANGALAI', ML, 11, { charSpace:2.5 });
