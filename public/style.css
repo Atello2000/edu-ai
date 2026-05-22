@@ -1820,7 +1820,10 @@ kbd {
 }
 .exam-sheet-card h2:first-child { margin-top:0; }
 .exam-sheet-card table {
-  width:100%;
+  display:block;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  max-width:100%;
   border-collapse:collapse;
   margin:.8rem 0;
   font-size:.86rem;
