@@ -93,7 +93,6 @@ router.post('/summarize', async (req, res) => {
       const truncated = text.slice(0, LIMITS.summaryChars);
       send({ type: 'start', name: file.name });
 
-      const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
       const prompt = `${userContext(req.user)}Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}, structuré en Markdown, avec exactement ce plan :
 
 ## 🎯 Objectifs du cours
@@ -109,9 +108,13 @@ router.post('/summarize', async (req, res) => {
 (définitions brèves des termes ou notions fondamentales du cours)
 
 ## 💡 À retenir
-(1 encadré blockquote avec la leçon principale en 2-3 phrases)`;
+(1 encadré blockquote avec la leçon principale en 2-3 phrases)
 
-      for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length), cachedContent)) {
+---
+Contenu du cours "${file.name}" :
+${truncated}`;
+
+      for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length))) {
         if (chunk.usage) { logTokens(req.user?.id, 'summarize', chunk.usage.provider, chunk.usage.input, chunk.usage.output); continue; }
         send({ type: 'delta', name: file.name, text: chunk.text });
         streamModel = chunk.model;
