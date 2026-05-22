@@ -254,6 +254,16 @@ export default function AppPage() {
               <button className="act-btn purple" id="exam-sheet-btn">Créer</button>
               <button className="regen-link hidden" id="exam-sheet-regen-btn">↺ Régénérer</button>
             </div>
+            <div className="act-card act-card-wide" data-color="teal">
+              <div className="act-card-icon teal">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/></svg>
+              </div>
+              <div className="act-card-body">
+                <strong>Carte mentale</strong>
+                <span>Visualise le cours sous forme d&apos;arbre interactif</span>
+              </div>
+              <button className="act-btn teal" id="mindmap-action-btn">Créer</button>
+            </div>
           </div>
         </div>
 
