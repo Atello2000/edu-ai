@@ -5,48 +5,27 @@ import './ForYouSection.css';
 const IconCards  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 2H8a2 2 0 0 0-2 2v2h12V4a2 2 0 0 0-2-2z"/></svg>;
 const IconQuiz   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="currentColor"/></svg>;
 const IconSearch = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
-const IconSpark  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l1.8 5.5H20l-4.6 3.4 1.8 5.5L12 13l-5.2 3.4 1.8-5.5L4 7.5h6.2z"/></svg>;
-const IconPin    = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 13-7 13S5 14 5 9a7 7 0 0 1 7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>;
+const IconDoc    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
 
-const DOMAIN_TOPICS = {
-  'santé':        ['Anatomie','Physiologie','Pharmacologie','Biochimie','Séméiologie','Pathologie générale'],
-  'informatique': ['Algorithmique','Structures de données','Réseaux','Base de données','Programmation objet','Sécurité'],
-  'droit':        ['Droit civil','Droit pénal','Droit constitutionnel','Droit des contrats','Procédure civile'],
-  'économie':     ['Microéconomie','Macroéconomie','Finance d\'entreprise','Comptabilité','Management','Marketing'],
-  'sciences':     ['Mathématiques','Physique','Chimie organique','Biologie cellulaire','Thermodynamique','Statistiques'],
-  'langues':      ['Grammaire','Conjugaison','Vocabulaire','Littérature','Phonétique','Linguistique'],
-  'ingénierie':   ['Mécanique des fluides','Électronique','Résistance des matériaux','Thermodynamique','Automatique'],
-  'histoire':     ['Histoire moderne','Géopolitique','Sociologie','Philosophie','Relations internationales','Anthropologie'],
-};
+const HISTORY_KEY = 'jangalai-sessions';
 
-const TOPIC_ICONS = {
-  'Algorithmique':'⚙️','Structures de données':'🗂️','Réseaux':'🌐','Base de données':'🗄️',
-  'Programmation objet':'📦','Sécurité':'🔒','Anatomie':'🦴','Physiologie':'💓',
-  'Pharmacologie':'💊','Biochimie':'🧬','Séméiologie':'🩺','Pathologie générale':'🔬',
-  'Droit civil':'📋','Droit pénal':'⚖️','Droit constitutionnel':'🏛️','Droit des contrats':'✍️',
-  'Procédure civile':'📜','Microéconomie':'📈','Macroéconomie':'🌍','Finance d\'entreprise':'💰',
-  'Comptabilité':'🔢','Management':'👔','Marketing':'📣','Mathématiques':'📐',
-  'Physique':'⚡','Chimie organique':'⚗️','Biologie cellulaire':'🔬','Thermodynamique':'🌡️',
-  'Statistiques':'📊','Grammaire':'📝','Conjugaison':'✏️','Vocabulaire':'📖',
-  'Littérature':'📚','Phonétique':'🎙️','Linguistique':'🗣️','Mécanique des fluides':'💧',
-  'Électronique':'⚡','Résistance des matériaux':'🏗️','Automatique':'🤖',
-  'Histoire moderne':'📜','Géopolitique':'🗺️','Sociologie':'👥','Philosophie':'🧠',
-  'Relations internationales':'🤝','Anthropologie':'🏺',
-};
-
-function getTopics(domains) {
-  const topics = [];
-  for (const d of domains) {
-    const list = DOMAIN_TOPICS[d];
-    if (list) topics.push(...list.slice(0, 4));
-    else topics.push(d);
-  }
-  return [...new Set(topics)].slice(0, 8);
+function cleanName(fileName) {
+  return fileName
+    .replace(/\.[^.]+$/, '')       // supprimer extension
+    .replace(/[_-]+/g, ' ')        // _ et - → espace
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-function levelLabel(level) {
-  const map = { licence:'Licence', master:'Master', doctorat:'Doctorat', professionnel:'Pro' };
-  return map[level] || level || '';
+function timeAgo(ts) {
+  const h = (Date.now() - ts) / 3600000;
+  if (h < 1)   return "il y a moins d'1h";
+  if (h < 24)  return `il y a ${Math.floor(h)}h`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return 'hier';
+  if (d < 7)   return `il y a ${d} jours`;
+  if (d < 14)  return 'il y a 1 semaine';
+  return `il y a ${Math.floor(d / 7)} semaines`;
 }
 
 async function postActivity(topic, type, score = null, total = null) {
@@ -59,26 +38,37 @@ async function postActivity(topic, type, score = null, total = null) {
 
 export default function ForYouSection({ onActivity }) {
   const { user } = useAuth();
-  const [custom, setCustom]             = useState('');
-  const [loadingKey, setLoadingKey]     = useState('');
-  const [result, setResult]             = useState(null);
-  const [resultType, setResultType]     = useState('');
-  const [resultTopic, setResultTopic]   = useState('');
-  const [fcIdx, setFcIdx]               = useState(0);
-  const [flipped, setFlipped]           = useState(false);
+  const [custom, setCustom]           = useState('');
+  const [loadingKey, setLoadingKey]   = useState('');
+  const [result, setResult]           = useState(null);
+  const [resultType, setResultType]   = useState('');
+  const [resultTopic, setResultTopic] = useState('');
+  const [fcIdx, setFcIdx]             = useState(0);
+  const [flipped, setFlipped]         = useState(false);
   const [activityData, setActivityData] = useState(null);
-
-  // Cache mémoire : évite de re-appeler l'API pour un sujet déjà généré
   const cache = useRef(new Map());
 
-  // Sujets de base depuis le profil
-  const baseTopics = useMemo(() => {
-    let doms = [];
-    try { doms = JSON.parse(user?.domains || '[]'); } catch {}
-    return getTopics(doms);
-  }, [user?.domains]);
+  // ── Sujets récents depuis l'historique localStorage ───────────────
+  const recentTopics = useMemo(() => {
+    try {
+      const sessions = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      const seen = new Set();
+      const topics = [];
+      for (const s of sessions) {
+        for (const fname of (s.files || [])) {
+          const name = cleanName(fname);
+          if (name && !seen.has(name)) {
+            seen.add(name);
+            topics.push({ name, timestamp: s.timestamp || 0 });
+          }
+        }
+        if (topics.length >= 6) break;
+      }
+      return topics;
+    } catch { return []; }
+  }, []);
 
-  // Charger l'historique d'activité une fois au montage
+  // ── Charger les scores d'activité ─────────────────────────────────
   useEffect(() => {
     if (!user?.onboarding_done) return;
     fetch('/api/activity/summary', { credentials: 'include' })
@@ -87,67 +77,32 @@ export default function ForYouSection({ onActivity }) {
       .catch(() => {});
   }, [user?.id]);
 
-  // Trier les sujets : faibles scores en premier, sujets récents en dernier
-  const sortedTopics = useMemo(() => {
-    if (!activityData) return baseTopics;
-    const { recentActivity = [] } = activityData;
-
-    // Score quiz le plus bas par sujet
-    const quizScores = {};
-    recentActivity.forEach(a => {
-      if (a.type === 'quiz' && a.total > 0) {
-        const pct = a.score / a.total;
-        if (quizScores[a.topic] === undefined || pct < quizScores[a.topic])
-          quizScores[a.topic] = pct;
-      }
-    });
-
-    // Sujets étudiés dans les 4 dernières heures → à déprioritiser
-    const recentSet = new Set(
-      recentActivity
-        .filter(a => Date.now() - new Date(a.created_at).getTime() < 4 * 3600 * 1000)
-        .map(a => a.topic)
+  // Meilleur score pour un topic donné
+  function getBestScore(topicName) {
+    if (!activityData?.bestScores?.length) return null;
+    const key = topicName.toLowerCase().slice(0, 20);
+    const match = activityData.bestScores.find(b =>
+      b.topic.toLowerCase().includes(key) ||
+      key.includes(b.topic.toLowerCase().slice(0, 15))
     );
+    if (!match || !match.total) return null;
+    return {
+      score: match.score,
+      total: match.total,
+      pct: Math.round(match.best_pct * 100),
+    };
+  }
 
-    return [...baseTopics].sort((a, b) => {
-      const priority = t => {
-        let s = 0;
-        if (quizScores[t] !== undefined && quizScores[t] < 0.6) s -= 2; // mauvais score → remonte
-        if (quizScores[t] !== undefined && quizScores[t] >= 0.8) s += 1; // maîtrisé → descend
-        if (recentSet.has(t)) s += 3;                                    // vu récemment → descend
-        return s;
-      };
-      return priority(a) - priority(b);
-    });
-  }, [baseTopics, activityData]);
-
-  // Suggestion du jour : rotation quotidienne (change chaque jour)
-  const featuredTopic = useMemo(() => {
-    if (!sortedTopics.length) return null;
-    const dayIdx = Math.floor(Date.now() / 86400000);
-    return sortedTopics[dayIdx % sortedTopics.length];
-  }, [sortedTopics]);
-
-  if (!user?.onboarding_done) return null;
-
-  let domains = [];
-  try { domains = JSON.parse(user.domains || '[]'); } catch {}
-
+  // ── Générer flashcards ou quiz ────────────────────────────────────
   async function generate(topic, type) {
     const key = `${topic}|${type}`;
-
-    // Résultat en cache → affichage instantané
     if (cache.current.has(key)) {
       const cached = cache.current.get(key);
-      setResult(cached);
-      setResultType(type);
-      setResultTopic(topic);
+      setResult(cached); setResultType(type); setResultTopic(topic);
       setFcIdx(0); setFlipped(false);
       return;
     }
-
-    setLoadingKey(key);
-    setResult(null);
+    setLoadingKey(key); setResult(null);
     try {
       const r = await fetch('/api/topic', {
         method: 'POST', credentials: 'include',
@@ -156,16 +111,10 @@ export default function ForYouSection({ onActivity }) {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
-
-      cache.current.set(key, data); // Mettre en cache
-
-      setResult(data);
-      setResultType(type);
-      setResultTopic(topic);
+      cache.current.set(key, data);
+      setResult(data); setResultType(type); setResultTopic(topic);
       setFcIdx(0); setFlipped(false);
-      if (type === 'flashcards') {
-        postActivity(topic, 'flashcards').then(() => onActivity?.());
-      }
+      if (type === 'flashcards') postActivity(topic, 'flashcards').then(() => onActivity?.());
     } catch (err) { alert(err.message); }
     finally { setLoadingKey(''); }
   }
@@ -173,45 +122,84 @@ export default function ForYouSection({ onActivity }) {
   function handleQuizComplete(score, total) {
     postActivity(resultTopic, 'quiz', score, total).then(() => {
       onActivity?.();
-      // Invalider le cache de l'activité pour que le tri se mette à jour
       setActivityData(null);
       fetch('/api/activity/summary', { credentials: 'include' })
-        .then(r => r.json())
-        .then(d => setActivityData(d))
-        .catch(() => {});
+        .then(r => r.json()).then(d => setActivityData(d)).catch(() => {});
     });
   }
 
+  if (!user?.onboarding_done) return null;
   const isLoading = loadingKey !== '';
 
   return (
     <div className="foryou-section">
 
-      {/* Header */}
+      {/* Titre */}
       <div className="foryou-header">
-        <div className="foryou-title">
-          <span>Pour vous</span>
-          <div className="foryou-badges">
-            {user.level && <span className="fy-badge fy-level">{levelLabel(user.level)}</span>}
-            {domains.slice(0,2).map(d => <span key={d} className="fy-badge fy-domain">{d}</span>)}
-            {user.specialty && <span className="fy-badge fy-specialty">{user.specialty}</span>}
-          </div>
-        </div>
-        <button className="fy-edit-btn" onClick={() => window.__editProfile?.()}>
-          Modifier le profil
-        </button>
+        <span className="foryou-title">Révision rapide</span>
       </div>
 
-      {/* Custom search */}
+      {/* Cartes fichiers récents */}
+      {recentTopics.length > 0 ? (
+        <div className="fy-courses-list">
+          {recentTopics.map(t => {
+            const sc = getBestScore(t.name);
+            const metaCls = sc ? (sc.pct >= 70 ? 'good' : 'low') : 'neutral';
+            return (
+              <div key={t.name} className="fy-course-card">
+                <div className="fy-course-left">
+                  <span className="fy-course-icon"><IconDoc /></span>
+                  <div className="fy-course-info">
+                    <span className="fy-course-name">{t.name}</span>
+                    <span className={`fy-course-meta ${metaCls}`}>
+                      {sc
+                        ? `${sc.score}/${sc.total} · ${sc.pct}%${sc.pct < 70 ? ' · à retravailler' : ''}`
+                        : `Jamais testé · ${timeAgo(t.timestamp)}`}
+                    </span>
+                  </div>
+                </div>
+                <div className="fy-course-actions">
+                  <button
+                    className="fy-card-btn fy-flash"
+                    disabled={isLoading}
+                    onClick={() => generate(t.name, 'flashcards')}
+                  >
+                    {loadingKey === `${t.name}|flashcards`
+                      ? <span className="fy-btn-spinner" />
+                      : <IconCards />} Flash
+                  </button>
+                  <button
+                    className="fy-card-btn fy-quiz"
+                    disabled={isLoading}
+                    onClick={() => generate(t.name, 'quiz')}
+                  >
+                    {loadingKey === `${t.name}|quiz`
+                      ? <span className="fy-btn-spinner" />
+                      : <IconQuiz />} Quiz
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="fy-empty">
+          <IconDoc />
+          <span>Chargez un cours pour voir vos révisions ici</span>
+        </div>
+      )}
+
+      {/* Recherche libre */}
       <div className="foryou-search">
         <div className="fy-search-wrap">
           <span className="fy-search-icon"><IconSearch /></span>
           <input
             className="fy-search-input"
             type="text"
-            placeholder="Tapez un sujet personnalisé…"
+            placeholder="Réviser un autre sujet…"
             value={custom}
             onChange={e => setCustom(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && custom.trim()) generate(custom.trim(), 'quiz'); }}
           />
         </div>
         {custom.trim() && (
@@ -234,70 +222,15 @@ export default function ForYouSection({ onActivity }) {
         )}
       </div>
 
-      {/* Featured topic */}
-      {featuredTopic && !custom.trim() && (
-        <div className="fy-featured">
-          <div className="fy-featured-label"><IconSpark /> Suggestion du jour</div>
-          <div className="fy-featured-body">
-            <span className="fy-featured-icon">{TOPIC_ICONS[featuredTopic] || <IconPin />}</span>
-            <span className="fy-featured-name">{featuredTopic}</span>
-          </div>
-          <div className="fy-featured-actions">
-            <button
-              className="fy-action-btn fy-flash"
-              disabled={isLoading}
-              onClick={() => generate(featuredTopic, 'flashcards')}
-            >
-              {loadingKey === `${featuredTopic}|flashcards` ? <span className="fy-btn-spinner" /> : <IconCards />} Flashcards
-            </button>
-            <button
-              className="fy-action-btn fy-quiz"
-              disabled={isLoading}
-              onClick={() => generate(featuredTopic, 'quiz')}
-            >
-              {loadingKey === `${featuredTopic}|quiz` ? <span className="fy-btn-spinner" /> : <IconQuiz />} Quiz
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Topic cards grid */}
-      {sortedTopics.length > 1 && (
-        <div className="foryou-grid">
-          {sortedTopics.filter(t => t !== featuredTopic).slice(0, 6).map(t => (
-            <div key={t} className="fy-card">
-              <div className="fy-card-top">
-                <span className="fy-card-icon">{TOPIC_ICONS[t] || '📌'}</span>
-                <span className="fy-card-name">{t}</span>
-              </div>
-              <div className="fy-card-actions">
-                <button
-                  className="fy-card-btn fy-flash"
-                  disabled={isLoading}
-                  onClick={() => generate(t, 'flashcards')}
-                >
-                  {loadingKey === `${t}|flashcards` ? <span className="fy-btn-spinner" /> : <IconCards />} Flash
-                </button>
-                <button
-                  className="fy-card-btn fy-quiz"
-                  disabled={isLoading}
-                  onClick={() => generate(t, 'quiz')}
-                >
-                  {loadingKey === `${t}|quiz` ? <span className="fy-btn-spinner" /> : <IconQuiz />} Quiz
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Result modal */}
+      {/* Modal résultat */}
       {result && (
         <div className="fy-result-overlay" onClick={e => { if (e.target === e.currentTarget) setResult(null); }}>
           <div className="fy-result-modal">
             <div className="fy-result-header">
               <div>
-                <span className="fy-result-type">{resultType === 'flashcards' ? <><IconCards /> Flashcards</> : <><IconQuiz /> Quiz</>}</span>
+                <span className="fy-result-type">
+                  {resultType === 'flashcards' ? <><IconCards /> Flashcards</> : <><IconQuiz /> Quiz</>}
+                </span>
                 <span className="fy-result-topic">{resultTopic}</span>
               </div>
               <button className="fy-close-btn" onClick={() => setResult(null)}>✕</button>
@@ -305,7 +238,10 @@ export default function ForYouSection({ onActivity }) {
 
             {resultType === 'flashcards' && result.flashcards?.length > 0 && (
               <div className="fy-fc-area">
-                <div className={`fy-fc-card ${flipped ? 'flipped' : ''}`} onClick={() => setFlipped(f => !f)}>
+                <div
+                  className={`fy-fc-card ${flipped ? 'flipped' : ''}`}
+                  onClick={() => setFlipped(f => !f)}
+                >
                   <div className="fy-fc-front">
                     <span className="fy-fc-hint">Question — cliquez pour retourner</span>
                     <p>{result.flashcards[fcIdx]?.front}</p>
@@ -316,9 +252,9 @@ export default function ForYouSection({ onActivity }) {
                   </div>
                 </div>
                 <div className="fy-fc-nav">
-                  <button onClick={() => { setFcIdx(i => Math.max(0, i-1)); setFlipped(false); }} disabled={fcIdx === 0}>←</button>
+                  <button onClick={() => { setFcIdx(i => Math.max(0, i - 1)); setFlipped(false); }} disabled={fcIdx === 0}>←</button>
                   <span>{fcIdx + 1} / {result.flashcards.length}</span>
-                  <button onClick={() => { setFcIdx(i => Math.min(result.flashcards.length-1, i+1)); setFlipped(false); }} disabled={fcIdx === result.flashcards.length-1}>→</button>
+                  <button onClick={() => { setFcIdx(i => Math.min(result.flashcards.length - 1, i + 1)); setFlipped(false); }} disabled={fcIdx === result.flashcards.length - 1}>→</button>
                 </div>
               </div>
             )}
@@ -333,6 +269,7 @@ export default function ForYouSection({ onActivity }) {
   );
 }
 
+// ── Composants Quiz ───────────────────────────────────────────────────────────
 function QuizArea({ questions, onComplete }) {
   const [answers, setAnswers] = useState({});
   const [logged, setLogged]   = useState(false);
@@ -358,20 +295,12 @@ function QuizArea({ questions, onComplete }) {
           {(() => {
             const score = questions.filter((q, i) => q.answer?.charAt(0) === answers[i]).length;
             const pct   = Math.round(score / total * 100);
-            return (
-              <span className={pct >= 70 ? 'good' : 'low'}>
-                {score}/{total} — {pct}%
-              </span>
-            );
+            return <span className={pct >= 70 ? 'good' : 'low'}>{score}/{total} — {pct}%</span>;
           })()}
         </div>
       )}
       {questions.map((q, i) => (
-        <QuizQuestion
-          key={i} q={q} idx={i}
-          selected={answers[i]}
-          onSelect={letter => handleSelect(i, letter)}
-        />
+        <QuizQuestion key={i} q={q} idx={i} selected={answers[i]} onSelect={l => handleSelect(i, l)} />
       ))}
     </div>
   );
@@ -384,8 +313,8 @@ function QuizQuestion({ q, idx, selected, onSelect }) {
       <p className="fy-quiz-question"><strong>{idx + 1}.</strong> {q.question}</p>
       <div className="fy-quiz-options">
         {q.options?.map((opt, i) => {
-          const letter    = String.fromCharCode(65 + i);
-          const isCorrect = letter === correct;
+          const letter     = String.fromCharCode(65 + i);
+          const isCorrect  = letter === correct;
           const isSelected = selected === letter;
           let cls = 'fy-quiz-opt';
           if (selected) cls += isCorrect ? ' correct' : isSelected ? ' wrong' : '';

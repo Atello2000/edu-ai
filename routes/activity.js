@@ -63,9 +63,19 @@ router.get('/summary', async (req, res) => {
      GROUP BY topic ORDER BY n DESC LIMIT 6`
   ).all(uid);
 
+  // Meilleur score quiz par topic (pour les cartes de révision)
+  const bestScores = await prepare(
+    `SELECT topic,
+            MAX(CAST(score AS REAL) / total) AS best_pct,
+            score, total
+     FROM activity
+     WHERE user_id = ? AND type = 'quiz' AND total > 0
+     GROUP BY topic`
+  ).all(uid);
+
   const streak = await calcStreak(uid);
 
-  res.json({ streak, totalSessions, recentActivity, topTopics });
+  res.json({ streak, totalSessions, recentActivity, topTopics, bestScores });
 });
 
 module.exports = router;
