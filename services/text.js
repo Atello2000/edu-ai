@@ -163,7 +163,7 @@ async function extractTextFromBuffer(buffer, originalName) {
     const data = await pdfParse(buffer);
     const text = data.text?.trim() || '';
     // PDF scanné détecté → essayer l'OCR Mistral
-    if (text.length < OCR_THRESHOLD && mistral) {
+    if (text.length < OCR_THRESHOLD && process.env.MISTRAL_API_KEY) {
       const ocrText = await ocrWithMistral(buffer, originalName);
       if (ocrText) return ocrText;
     }
