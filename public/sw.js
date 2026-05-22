@@ -1,5 +1,10 @@
 const CACHE = 'jangalai-__CACHE_VERSION__';
-const ASSETS = ['/', '/index.html', '/app.html', '/style.css', '/app.js', '/manifest.json', '/icon.svg',
+
+// IMPORTANT: never cache HTML entry points (/ or index.html) —
+// their hashed asset references change on every deploy and a stale
+// cached HTML causes a blank page (old JS hash → 404 → React never mounts).
+const ASSETS = [
+  '/app.js', '/style.css', '/manifest.json', '/icon.svg',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap',
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
@@ -7,7 +12,7 @@ const ASSETS = ['/', '/index.html', '/app.html', '/style.css', '/app.js', '/mani
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
-  // Ne pas skipWaiting automatiquement — on attend que l'utilisateur valide la mise à jour
+  self.skipWaiting(); // activate immediately so the new SW takes over right away
 });
 
 self.addEventListener('message', e => {
@@ -40,11 +45,21 @@ self.addEventListener('notificationclick', e => {
 
 const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 
+// URLs whose content changes on every deploy — always fetch fresh, never cache
+const NO_CACHE_PATTERNS = ['/', '/index.html', '/app.html'];
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return;
 
-  const isExternal = EXTERNAL.some(h => e.request.url.includes(h));
+  const url = new URL(e.request.url);
+  const isExternal = EXTERNAL.some(h => url.hostname.includes(h));
+
+  // HTML entry points: always network, never fall back to cache
+  if (!isExternal && NO_CACHE_PATTERNS.includes(url.pathname)) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
 
   if (isExternal) {
     // Cache-first pour les ressources CDN/fonts
@@ -58,7 +73,7 @@ self.addEventListener('fetch', e => {
       }))
     );
   } else {
-    // Network-first pour les assets locaux (app.html, app.js, style.css…)
+    // Network-first pour les assets locaux (app.js, style.css…)
     e.respondWith(
       fetch(e.request).then(res => {
         if (res.ok) {
