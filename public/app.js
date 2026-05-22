@@ -443,7 +443,7 @@ function updateExpandBtn(btn, sectionsEl) {
   btn.textContent = allCollapsed ? 'Tout développer' : 'Tout réduire';
 }
 
-// Strip ALL markdown syntax pour le PDF
+// Strip markdown syntax pour le PDF (conserve les accents français)
 function stripMd(text) {
   return text
     .replace(/^#{1,6}\s*/,'')
@@ -568,27 +568,76 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
       const PL   = ML + 5;
       const bodW = CW - 5;
 
-      // section header row
+      // section header row — conserve les accents (é, è, à, ç...)
       need(12);
       fillRect(ML, y, CW, 11, tint(col));
       fillRect(ML, y,  3, 11, col);
-      const cleanTitle = section.title.replace(/[^\x00-\x7E]/g,'').trim();
+      const cleanTitle = section.title
+        .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+        .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/g, '')
+        .trim();
       pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
       setRgb(col);
-      pdf.text(cleanTitle, ML+6, y+7.5);
+      pdf.text(wrap(cleanTitle, CW - 10), ML+6, y+7.5);
       hline(ML, y+11, ML+CW, C.border);
-      y += 11 + 4;
+      y += 11 + 5;
+
+      // Rendu d'une ligne avec support bold inline (**terme:** définition)
+      function renderLine(rawLine, indentX, maxW) {
+        // "**Terme:** définition" → term en gras, suite normale
+        const leadBold = rawLine.match(/^\*\*([^*]+)\*\*[:\s]\s*(.*)/s);
+        if (leadBold) {
+          const term = leadBold[1].trim();
+          const def  = leadBold[2].trim();
+          pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5); setRgb(C.text);
+          const termW = pdf.getTextWidth(term + ' : ');
+          const termLines = wrap(term + ' :', indentX === PL ? bodW : maxW);
+          pdf.text(termLines[0], indentX, y+LH);
+          if (def) {
+            pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
+            const defW = maxW - (termLines[0].length > term.length + 2 ? 0 : termW);
+            const defX = termLines[0].length > term.length + 2 ? indentX : indentX + termW;
+            const defLines = wrap(def, defW);
+            pdf.text(defLines, defX, y+LH);
+            const h = Math.max(termLines.length, defLines.length);
+            y += h * LH + 2;
+          } else {
+            y += termLines.length * LH + 2;
+          }
+          return;
+        }
+        // Ligne entièrement en gras → **texte**
+        const fullBold = rawLine.match(/^\*\*(.+)\*\*$/);
+        if (fullBold) {
+          pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5); setRgb(C.text);
+          const lines = wrap(fullBold[1], maxW);
+          need(lines.length * LH + 2);
+          pdf.text(lines, indentX, y+LH);
+          y += lines.length * LH + 2;
+          return;
+        }
+        // Texte normal
+        const text = stripMd(rawLine);
+        if (!text) return;
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5); setRgb(C.text);
+        const lines = wrap(text, maxW);
+        need(lines.length * LH + 2);
+        pdf.text(lines, indentX, y+LH);
+        y += lines.length * LH + 2;
+      }
 
       // section body lines
+      let listCounter = 0;
       for (const raw of section.lines) {
         const line = raw.trimEnd();
-        if (!line) { y += 2; continue; }
+        if (!line) { y += 2.5; listCounter = 0; continue; }
 
         // blockquote
         if (line.startsWith('> ')) {
+          listCounter = 0;
           const text = stripMd(line.slice(2));
           const lines = wrap(text, bodW - 8);
-          const bH = lines.length * LH + 5;
+          const bH = lines.length * LH + 6;
           need(bH + 4);
           fillRect(PL, y, bodW, bH, [235,252,248]);
           fillRect(PL, y, 2.5, bH, C.teal);
@@ -601,41 +650,70 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
 
         // sub-heading (h1-h6)
         if (/^#{1,6}\s/.test(line)) {
+          listCounter = 0;
           const text = stripMd(line);
-          need(12);
+          need(13);
+          y += 3;
           pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5);
-          setRgb(C.text);
+          setRgb(col);
           pdf.text(text, PL, y+LH);
-          hline(PL, y+LH+2, PL+bodW, C.border);
+          hline(PL, y+LH+2, PL+bodW, tint(col));
           y += 12;
           continue;
         }
 
-        // bullet (-, *, +) ou liste numérotée
-        if (/^[-*+]\s/.test(line) || /^\d+\.\s/.test(line)) {
-          const text = stripMd(line);
-          const lines = wrap(text, bodW - 7);
+        // liste numérotée → affiche le vrai numéro
+        const numMatch = line.match(/^(\d+)\.\s(.*)/);
+        if (numMatch) {
+          const num  = numMatch[1];
+          const text = numMatch[2];
+          const numLabel = num + '.';
+          const numW = pdf.getTextWidth(numLabel) + 2;
+          pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5); setRgb(col);
+          need(LH + 3);
+          pdf.text(numLabel, PL, y+LH);
+          pdf.setFont('helvetica','normal'); setRgb(C.text);
+          const textLines = wrap(text.replace(/\*\*(.+?)\*\*/g,'$1'), bodW - numW - 2);
+          need(textLines.length * LH + 2);
+          pdf.text(textLines, PL + numW + 2, y+LH);
+          y += textLines.length * LH + 2;
+          continue;
+        }
+
+        // bullet (-, *, +)
+        if (/^[-*+]\s/.test(line)) {
+          listCounter = 0;
+          const inner = line.replace(/^[-*+]\s/, '');
+          const innerClean = inner.replace(/\*\*(.+?)\*\*/g, '$1');
+          const lines = wrap(innerClean, bodW - 7);
           need(lines.length * LH + 2);
           setFill(col); pdf.circle(PL+1.5, y+LH-1.2, 1, 'F');
-          pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
-          setRgb(C.text);
+          // Gras sur le premier mot si format "**term:**"
+          if (/^\*\*[^*]+\*\*/.test(inner)) {
+            const m = inner.match(/^\*\*([^*]+)\*\*[:\s]?\s*(.*)/s);
+            if (m) {
+              pdf.setFont('helvetica','bold'); pdf.setFontSize(9.5); setRgb(C.text);
+              const tw = pdf.getTextWidth(m[1] + ': ');
+              pdf.text(m[1] + ':', PL+5, y+LH);
+              pdf.setFont('helvetica','normal');
+              const dl = wrap(m[2], bodW - 7 - tw);
+              pdf.text(dl, PL+5+tw, y+LH);
+              y += Math.max(1, dl.length) * LH + 2;
+              continue;
+            }
+          }
+          pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5); setRgb(C.text);
           pdf.text(lines, PL+5, y+LH);
-          y += lines.length * LH + 1.5;
+          y += lines.length * LH + 2;
           continue;
         }
 
         // paragraph
-        const text = stripMd(line);
-        if (!text) continue;
-        const lines = wrap(text, bodW);
-        need(lines.length * LH + 2);
-        pdf.setFont('helvetica','normal'); pdf.setFontSize(9.5);
-        setRgb(C.text);
-        pdf.text(lines, PL, y+LH);
-        y += lines.length * LH + 2;
+        need(LH + 2);
+        renderLine(line, PL, bodW);
       }
 
-      y += 7; // gap between sections
+      y += 8; // gap between sections
     }
 
     // ── render ───────────────────────────────────────────────────────
