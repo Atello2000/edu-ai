@@ -20,10 +20,20 @@ self.addEventListener('message', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(async () => {
+        await self.clients.claim();
+        // Force-reload all open windows so they pick up the new index.html.
+        // This recovers users who are stuck on a blank page due to a stale
+        // cached index.html pointing to old (now 404) hashed asset filenames.
+        const openClients = await self.clients.matchAll({ type: 'window' });
+        for (const client of openClients) {
+          client.navigate(client.url);
+        }
+      })
+  );
 });
 
 self.addEventListener('push', e => {

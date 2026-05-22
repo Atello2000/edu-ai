@@ -34,7 +34,17 @@ app.get('/sw.js', (req, res) => {
 // En production, sert le build React en priorité
 const reactDist = path.join(__dirname, 'client', 'dist');
 if (fs.existsSync(reactDist)) {
-  app.use(express.static(reactDist));
+  // HTML entry points must NEVER be browser-cached — hash-named assets change
+  // on every deploy and a stale cached index.html causes a blank page.
+  app.use(express.static(reactDist, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    },
+  }));
 }
 
 app.use(express.static('public'));
