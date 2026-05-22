@@ -468,7 +468,7 @@ async function exportSummaryToPDF(fileName, summaryMd, sectionsEl) {
   btn.innerHTML = '⏳…'; btn.disabled = true;
   try {
     const { jsPDF } = window.jspdf;
-    const baseName = fileName.replace(/\.[^.]+$/, '');
+    const baseName = fileName; // déjà nettoyé par l'appelant (sans extension)
     const pdf = new jsPDF('p', 'mm', 'a4');
 
     const PW = pdf.internal.pageSize.getWidth();   // 210 mm
@@ -777,6 +777,9 @@ async function exportExamSheetToPDF(title, md) {
     function need(h)   { if (y+h > PH-16) newPage(); }
 
     // ── table renderer ────────────────────────────────────────────────
+    // jsPDF 2.5.1 : splitTextToSize interprète maxLen en points même si le
+    // document est en mm → multiplier par PT (mm→pt) pour obtenir la bonne largeur
+    const PT = 2.835;
     function renderTable(tableLines) {
       const rows = tableLines
         .filter(l => !/^\|[\s\-:|]+\|$/.test(l.trim()))
@@ -785,10 +788,14 @@ async function exportExamSheetToPDF(title, md) {
       const cols = Math.max(...rows.map(r => r.length));
       const colW  = CW / cols;
       const pad   = 2;
+      const cellW = (colW - pad * 2) * PT; // largeur de split en pt
 
       rows.forEach((row, ri) => {
+        // Fixer la taille de police AVANT de calculer maxL pour des métriques cohérentes
+        if (ri === 0) { pdf.setFont('helvetica','bold');   pdf.setFontSize(8);   }
+        else          { pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5); }
         let maxL = 1;
-        row.forEach(cell => { maxL = Math.max(maxL, wrap(cell, colW - pad*2).length); });
+        row.forEach(cell => { maxL = Math.max(maxL, wrap(cell, cellW).length); });
         const rH = maxL * LH + 5;
         need(rH + 1);
         if (ri === 0) {
@@ -797,9 +804,9 @@ async function exportExamSheetToPDF(title, md) {
           fillRect(ML, y, CW, rH, ri%2===0 ? C.bg : C.white);
         }
         row.forEach((cell, ci) => {
-          if (ri === 0) { pdf.setFont('helvetica','bold'); pdf.setFontSize(8); setRgb(C.gold); }
+          if (ri === 0) { pdf.setFont('helvetica','bold');   pdf.setFontSize(8);   setRgb(C.gold); }
           else          { pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5); setRgb(C.text); }
-          pdf.text(wrap(cell, colW-pad*2), ML+ci*colW+pad, y+LH);
+          pdf.text(wrap(cell, cellW), ML+ci*colW+pad, y+LH);
           if (ci < cols-1) {
             setDraw(C.border); pdf.setLineWidth(0.2);
             pdf.line(ML+(ci+1)*colW, y, ML+(ci+1)*colW, y+rH);
@@ -875,7 +882,7 @@ async function exportExamSheetToPDF(title, md) {
     }
     flushTable();
     drawFooter();
-    const safeName = title.replace(/\.[^.]+$/, '');
+    const safeName = title; // déjà nettoyé par l'appelant (sans extension)
     pdf.save(safeName + '_fiche-examen.pdf');
   } finally { btn.innerHTML = orig; btn.disabled = false; }
 }

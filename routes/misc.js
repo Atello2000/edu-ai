@@ -44,7 +44,11 @@ router.post('/upload', (req, res, next) => {
       text = raw.slice(0, MAX_TEXT_UPLOAD);
     } catch (e) {}
     const id = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    return { id, name: f.originalname, size: f.size, text };
+    // multer lit les noms de fichiers UTF-8 en Latin-1 par défaut →
+    // re-décoder les octets latin1 comme UTF-8 pour restaurer les accents
+    let name = f.originalname;
+    try { name = Buffer.from(f.originalname, 'latin1').toString('utf8'); } catch {}
+    return { id, name, size: f.size, text };
   }));
   res.json({ success: true, files });
 });
