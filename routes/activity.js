@@ -35,47 +35,59 @@ router.post('/', async (req, res) => {
   if (!topic || !['flashcards', 'quiz'].includes(type))
     return res.status(400).json({ error: 'Paramètres invalides.' });
 
-  await prepare(
-    'INSERT INTO activity (user_id, topic, type, score, total) VALUES (?, ?, ?, ?, ?)'
-  ).run(req.user.id, topic.trim().slice(0, 120), type, score ?? null, total ?? null);
-
-  res.json({ ok: true });
+  try {
+    await prepare(
+      'INSERT INTO activity (user_id, topic, type, score, total) VALUES (?, ?, ?, ?, ?)'
+    ).run(req.user.id, topic.trim().slice(0, 120), type, score ?? null, total ?? null);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /activity error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── GET /api/activity/summary ─────────────────────────────────────────────────
 router.get('/summary', async (req, res) => {
-  const uid = req.user.id;
+  try {
+    const uid = req.user.id;
 
-  const totalRow = await prepare(
-    'SELECT COUNT(*) AS n FROM activity WHERE user_id = ?'
-  ).get(uid);
-  const totalSessions = Number(totalRow?.n || 0);
+    const totalRow = await prepare(
+      'SELECT COUNT(*) AS n FROM activity WHERE user_id = ?'
+    ).get(uid);
+    const totalSessions = Number(totalRow?.n || 0);
 
-  const recentActivity = await prepare(
-    `SELECT topic, type, score, total, created_at
-     FROM activity WHERE user_id = ?
-     ORDER BY created_at DESC LIMIT 7`
-  ).all(uid);
+    const recentActivity = await prepare(
+      `SELECT topic, type, score, total, created_at
+       FROM activity WHERE user_id = ?
+       ORDER BY created_at DESC LIMIT 7`
+    ).all(uid);
 
-  const topTopics = await prepare(
-    `SELECT topic, COUNT(*) AS n FROM activity
-     WHERE user_id = ?
-     GROUP BY topic ORDER BY n DESC LIMIT 6`
-  ).all(uid);
+    const topTopics = await prepare(
+      `SELECT topic, COUNT(*) AS n FROM activity
+       WHERE user_id = ?
+       GROUP BY topic ORDER BY n DESC LIMIT 6`
+    ).all(uid);
 
-  // Meilleur score quiz par topic (pour les cartes de révision)
-  const bestScores = await prepare(
-    `SELECT topic,
-            MAX(CAST(score AS REAL) / total) AS best_pct,
-            score, total
-     FROM activity
-     WHERE user_id = ? AND type = 'quiz' AND total > 0
-     GROUP BY topic`
-  ).all(uid);
+    // Meilleur score quiz par topic (pour les cartes de révision)
+    // PostgreSQL requires all selected columns to be either in GROUP BY
+    // or wrapped in an aggregate — use MAX() for score and total.
+    const bestScores = await prepare(
+      `SELECT topic,
+              MAX(CAST(score AS REAL) / total) AS best_pct,
+              MAX(score) AS score,
+              MAX(total) AS total
+       FROM activity
+       WHERE user_id = ? AND type = 'quiz' AND total > 0
+       GROUP BY topic`
+    ).all(uid);
 
-  const streak = await calcStreak(uid);
+    const streak = await calcStreak(uid);
 
-  res.json({ streak, totalSessions, recentActivity, topTopics, bestScores });
+    res.json({ streak, totalSessions, recentActivity, topTopics, bestScores });
+  } catch (err) {
+    console.error('GET /activity/summary error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

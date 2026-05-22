@@ -73,9 +73,14 @@ router.get('/users/count', (req, res) => {
 
 router.get('/quota', requireAuth, async (req, res) => {
   if (!IS_PROD) return res.json({ unlimited: true });
-  const status = await getQuotaStatus(req);
-  if (!status) return res.json({ unlimited: true });
-  res.json({ unlimited: false, ...status });
+  try {
+    const status = await getQuotaStatus(req);
+    if (!status) return res.json({ unlimited: true });
+    res.json({ unlimited: false, ...status });
+  } catch (err) {
+    require('../services/logger').error('GET /quota error', { message: err.message });
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

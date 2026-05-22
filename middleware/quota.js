@@ -73,10 +73,12 @@ async function getQuotaStatus(req) {
   const today  = getTodayStr();
   const limits = QUOTA_DAILY[req.user.plan] || QUOTA_DAILY.free;
 
+  // .get() instead of .run() — user_quota has no "id" column so run()'s
+  // auto-appended "RETURNING id" would crash; .get() sends the SQL as-is.
   await prepare(`
     INSERT INTO user_quota (user_id, date) VALUES (?, ?)
     ON CONFLICT (user_id, date) DO NOTHING
-  `).run(req.user.id, today);
+  `).get(req.user.id, today);
 
   const row = await prepare(
     'SELECT * FROM user_quota WHERE user_id = ? AND date = ?'
