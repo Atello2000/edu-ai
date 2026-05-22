@@ -359,7 +359,6 @@ function renderSummaryItem(r) {
       <button class="summary-action-btn copy-btn" data-text="${encoded}">${SVG.copy} Copier</button>
       <button class="summary-action-btn download-btn" data-name="${r.name}" data-text="${encoded}">${SVG.download} TXT</button>
       <button class="summary-action-btn pdf pdf-btn" data-name="${r.name}">${SVG.pdf} PDF</button>
-      <button class="summary-action-btn mindmap-btn">${SVG.map} Mindmap</button>
     </div>`;
 
   // Toolbar
@@ -431,9 +430,6 @@ function renderSummaryItem(r) {
   });
   item.querySelector('.pdf-btn').addEventListener('click', () =>
     exportSummaryToPDF(baseName, r.summary, sectionsEl)
-  );
-  item.querySelector('.mindmap-btn').addEventListener('click', () =>
-    openMindmap(r.name, r.summary)
   );
   return item;
 }
