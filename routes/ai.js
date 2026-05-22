@@ -165,7 +165,6 @@ Varie obligatoirement les types de questions parmi :
 - Identification d'erreur (ex: "Laquelle de ces affirmations est incorrecte ?")
 N'utilise pas deux fois le même type de question consécutivement.`;
 
-      const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
       const prompt = `${userContext(req.user)}Génère ${count} questions QCM de niveau ${difficulty} ${inLang} basées sur ce cours.
 ${difficultyGuide}
 ${questionTypes}
@@ -178,23 +177,20 @@ Pour chaque question, donne exactement ce format JSON :
       "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
       "answer": "A",
       "explanation": "Explique clairement pourquoi la bonne réponse est correcte.",
-      "whyWrong": {
-        "B": "Explique pourquoi cette option est fausse ou insuffisante.",
-        "C": "Explique pourquoi cette option est fausse ou insuffisante.",
-        "D": "Explique pourquoi cette option est fausse ou insuffisante."
-      },
       "sourceHint": "Rappelle la notion ou le passage du cours à revoir, sans inventer de citation exacte."
     }
   ]
 }
 
-Dans "whyWrong", inclue aussi la lettre correcte si nécessaire avec une phrase courte du type "C'est la bonne réponse".
 Les explications doivent être pédagogiques, concrètes et utiles pour réviser.
+Réponds UNIQUEMENT avec le JSON, sans texte autour.
 
-Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
+---
+Contenu du cours "${file.name}" :
+${truncated}`;
 
       const { text: rawQuizText, model: fileQuizModel, usage: quizUsage } = await aiComplete(
-        prompt, calcMaxTokens('quiz', truncated.length, count), cachedContent
+        prompt, calcMaxTokens('quiz', truncated.length, count)
       );
       logTokens(req.user?.id, 'quiz', quizUsage?.provider, quizUsage?.input, quizUsage?.output);
 
@@ -219,14 +215,27 @@ Réponds UNIQUEMENT avec le JSON, sans texte autour.`;
   }
 });
 
-// ── Fiche d'examen ────────────────────────────────────────────────────────────
+// ── Fiche d'examen (SSE streaming) ───────────────────────────────────────────
 router.post('/exam-sheet', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
   const quota = await checkQuota(req, 'summarize');
-  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} fiches/jour). Revenez demain.` });
+  if (!quota.ok) {
+    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} fiches/jour). Revenez demain.` });
+    return res.end();
+  }
 
   try {
     const { files } = req.body;
-    if (!files || !files.length) return res.status(400).json({ error: 'Aucun fichier sélectionné' });
+    if (!files || !files.length) {
+      send({ type: 'error', message: 'Aucun fichier sélectionné' });
+      return res.end();
+    }
 
     const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang = langLabel(lang);
@@ -236,7 +245,8 @@ router.post('/exam-sheet', async (req, res) => {
       context += `\n\n=== ${file.name} ===\n${text.slice(0, 18000)}`;
     }
 
-    const { text, model, usage: sheetUsage } = await aiComplete(`${userContext(req.user)}Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
+    let streamModel = MODEL_LABEL;
+    const prompt = `${userContext(req.user)}Tu es un enseignant exigeant qui prépare une fiche d'examen ${inLang}.
 
 À partir des cours fournis, produis une fiche de révision dense, claire et directement exploitable avant un contrôle.
 
@@ -261,14 +271,23 @@ Propose 8 à 12 questions d'examen, avec une réponse attendue concise.
 Propose un plan sur 3 jours : quoi relire, quoi mémoriser, quoi tester.
 
 Cours :
-${context}`, 4200);
+${context}`;
 
-    logTokens(req.user?.id, 'exam-sheet', sheetUsage?.provider, sheetUsage?.input, sheetUsage?.output);
-    res.json({ success: true, sheet: text, model });
+    for await (const chunk of aiStream(prompt, 4200)) {
+      if (chunk.usage) {
+        logTokens(req.user?.id, 'exam-sheet', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
+        continue;
+      }
+      send({ type: 'delta', text: chunk.text });
+      streamModel = chunk.model;
+    }
+
+    send({ type: 'end', model: streamModel });
   } catch (err) {
     logger.error('AI exam-sheet error', { userId: req.user?.id, message: err.message });
-    res.status(500).json({ error: err.message });
+    send({ type: 'error', message: err.message });
   }
+  res.end();
 });
 
 // ── Flashcards (traitement parallèle) ────────────────────────────────────────
@@ -287,7 +306,6 @@ router.post('/flashcards', async (req, res) => {
       if (!text.trim()) throw new Error(`Contenu de "${file.name}" vide ou indisponible. Rechargez le fichier.`);
       const truncated = text.slice(0, LIMITS.flashChars);
 
-      const cachedContent = `Contenu du cours "${file.name}" :\n${truncated}`;
       const prompt = `${userContext(req.user)}Tu es un assistant pédagogique. Génère ${count} flashcards ${inLang} pour aider à mémoriser les concepts essentiels.
 
 Chaque flashcard doit avoir :
@@ -299,10 +317,14 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
   "flashcards": [
     { "front": "...", "back": "..." }
   ]
-}`;
+}
+
+---
+Contenu du cours "${file.name}" :
+${truncated}`;
 
       const { text: rawFlashText, model: fileFlashModel, usage: flashUsage } = await aiComplete(
-        prompt, calcMaxTokens('flash', truncated.length, count), cachedContent
+        prompt, calcMaxTokens('flash', truncated.length, count)
       );
       logTokens(req.user?.id, 'flashcards', flashUsage?.provider, flashUsage?.input, flashUsage?.output);
 

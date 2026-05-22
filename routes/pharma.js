@@ -1,7 +1,8 @@
 const express = require('express');
 const router  = express.Router();
-const { aiComplete, aiChat } = require('../services/ai');
+const { aiComplete, aiChat, calcMaxTokens } = require('../services/ai');
 const { logTokens } = require('../services/tokens');
+const { checkQuota } = require('../middleware/quota');
 const logger  = require('../services/logger');
 
 function requireMax(req, res, next) {
@@ -27,6 +28,9 @@ const PHARMA_SYSTEM = `Tu es un expert senior en régulation pharmaceutique avec
 Réponds toujours en français. Structure tes réponses avec Markdown (titres, listes, tableaux si utile). Cite les textes réglementaires précis (numéros de guidelines ICH, numéros d'articles de directives/règlements EU). Adapte le niveau à un étudiant de Master 1 en régulation pharmaceutique : rigoureux mais pédagogique.`;
 
 router.post('/chat', async (req, res) => {
+  const quota = await checkQuota(req, 'chat');
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
+
   try {
     const { messages } = req.body;
     const { text, model, usage } = await aiChat(PHARMA_SYSTEM, (messages || []).slice(-10), 1500);
@@ -38,6 +42,9 @@ router.post('/chat', async (req, res) => {
 });
 
 router.post('/quiz', async (req, res) => {
+  const quota = await checkQuota(req, 'quiz');
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} quiz/jour). Revenez demain.` });
+
   try {
     const { topic } = req.body;
     const VALID_DIFF = ['facile', 'moyen', 'difficile'];
@@ -60,7 +67,7 @@ IMPORTANT : dans le texte des questions, options et explications, n'utilise PAS 
 
 Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autour :
 {"questions":[{"question":"...","options":["A. ...","B. ...","C. ...","D. ..."],"answer":"A","explanation":"..."}]}`,
-      Math.min(count * 500 + 800, 6000)
+      calcMaxTokens('quiz', 0, count)
     );
 
     let quiz = { questions: [] };
@@ -82,6 +89,9 @@ Réponds UNIQUEMENT avec ce JSON valide, sans balises markdown, sans texte autou
 });
 
 router.post('/fiche', async (req, res) => {
+  const quota = await checkQuota(req, 'summarize');
+  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} fiches/jour). Revenez demain.` });
+
   try {
     const { topic } = req.body;
     const { text, model, usage: ficheUsage } = await aiComplete(

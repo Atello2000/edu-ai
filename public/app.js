@@ -1419,18 +1419,43 @@ examSheetBtn.addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ files, lang: getPrefs().lang || 'fr' })
     });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-    examSheetMd = data.sheet || '';
-    examSheetResult.innerHTML = `<div class="exam-sheet-card">${marked.parse(examSheetMd)}</div>`;
+    if (!res.ok) throw new Error('Erreur serveur');
+    hideLoader();
     generatedSections.add('exam-sheet-section');
     showPanel('exam-sheet-section');
-    if (data.model) setModelBadge('exam-sheet-section', data.model);
-    saveSession({ examSheet: { files: files.map(f => f.name), sheet: examSheetMd } });
-    fetchQuota();
-    refreshFloatNav();
-    renderDashboard();
-    updateExamSheetBtnState();
+    examSheetResult.innerHTML = '<div class="exam-sheet-card"><p style="color:var(--muted);font-size:.85rem;padding:.5rem 0">Génération en cours…</p></div>';
+
+    const reader  = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let sheetText = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() ?? '';
+      for (const part of parts) {
+        if (!part.startsWith('data: ')) continue;
+        let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
+
+        if (data.type === 'delta') {
+          sheetText += data.text;
+          examSheetResult.innerHTML = `<div class="exam-sheet-card">${marked.parse(sheetText)}</div>`;
+        } else if (data.type === 'end') {
+          examSheetMd = sheetText;
+          if (data.model) setModelBadge('exam-sheet-section', data.model);
+          saveSession({ examSheet: { files: files.map(f => f.name), sheet: examSheetMd } });
+          fetchQuota();
+          refreshFloatNav();
+          renderDashboard();
+          updateExamSheetBtnState();
+        } else if (data.type === 'error') {
+          throw new Error(data.message);
+        }
+      }
+    }
   } catch (err) { alert('Erreur : ' + err.message); }
   finally { hideLoader(); }
 });
