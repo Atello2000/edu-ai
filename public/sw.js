@@ -43,20 +43,20 @@ self.addEventListener('push', e => {
       body:  data.body  || 'Vous avez des flashcards à réviser.',
       icon:  data.icon  || '/icon.svg',
       badge: '/icon.svg',
-      data:  { url: data.url || '/app.html' }
+      data:  { url: data.url || '/app' }
     })
   );
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(clients.openWindow(e.notification.data?.url || '/app.html'));
+  e.waitUntil(clients.openWindow(e.notification.data?.url || '/app'));
 });
 
 const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 
 // URLs whose content changes on every deploy — always fetch fresh, never cache
-const NO_CACHE_PATTERNS = ['/', '/index.html', '/app.html'];
+const NO_CACHE_PATTERNS = ['/', '/index.html'];
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;

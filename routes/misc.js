@@ -71,8 +71,12 @@ router.get('/users/count', (req, res) => {
   res.json({ online: onlineUsers.size });
 });
 
-router.get('/quota', requireAuth, async (req, res) => {
+// IS_PROD check first: no auth needed in dev/test (always unlimited anyway).
+// requireAuth is only applied in production where quota actually matters.
+router.get('/quota', (req, res, next) => {
   if (!IS_PROD) return res.json({ unlimited: true });
+  requireAuth(req, res, next);
+}, async (req, res) => {
   try {
     const status = await getQuotaStatus(req);
     if (!status) return res.json({ unlimited: true });

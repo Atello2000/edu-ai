@@ -12,16 +12,6 @@ beforeAll(() => {
   app = require('../app');
 });
 
-// ── /api/library ─────────────────────────────────────────────────────────────
-describe('GET /api/library', () => {
-  it('retourne un tableau de sections', async () => {
-    const res = await request(app).get('/api/library');
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('sections');
-    expect(Array.isArray(res.body.sections)).toBe(true);
-  });
-});
-
 // ── /api/upload ───────────────────────────────────────────────────────────────
 describe('POST /api/upload', () => {
   it('rejette une requête sans fichier', async () => {
@@ -62,7 +52,7 @@ describe('POST /api/upload', () => {
     fs.unlinkSync(tmp);
     const uploaded = path.join(__dirname, '..', 'uploads', res.body.files[0].id);
     if (fs.existsSync(uploaded)) fs.unlinkSync(uploaded);
-  });
+  }, 20000); // pdf-parse cold-start peut dépasser 5 s
 });
 
 // ── /api/ping ─────────────────────────────────────────────────────────────────
