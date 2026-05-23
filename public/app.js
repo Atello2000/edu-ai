@@ -577,6 +577,8 @@ floatNav.querySelectorAll('.fnav-btn').forEach(btn =>
 
 // ── STATS — rendering handled by StatsPanel React component ──────────────────
 const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
+const SRS_KEY        = 'jangalai-srs';
+function getSRSData() { return JSON.parse(localStorage.getItem(SRS_KEY) || '{}'); }
 
 function saveQuizStat(pct, correct, total) {
   const stats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
@@ -681,23 +683,6 @@ renderDashboard();
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function showLoader(text) { loaderText.textContent = text; loader.classList.remove('hidden'); }
 function hideLoader()     { loader.classList.add('hidden'); }
-
-// ── MODÈLE IA BADGE ──────────────────────────────────────────────────────────
-function setModelBadge(sectionId, modelName) {
-  if (!isLocal) return; // badge visible uniquement en local
-  const sec = document.getElementById(sectionId);
-  if (!sec) return;
-  let badge = sec.querySelector('.model-badge');
-  if (!badge) {
-    badge = document.createElement('span');
-    badge.className = 'model-badge';
-    const tag = sec.querySelector('.mono-tag, .panel-label');
-    if (tag) tag.parentNode.insertBefore(badge, tag.nextSibling);
-  }
-  const isGroq = modelName.toLowerCase().includes('groq') || modelName.toLowerCase().includes('llama');
-  badge.className = `model-badge ${isGroq ? 'model-groq' : 'model-claude'}`;
-  badge.textContent = modelName;
-}
 
 // ── QUOTA RESTANT ─────────────────────────────────────────────────────────────
 const quotaBar = document.getElementById('quota-bar');

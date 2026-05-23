@@ -85,6 +85,7 @@ export default function AppPage() {
   const [examMins, setExamMins] = useState(10);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user && !user.onboarding_done) setShowOnboarding(true);
     window.__editProfile = () => setShowOnboarding(true);
   }, [user]);

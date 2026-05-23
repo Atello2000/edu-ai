@@ -49,7 +49,7 @@ export function stripMd(text) {
     .replace(/`(.+?)`/g,       '$1')
     .replace(/\[(.+?)\]\(.+?\)/g, '$1')
     .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-    .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪]/g,  '')
+    .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
 }

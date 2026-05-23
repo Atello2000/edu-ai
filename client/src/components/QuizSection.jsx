@@ -27,6 +27,7 @@ export default function QuizSection({
   useEffect(() => {
     if (!examMode || submitted || questions.length === 0) return;
     const totalSec = (examMins || 10) * 60;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTimeLeft(totalSec);
     startTs.current = Date.now();
     intervalRef.current = setInterval(() => {

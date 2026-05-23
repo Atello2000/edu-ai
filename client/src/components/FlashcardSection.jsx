@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { getSRSStatus, getSRSLabel, cardHash } from '../hooks/useFlashcards.js';
+import { getSRSStatus, getSRSLabel } from '../hooks/useFlashcards.js';
 
 /* ── Carte individuelle ───────────────────────────────────────────────────── */
 function FlashCard({ card, cardIdx, state, onMark }) {
   const [flipped, setFlipped] = useState(false);
-  const key    = cardHash(card.front);
   const status = getSRSStatus(card.front);
   const label  = getSRSLabel(card.front);
 

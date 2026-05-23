@@ -101,7 +101,7 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
     fillRect(ML, y,  3, 11, col);
     const cleanTitle = section.title
       .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-      .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/g, '')
+      .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/gu, '')
       .trim();
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5);
     setRgb(col);

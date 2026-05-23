@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
@@ -56,7 +56,7 @@ export default function Landing() {
   useTheme();
   const navigate = useNavigate();
 
-  useEffect(() => { if (user) navigate('/app'); }, [user]);
+  useEffect(() => { if (user) navigate('/app'); }, [user, navigate]);
   useFadeUp();
   useCounterAnim();
 

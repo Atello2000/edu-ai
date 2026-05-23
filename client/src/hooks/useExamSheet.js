@@ -68,7 +68,7 @@ export function useExamSheet() {
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return { md, streaming, loading, error, generate, reset, restoreFrom };
 }

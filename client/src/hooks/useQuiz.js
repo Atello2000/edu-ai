@@ -87,7 +87,7 @@ export function useQuiz() {
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   function selectAnswer(questionIdx, letter) {
     setAnswers(prev => ({ ...prev, [questionIdx]: letter }));

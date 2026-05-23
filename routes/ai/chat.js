@@ -1,7 +1,6 @@
 const express = require('express');
 const router  = express.Router();
 const { aiChatStream }         = require('../../services/ai');
-const { extractText }          = require('../../services/text');
 const { checkQuota, LIMITS }   = require('../../middleware/quota');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
@@ -33,9 +32,10 @@ router.post('/chat', async (req, res) => {
     }
 
     // Fichier joint par l'étudiant (devoir, QCM…)
+    // Le texte est extrait lors de l'upload et stocké dans attachedFile.text
     let attachedContext = '';
     if (attachedFile) {
-      const text = await extractText(attachedFile.path, attachedFile.name);
+      const text = attachedFile.text || '';
       attachedContext = `\n\n=== DOCUMENT SOUMIS PAR L'ÉTUDIANT : ${attachedFile.name} ===\n${text.slice(0, 12000)}`;
     }
 

@@ -75,7 +75,7 @@ export default function ForYouSection({ onActivity }) {
       .then(r => r.json())
       .then(d => setActivityData(d))
       .catch(() => {});
-  }, [user?.id]);
+  }, [user?.id, user?.onboarding_done]);
 
   // Meilleur score pour un topic donné
   function getBestScore(topicName) {

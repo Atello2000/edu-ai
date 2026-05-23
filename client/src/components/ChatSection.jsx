@@ -10,7 +10,7 @@ const SUGGESTIONS = [
 const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
 
 /* ── Bulle de message ─────────────────────────────────────────────────────── */
-function ChatBubble({ msg, onCopy }) {
+function ChatBubble({ msg }) {
   const [copied, setCopied] = useState(false);
 
   if (msg.role === 'typing') {
@@ -108,6 +108,7 @@ export default function ChatSection({
 
   // Keep all chips active when files change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveFiles(new Set(files.map((_, i) => i)));
   }, [files]);
 

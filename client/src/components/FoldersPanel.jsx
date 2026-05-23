@@ -28,6 +28,7 @@ export default function FoldersPanel() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFolders();
     window.__refreshFolders = loadFolders;
     return () => { delete window.__refreshFolders; };

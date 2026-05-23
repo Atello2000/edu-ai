@@ -105,7 +105,7 @@ export function useSummarize() {
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return { results, streaming, loading, error, summarize, reset, restoreFrom };
 }

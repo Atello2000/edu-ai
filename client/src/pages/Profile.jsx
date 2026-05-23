@@ -18,6 +18,7 @@ export default function Profile() {
   const [pwdBusy, setPwdBusy]   = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) setNameVal(user.name);
     fetch('/api/quota').then(r => r.json()).then(d => {
       if (!d.unlimited) setQuota(d);

@@ -122,7 +122,7 @@ export function useChat() {
     } finally {
       setLoading(false);
     }
-  }, [history]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [history]);
 
   return {
     messages, history, loading,

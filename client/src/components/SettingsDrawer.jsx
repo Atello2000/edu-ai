@@ -28,6 +28,7 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       // Sync theme from DOM in case it changed outside
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTheme(document.documentElement.getAttribute('data-theme') || 'light');
     } else {
       document.body.style.overflow = '';

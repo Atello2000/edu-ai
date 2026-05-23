@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Logo from '../components/Logo';
@@ -9,15 +9,14 @@ export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState('login');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
+  const [error, setError] = useState(() => {
     const e = searchParams.get('error');
-    if (e === 'google_denied') setError('Connexion Google annulée.');
-    else if (e === 'invalid_token') setError('Lien de vérification invalide.');
-    else if (e === 'token_expired') setError('Lien expiré. Reconnectez-vous pour en recevoir un nouveau.');
-    else if (e) setError('Une erreur est survenue. Réessayez.');
-  }, []);
+    if (e === 'google_denied') return 'Connexion Google annulée.';
+    if (e === 'invalid_token') return 'Lien de vérification invalide.';
+    if (e === 'token_expired') return 'Lien expiré. Reconnectez-vous pour en recevoir un nouveau.';
+    if (e) return 'Une erreur est survenue. Réessayez.';
+    return '';
+  });
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
 

@@ -7,7 +7,6 @@ const CopyIcon     = () => <svg viewBox="0 0 16 16" width="12" height="12" fill=
 const DownloadIcon = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 3v7M5.5 8L8 10.5 10.5 8"/><path d="M3 13h10"/></svg>;
 const PdfIcon      = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="2" width="10" height="12" rx="1.5"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="6" y1="9" x2="10" y2="9"/><line x1="6" y1="12" x2="8" y2="12"/></svg>;
 const SpeakIcon    = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="2,5 6,5 10,2 10,14 6,11 2,11" fill="currentColor" stroke="none"/><path d="M12 5.5a4 4 0 0 1 0 5"/></svg>;
-const StopIcon     = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor"><rect x="3" y="3" width="10" height="10" rx="1.5"/></svg>;
 
 /* ── Carte de résumé en cours de streaming ────────────────────────────────── */
 function StreamingCard({ name, text }) {
@@ -42,26 +41,6 @@ function StreamingCard({ name, text }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* ── Section individuelle avec collapse/expand ────────────────────────────── */
-function SummarySection({ section }) {
-  const [collapsed, setCollapsed] = useState(false);
-  return (
-    <div className={`summary-section ${section.cls}${collapsed ? ' collapsed' : ''}`}>
-      <div className="summary-section-header" onClick={() => setCollapsed(c => !c)}>
-        <span className="section-icon">{section.icon}</span>
-        <span className="section-title">{section.title}</span>
-        <span className="section-chevron">▼</span>
-      </div>
-      <div
-        className="summary-section-body"
-        dangerouslySetInnerHTML={{
-          __html: window.marked?.parse(section.lines.join('\n').trim()) ?? section.lines.join('\n'),
-        }}
-      />
     </div>
   );
 }
