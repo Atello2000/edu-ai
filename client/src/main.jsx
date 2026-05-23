@@ -8,6 +8,13 @@ import './style.css';
 
 // ── PWA Service Worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
+  // Remember whether a SW was already controlling this page before we register.
+  // controllerchange fires both on first install (null → SW) and on updates
+  // (old SW → new SW). We only want to reload on updates so that a hard
+  // navigation to the app doesn't trigger a cascade of reloads caused by the
+  // first-install activate cycle hitting an old CDN edge node.
+  const hadController = !!navigator.serviceWorker.controller;
+
   navigator.serviceWorker.register('/sw.js').then(reg => {
     if (reg.waiting) applySwUpdate(reg.waiting);
     reg.addEventListener('updatefound', () => {
@@ -18,7 +25,11 @@ if ('serviceWorker' in navigator) {
       });
     });
   }).catch(() => {});
-  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) location.reload(); // SW update — reload to apply new assets
+    // else: first install — no reload needed, page already has fresh assets
+  });
 }
 
 function applySwUpdate(sw) {

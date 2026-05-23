@@ -22,12 +22,17 @@ self.addEventListener('message', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(async () => {
+      .then(keys => {
+        const stale = keys.filter(k => k !== CACHE);
+        return Promise.all(stale.map(k => caches.delete(k)))
+          .then(() => stale.length > 0); // true = this is an update, not first install
+      })
+      .then(async isUpdate => {
         await self.clients.claim();
-        // Force-reload all open windows so they pick up the new index.html.
-        // This recovers users who are stuck on a blank page due to a stale
-        // cached index.html pointing to old (now 404) hashed asset filenames.
+        // Only force-reload open windows when replacing a previous version.
+        // On first install there is no stale content — skipping the forced
+        // navigate prevents a reload that could land on an old CDN edge node.
+        if (!isUpdate) return;
         const openClients = await self.clients.matchAll({ type: 'window' });
         for (const client of openClients) {
           client.navigate(client.url);

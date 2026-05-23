@@ -142,8 +142,8 @@ export default function Admin() {
                     {p.provider || 'Inconnu'}
                   </span>
                   <span className="breakdown-val">
-                    {fmtTokens((p.input||0)+(p.output||0))}{' '}
-                    <span style={{fontWeight:400,color:'var(--muted)',fontSize:'.76rem'}}>(↑{fmtTokens(p.input||0)} ↓{fmtTokens(p.output||0)})</span>
+                    {fmtTokens(Number(p.input||0)+Number(p.output||0))}{' '}
+                    <span style={{fontWeight:400,color:'var(--muted)',fontSize:'.76rem'}}>(↑{fmtTokens(Number(p.input||0))} ↓{fmtTokens(Number(p.output||0))})</span>
                   </span>
                 </div>
               )) : <span style={{color:'var(--muted)',fontSize:'.82rem'}}>Aucune donnée</span>}
