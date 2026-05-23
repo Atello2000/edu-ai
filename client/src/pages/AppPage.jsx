@@ -51,7 +51,8 @@ export default function AppPage() {
 
   // ── Fiche d'examen ─────────────────────────────────────────────────────────
   const { md: examMd, streaming: examStreaming, loading: examLoading,
-          generate: generateExam, reset: resetExam } = useExamSheet();
+          generate: generateExam, reset: resetExam,
+          restoreFrom: restoreExamFrom } = useExamSheet();
 
   // ── Quiz ───────────────────────────────────────────────────────────────────
   const {
@@ -113,7 +114,7 @@ export default function AppPage() {
 
   // ── Bridges session restore (app.js → React) ──────────────────────────────
   useEffect(() => {
-    window._setExamSheetMd    = md  => { /* trigger React state via resetExam+generate is not viable; use direct setState via ref */ };
+    window._setExamSheetMd    = md   => restoreExamFrom(md);
     window._setQuizData       = data => restoreQuizFrom(data);
     window._setFlashcardsData = data => restoreFcFrom(data);
     return () => {
@@ -121,7 +122,7 @@ export default function AppPage() {
       delete window._setQuizData;
       delete window._setFlashcardsData;
     };
-  }, [restoreQuizFrom, restoreFcFrom]);
+  }, [restoreExamFrom, restoreQuizFrom, restoreFcFrom]);
 
   // ── Quand upload réussit ───────────────────────────────────────────────────
   const handleUploaded = useCallback((files) => {

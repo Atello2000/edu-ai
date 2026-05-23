@@ -17,7 +17,8 @@ export function useExamSheet() {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
 
-  function reset() { setMd(''); setStreaming(''); setError(null); }
+  function reset()         { setMd(''); setStreaming(''); setError(null); }
+  function restoreFrom(md) { setMd(md); setStreaming(''); setError(null); }
 
   const generate = useCallback(async (files) => {
     if (!files.length) return;
@@ -68,5 +69,5 @@ export function useExamSheet() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { md, streaming, loading, error, generate, reset };
+  return { md, streaming, loading, error, generate, reset, restoreFrom };
 }
