@@ -87,12 +87,6 @@ export default function Landing() {
         </div>
       </section>
 
-      <div className="stats-bar">
-        <div className="stat-item fade-up"><div className="stat-value" data-count="4800" data-suffix="+">0</div><div className="stat-label">Étudiants actifs</div></div>
-        <div className="stat-item fade-up fade-up-delay-1"><div className="stat-value" data-count="120000" data-suffix="+">0</div><div className="stat-label">Flashcards créées</div></div>
-        <div className="stat-item fade-up fade-up-delay-2"><div className="stat-value" data-count="98" data-suffix="%">0</div><div className="stat-label">Satisfaction utilisateurs</div></div>
-        <div className="stat-item fade-up fade-up-delay-3"><div className="stat-value" data-count="35000" data-suffix="+">0</div><div className="stat-label">Quiz générés</div></div>
-      </div>
 
       <div className="mockup-section">
         <div className="section-label fade-up">Aperçu de l'application</div>

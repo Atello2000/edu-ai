@@ -42,6 +42,10 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum).' });
 
   try {
+    const { n: userCount } = await db.prepare('SELECT COUNT(*) AS n FROM users').get();
+    if (userCount >= 12)
+      return res.status(403).json({ error: 'L\'accès est limité pendant la bêta. Revenez bientôt !' });
+
     const hash        = await bcrypt.hash(password, 12);
     const verifyToken = genToken();
     const verifyExp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
@@ -262,6 +266,10 @@ router.get('/google/callback', async (req, res) => {
         await db.prepare('UPDATE users SET google_id = ?, email_verified = 1 WHERE id = ?').run(profile.id, existing.id);
         user = await db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
       } else {
+        // Beta user limit — new Google accounts count against the cap
+        const { n: userCount } = await db.prepare('SELECT COUNT(*) AS n FROM users').get();
+        if (userCount >= 12) return res.redirect(`${APP_URL}/login?error=beta_full`);
+
         const r = await db.prepare(
           'INSERT INTO users (email, password, name, google_id, email_verified) VALUES (?, ?, ?, ?, 1)'
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id);

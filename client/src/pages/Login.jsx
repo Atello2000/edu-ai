@@ -11,6 +11,7 @@ export default function Login() {
   const [tab, setTab] = useState('login');
   const [error, setError] = useState(() => {
     const e = searchParams.get('error');
+    if (e === 'beta_full')    return 'L\'accès est limité pendant la bêta. Revenez bientôt !';
     if (e === 'google_denied') return 'Connexion Google annulée.';
     if (e === 'invalid_token') return 'Lien de vérification invalide.';
     if (e === 'token_expired') return 'Lien expiré. Reconnectez-vous pour en recevoir un nouveau.';

@@ -4,9 +4,9 @@ const { prepare } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 
 function requireAdmin(req, res, next) {
-  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase();
+  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
   if (!adminEmail) return res.status(403).json({ error: 'Admin non configuré.' });
-  if (req.user.email.toLowerCase() !== adminEmail)
+  if (req.user.email.toLowerCase().trim() !== adminEmail)
     return res.status(403).json({ error: 'Accès refusé.' });
   next();
 }

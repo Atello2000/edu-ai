@@ -27,30 +27,45 @@ export default function Admin() {
   const [users, setUsers]   = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [accessError, setAccessError] = useState('');
 
   useEffect(() => {
     (async () => {
-      const check = await fetch('/api/admin/stats');
-      if (check.status === 403) { navigate('/app'); return; }
-      const [sRes, uRes, tRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/users'),
-        fetch('/api/admin/tokens'),
-      ]);
-      const [s, u, t] = await Promise.all([sRes.json(), uRes.json(), tRes.json()]);
-      setStats(s);
-      setUsers(u.users || []);
-      setTokens(t);
-      setLoading(false);
+      try {
+        const check = await fetch('/api/admin/stats', { credentials: 'include' });
+        if (!check.ok) {
+          const body = await check.json().catch(() => ({}));
+          setAccessError(`Erreur ${check.status} — ${body.error || 'Accès refusé'}`);
+          setLoading(false);
+          return;
+        }
+        const [sRes, uRes, tRes] = await Promise.all([
+          fetch('/api/admin/stats',  { credentials: 'include' }),
+          fetch('/api/admin/users',  { credentials: 'include' }),
+          fetch('/api/admin/tokens', { credentials: 'include' }),
+        ]);
+        const [s, u, t] = await Promise.all([sRes.json(), uRes.json(), tRes.json()]);
+        setStats(s);
+        setUsers(u.users || []);
+        setTokens(t);
+        setLoading(false);
+      } catch (err) {
+        setAccessError('Erreur réseau : ' + err.message);
+        setLoading(false);
+      }
     })();
   }, [navigate]);
 
   async function setPlan(id, plan) {
     await fetch(`/api/admin/users/${id}/plan`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan }),
     });
-    const [sRes, uRes] = await Promise.all([fetch('/api/admin/stats'), fetch('/api/admin/users')]);
+    const [sRes, uRes] = await Promise.all([
+      fetch('/api/admin/stats', { credentials: 'include' }),
+      fetch('/api/admin/users', { credentials: 'include' }),
+    ]);
     const [s, u] = await Promise.all([sRes.json(), uRes.json()]);
     setStats(s);
     setUsers(u.users || []);
@@ -58,8 +73,11 @@ export default function Admin() {
 
   async function deleteUser(id, name) {
     if (!confirm(`Supprimer le compte de "${name}" ? Cette action est irréversible.`)) return;
-    await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-    const [sRes, uRes] = await Promise.all([fetch('/api/admin/stats'), fetch('/api/admin/users')]);
+    await fetch(`/api/admin/users/${id}`, { method: 'DELETE', credentials: 'include' });
+    const [sRes, uRes] = await Promise.all([
+      fetch('/api/admin/stats', { credentials: 'include' }),
+      fetch('/api/admin/users', { credentials: 'include' }),
+    ]);
     const [s, u] = await Promise.all([sRes.json(), uRes.json()]);
     setStats(s);
     setUsers(u.users || []);
@@ -72,6 +90,13 @@ export default function Admin() {
   );
 
   if (loading) return <div className="admin-loading">Chargement…</div>;
+  if (accessError) return (
+    <div className="admin-loading" style={{flexDirection:'column',gap:'1rem'}}>
+      <strong style={{color:'var(--red,#e55)'}}>Accès bloqué</strong>
+      <code style={{background:'var(--bg)',padding:'.5rem 1rem',borderRadius:8,fontSize:'.85rem'}}>{accessError}</code>
+      <a href="/app" style={{color:'var(--blue)',fontSize:'.85rem'}}>← Retour à l'app</a>
+    </div>
+  );
 
   return (
     <div className="admin-page">
