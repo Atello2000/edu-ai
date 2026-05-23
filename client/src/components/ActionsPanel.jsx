@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import QuotaBar from './QuotaBar.jsx';
 
+const PREFS_KEY = 'jangalai-prefs';
+function getPrefs() { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
+
 export default function ActionsPanel({
   hasFiles,
   uploadedFiles = [],
@@ -94,7 +97,23 @@ export default function ActionsPanel({
     finally { loader?.classList.add('hidden'); }
   }
 
-  const [examModeOn, setExamModeOn] = useState(false);
+  const [examModeOn,    setExamModeOn]    = useState(false);
+  const [quizCount,     setQuizCount]     = useState(() => getPrefs().quizCount     || 5);
+  const [quizDifficulty,setQuizDifficulty]= useState(() => getPrefs().quizDifficulty|| 'moyen');
+  const [fcCount,       setFcCount]       = useState(() => getPrefs().fcCount       || 10);
+
+  // Bridge : SettingsDrawer appelle window.__applyPrefs() après un changement de prefs
+  useEffect(() => {
+    window.__applyPrefs = () => {
+      const p = getPrefs();
+      if (p.quizCount)      setQuizCount(p.quizCount);
+      if (p.quizDifficulty) setQuizDifficulty(p.quizDifficulty);
+      if (p.fcCount)        setFcCount(p.fcCount);
+      if (p.reduceMotion)   document.documentElement.classList.add('reduce-motion');
+      else                  document.documentElement.classList.remove('reduce-motion');
+    };
+    return () => { delete window.__applyPrefs; };
+  }, []);
 
   const allSelected = uploadedFiles.length > 0 && selectedIds.size === uploadedFiles.length;
 
@@ -198,8 +217,10 @@ export default function ActionsPanel({
           <div className="act-card-body">
             <strong>Quiz QCM</strong>
             <label>
-              <input type="number" id="quiz-count" defaultValue="5" min="1" max="20" /> questions ·{' '}
-              <select id="quiz-difficulty">
+              <input type="number" id="quiz-count" value={quizCount} min="1" max="20"
+                onChange={e => setQuizCount(parseInt(e.target.value) || 5)} /> questions ·{' '}
+              <select id="quiz-difficulty" value={quizDifficulty}
+                onChange={e => setQuizDifficulty(e.target.value)}>
                 <option value="moyen">Moyen</option>
                 <option value="facile">Facile</option>
                 <option value="difficile">Difficile</option>
@@ -231,7 +252,8 @@ export default function ActionsPanel({
           </div>
           <div className="act-card-body">
             <strong>Flashcards</strong>
-            <label><input type="number" id="fc-count" defaultValue="10" min="3" max="30" /> cartes</label>
+            <label><input type="number" id="fc-count" value={fcCount} min="3" max="30"
+              onChange={e => setFcCount(parseInt(e.target.value) || 10)} /> cartes</label>
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
             {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}

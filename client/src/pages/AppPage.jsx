@@ -101,6 +101,26 @@ export default function AppPage() {
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
+  // ── Compteur utilisateurs en ligne (local uniquement) ────────────────────
+  const [onlineCount, setOnlineCount] = useState(null);
+  useEffect(() => {
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (!isLocal) return;
+    if (!sessionStorage.getItem('edu-client-id'))
+      sessionStorage.setItem('edu-client-id', crypto.randomUUID());
+    const clientId = sessionStorage.getItem('edu-client-id');
+    async function ping() {
+      try {
+        const res  = await fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId }) });
+        const data = await res.json();
+        setOnlineCount(data.online);
+      } catch {}
+    }
+    ping();
+    const id = setInterval(ping, 30000);
+    return () => clearInterval(id);
+  }, []);
+
   // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
   const hasFiles = uploadedFiles.some(f => f.text || f.path);
 
@@ -301,6 +321,11 @@ export default function AppPage() {
           <Logo />
         </div>
         <div className="header-right">
+          {onlineCount !== null && (
+            <span id="online-counter" className="online-counter">
+              <span className="online-dot" /><span id="online-count">{onlineCount}</span> en ligne
+            </span>
+          )}
           <UserMenu user={user} />
           <button className="settings-btn" id="settings-btn" title="Paramètres" onClick={() => setShowSettings(true)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -539,34 +564,6 @@ export default function AppPage() {
       {/* Save to Folder Modal */}
       <SaveFolderModal />
 
-      {/* Onboarding Modal */}
-      <div className="modal-overlay hidden" id="onboarding-modal">
-        <div className="modal-box">
-          <div className="modal-header">
-            <h2>Bienvenue sur <Logo size={20} /> 👋</h2>
-            <p>Voici comment tirer le meilleur parti de la plateforme</p>
-          </div>
-          <div className="onboarding-steps">
-            <div className="ob-step">
-              <div className="ob-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-              <div><strong>1. Chargez vos cours</strong><br /><span>PDF, PowerPoint ou Word — jusqu&apos;à 20 Mo</span></div>
-            </div>
-            <div className="ob-step">
-              <div className="ob-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-              <div><strong>2. Choisissez une action</strong><br /><span>Résumé, Quiz, Flashcards ou Chat avec le cours</span></div>
-            </div>
-            <div className="ob-step">
-              <div className="ob-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 5.5-4 7.5S12 20 12 22c0-2-1-2.5-3-4.5S5 12 5 9a7 7 0 0 1 7-7z"/></svg></div>
-              <div><strong>3. Révisez intelligemment</strong><br /><span>Les flashcards utilisent la révision espacée (SM-2)</span></div>
-            </div>
-            <div className="ob-step">
-              <div className="ob-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6" rx="1"/><rect x="12" y="7" width="3" height="10" rx="1"/><rect x="17" y="4" width="3" height="13" rx="1"/></svg></div>
-              <div><strong>4. Suivez votre progression</strong><br /><span>Consultez vos stats depuis le bouton en haut à gauche</span></div>
-            </div>
-          </div>
-          <button className="act-btn blue full" id="onboarding-close">C&apos;est parti !</button>
-        </div>
-      </div>
     </>
   );
 }

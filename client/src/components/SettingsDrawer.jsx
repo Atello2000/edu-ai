@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
+import { usePush } from '../hooks/usePush.js';
 import Logo from './Logo.jsx';
 
 const PREFS_KEY      = 'jangalai-prefs';
@@ -17,6 +18,7 @@ function savePrefs(patch) {
 
 export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
   const { user } = useAuth();
+  const { subscribed: pushSubscribed, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePush();
   const [theme,        setTheme]        = useState(() => document.documentElement.getAttribute('data-theme') || 'light');
   const [reduceMotion, setReduceMotion] = useState(() => !!getPrefs().reduceMotion);
   const [lang,         setLang]         = useState(() => getPrefs().lang || 'fr');
@@ -167,6 +169,31 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
             <div className="settings-danger-row">
               <div className="settings-row-label"><span>Tutoriel d'accueil</span><small>Réafficher le guide de démarrage</small></div>
               <button className="settings-neutral-btn" onClick={resetOnboarding}>Réafficher</button>
+            </div>
+          </section>
+
+          <section className="settings-section">
+            <h3 className="settings-section-title">Notifications</h3>
+            <div className="settings-row">
+              <div className="settings-row-label">
+                <span>Rappels de révision</span>
+                <small>Notifie quand des flashcards sont à réviser</small>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={pushSubscribed}
+                  onChange={async e => {
+                    if (e.target.checked) {
+                      const ok = await pushSubscribe();
+                      if (!ok) alert('Notifications refusées ou non disponibles sur ce navigateur.');
+                    } else {
+                      await pushUnsubscribe();
+                    }
+                  }}
+                />
+                <span className="toggle-track"></span>
+              </label>
             </div>
           </section>
 
