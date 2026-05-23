@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function FloatNav({ hasFiles, activePanel, onNavigate }) {
   const [generatedSections, setGeneratedSections] = useState(new Set());

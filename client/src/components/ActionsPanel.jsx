@@ -22,27 +22,33 @@ export default function ActionsPanel({
   onQuiz,
   onFlashcards,
   onOpenChat,
+  onPrepareSession,
+  prepLoading,
+  sessionGoal,
 }) {
   // ── Sélection de fichiers (React-owned) ───────────────────────────────────
-  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [selectedIds, setSelectedIds] = useState(null);
 
   // Refs stables pour le bridge (évite une re-registration à chaque rendu)
   const uploadedFilesRef = useRef(uploadedFiles);
-  uploadedFilesRef.current = uploadedFiles;
   const selectedIdsRef   = useRef(selectedIds);
-  selectedIdsRef.current = selectedIds;
 
   // Quand les fichiers changent (nouvel upload ou restore), tout sélectionner
   useEffect(() => {
-    setSelectedIds(new Set(uploadedFiles.map(f => f.id)));
+    uploadedFilesRef.current = uploadedFiles;
   }, [uploadedFiles]);
+
+  useEffect(() => {
+    selectedIdsRef.current = selectedIds;
+  }, [selectedIds]);
 
   // Bridge pour les hooks AI (résumé, quiz…) qui ont besoin des fichiers sélectionnés
   useEffect(() => {
     window.__getSelectedFiles = () => {
       const files = uploadedFilesRef.current;
       const ids   = selectedIdsRef.current;
-      if (!ids.size || ids.size === files.length) return files;
+      if (ids === null || ids.size === files.length) return files;
+      if (!ids.size) return [];
       return files.filter(f => ids.has(f.id));
     };
     return () => { delete window.__getSelectedFiles; };
@@ -115,11 +121,13 @@ export default function ActionsPanel({
     return () => { delete window.__applyPrefs; };
   }, []);
 
-  const allSelected = uploadedFiles.length > 0 && selectedIds.size === uploadedFiles.length;
+  const allSelected = uploadedFiles.length > 0 && (
+    selectedIds === null || selectedIds.size === uploadedFiles.length
+  );
 
   function toggleOne(id, checked) {
     setSelectedIds(prev => {
-      const next = new Set(prev);
+      const next = new Set(prev ?? uploadedFiles.map(f => f.id));
       if (checked) next.add(id); else next.delete(id);
       return next;
     });
@@ -158,7 +166,7 @@ export default function ActionsPanel({
               id="select-all"
               checked={allSelected}
               onChange={e => setSelectedIds(
-                e.target.checked ? new Set(uploadedFiles.map(f => f.id)) : new Set()
+                e.target.checked ? null : new Set()
               )}
             />
             Tout sélectionner
@@ -170,7 +178,7 @@ export default function ActionsPanel({
               <input
                 type="checkbox"
                 value={f.id}
-                checked={selectedIds.has(f.id)}
+                checked={selectedIds === null || selectedIds.has(f.id)}
                 onChange={e => toggleOne(f.id, e.target.checked)}
               />
               <span className="file-ext">{f.name.split('.').pop().toUpperCase()}</span>
@@ -182,6 +190,29 @@ export default function ActionsPanel({
 
       {/* Cartes d'action */}
       <div className="action-trio">
+
+        {/* Préparer ma session */}
+        <div className="act-card act-card-wide act-card-prepare" data-color="blue">
+          <div className="act-card-icon blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Préparer ma session</strong>
+            <span>
+              Résumé + quiz + flashcards en une fois
+              {sessionGoal && <> · <span className="prep-goal-tag">{
+                sessionGoal === 'exam' ? 'Examen demain' :
+                sessionGoal === 'understand' ? 'Comprendre' :
+                sessionGoal === 'memorize' ? 'Mémoriser' : "S'entraîner"
+              }</span></>}
+            </span>
+          </div>
+          <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
+            {prepLoading ? 'En cours…' : 'Lancer'}
+          </button>
+        </div>
 
         {/* Résumer */}
         <div className="act-card" data-color="purple">

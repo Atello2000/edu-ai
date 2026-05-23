@@ -76,10 +76,10 @@ export default function Landing() {
       </nav>
 
       <section className="hero">
-        <div className="hero-badge fade-up">IA personnalisée selon votre niveau et votre spécialité</div>
+        <div className="hero-badge fade-up">Votre coach de révision avant examen, propulsé par l'IA</div>
         <h1 className="fade-up fade-up-delay-1">Révisez plus vite,<br />apprenez <em>différemment</em></h1>
         <p className="fade-up fade-up-delay-2">
-          Définissez votre profil une seule fois — niveau, domaine, spécialité. L'IA génère résumés, quiz et flashcards adaptés à votre filière, que ce soit depuis vos cours ou directement sur n'importe quel sujet.
+          Chargez votre cours, choisissez votre objectif — examen demain, comprendre, mémoriser, s'entraîner. En un clic, Jangalai génère résumé, quiz, flashcards et carte mentale adaptés à votre filière.
         </p>
         <div className="hero-btns fade-up fade-up-delay-3">
           <Link to="/login" className="btn-hero">Commencer gratuitement →</Link>
@@ -118,6 +118,7 @@ export default function Landing() {
                 <div className="mockup-tab active">Flashcards</div>
                 <div className="mockup-tab">Chat</div>
                 <div className="mockup-tab">Fiche exam</div>
+                <div className="mockup-tab">Carte mentale</div>
               </div>
               <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.75rem' }}>Carte 7 sur 24 · Biochimie S3</div>
               <div className="mockup-card-preview">
@@ -145,8 +146,8 @@ export default function Landing() {
         <h2 className="fade-up fade-up-delay-1">Trois étapes vers la <em>maîtrise</em></h2>
         <div className="steps-grid">
           <div className="step-card fade-up fade-up-delay-1"><div className="step-number">01</div><div className="step-icon">🎯</div><h3>Configurez votre profil</h3><p>Indiquez votre niveau d'études, vos domaines et votre spécialité. En 60 secondes, Jangalai connaît votre filière et adapte chaque contenu généré à votre contexte.</p></div>
-          <div className="step-card fade-up fade-up-delay-2"><div className="step-number">02</div><div className="step-icon">⚡</div><h3>Importez ou choisissez un sujet</h3><p>Glissez un PDF, PPT ou Word — ou choisissez directement un sujet dans votre espace "Pour vous" sans charger de fichier. L'IA génère résumé, quiz, flashcards et fiche d'examen instantanément.</p></div>
-          <div className="step-card fade-up fade-up-delay-3"><div className="step-number">03</div><div className="step-icon">🔥</div><h3>Révisez et progressez</h3><p>L'algorithme SM-2 planifie vos révisions au moment optimal. Votre streak quotidien, vos scores et vos sessions sont suivis pour vous garder motivé jusqu'aux examens.</p></div>
+          <div className="step-card fade-up fade-up-delay-2"><div className="step-number">02</div><div className="step-icon">⚡</div><h3>Définissez votre objectif</h3><p>Examen demain ? Besoin de mémoriser ? Après chaque chargement, indiquez votre objectif. Jangalai adapte la difficulté, le nombre de questions et le type de contenu — ou lancez « Préparer ma session » pour tout générer en un seul clic.</p></div>
+          <div className="step-card fade-up fade-up-delay-3"><div className="step-number">03</div><div className="step-icon">🔥</div><h3>Révisez, corrigez, progressez</h3><p>L'algorithme SM-2 planifie vos flashcards au bon moment. Après chaque quiz, révisez vos erreurs en un clic ou convertissez-les en flashcards. Votre streak quotidien vous garde motivé jusqu'aux examens.</p></div>
         </div>
       </div>
 
@@ -154,14 +155,16 @@ export default function Landing() {
         <div className="section-label fade-up">Fonctionnalités</div>
         <h2 className="fade-up fade-up-delay-1">Tout ce dont vous avez besoin pour <em>réussir</em></h2>
         <div className="features-grid">
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon blue">🎯</div><h3>IA personnalisée</h3><p>Renseignez votre niveau, domaine et spécialité à l'inscription. Chaque résumé, quiz et flashcard est ensuite calibré à votre filière — vocabulaire, exemples, niveau de détail.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon purple">✨</div><h3>Pour vous — sans fichier</h3><p>Votre espace personnalisé suggère des sujets clés de votre domaine. Générez des flashcards ou un quiz en un clic, sans rien charger.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon blue">⚡</div><h3>Préparer ma session</h3><p>Un seul bouton génère simultanément résumé, quiz et flashcards — adaptés à l'objectif que vous avez choisi. Idéal la veille d'un examen.</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon purple">🎯</div><h3>Objectif de session</h3><p>Examen demain, comprendre, mémoriser ou s'entraîner : Jangalai adapte la difficulté, le nombre de questions et le volume de cartes à votre besoin du moment.</p></div>
           <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon teal">📄</div><h3>Résumés structurés</h3><p>5 sections claires en secondes : objectifs, points clés, résumé détaillé, concepts importants et à retenir.</p></div>
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold">❓</div><h3>Quiz QCM adaptatif</h3><p>Questions générées depuis vos cours ou par sujet, 3 niveaux de difficulté, mode examen avec chronomètre et score détaillé.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon blue">🃏</div><h3>Flashcards intelligentes</h3><p>Algorithme SM-2 — vous révisez ce que vous ne maîtrisez pas encore, exactement au bon moment.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold">❓</div><h3>Quiz QCM & correction</h3><p>3 niveaux de difficulté, mode examen avec chronomètre. Après le score, révisez vos erreurs en un clic ou convertissez-les en flashcards.</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon blue">🃏</div><h3>Flashcards intelligentes</h3><p>Algorithme SM-2 — vous révisez ce que vous ne maîtrisez pas encore, exactement au bon moment. Notifications de rappel intégrées.</p></div>
           <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon purple">💬</div><h3>Chat avec le cours</h3><p>Posez n'importe quelle question sur vos fichiers. Joignez une image ou un devoir pour le faire corriger par l'IA.</p></div>
           <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold">📋</div><h3>Fiche d'examen</h3><p>Définitions, pièges à éviter, tableaux comparatifs et questions probables générés en un clic depuis vos cours.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon teal">🔥</div><h3>Suivi & streak quotidien</h3><p>Historique des révisions, scores par sujet, streak de jours consécutifs. Restez motivé avec une progression visible chaque jour.</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon teal">🗺️</div><h3>Carte mentale</h3><p>Visualisez la structure du cours sous forme d'arbre interactif. Zoomez, naviguez et repérez les connexions entre concepts en un coup d'œil.</p></div>
+          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon blue">✨</div><h3>Pour vous — sans fichier</h3><p>Votre espace personnalisé suggère des sujets clés de votre domaine. Générez des flashcards ou un quiz en un clic, sans rien charger.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon purple">🔥</div><h3>Suivi & streak quotidien</h3><p>Historique des révisions, scores par sujet, streak de jours consécutifs. Restez motivé avec une progression visible chaque jour.</p></div>
         </div>
       </div>
 
@@ -193,50 +196,61 @@ export default function Landing() {
         <div className="pricing-inner">
           <div className="section-label fade-up">Tarifs</div>
           <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '.75rem' }}>Simple et <em>transparent</em></h2>
-          <p className="fade-up fade-up-delay-2" style={{ color: 'var(--muted)', fontSize: '.95rem', marginBottom: '2.5rem' }}>Commencez gratuitement, passez à Pro quand vous en avez besoin.</p>
+          <p className="fade-up fade-up-delay-2" style={{ color: 'var(--muted)', fontSize: '.95rem', marginBottom: '2.5rem' }}>Commencez gratuitement. Les offres Pro et Max arrivent bientôt.</p>
           <div className="pricing-grid">
             <div className="price-card fade-up fade-up-delay-1">
               <div className="plan-name">Gratuit</div>
               <div className="plan-price">0€ <span>/ mois</span></div>
               <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
               <div className="plan-features">
-                <div className="plan-feat">3 résumés / jour</div>
-                <div className="plan-feat">5 quiz / jour</div>
-                <div className="plan-feat">5 flashcards / jour</div>
-                <div className="plan-feat">5 messages chat / jour</div>
+                <div className="plan-feat">5 résumés / jour</div>
+                <div className="plan-feat">8 quiz / jour</div>
+                <div className="plan-feat">8 flashcards / jour</div>
+                <div className="plan-feat">3 messages chat / jour</div>
+                <div className="plan-feat">Préparer ma session inclus</div>
+                <div className="plan-feat">Carte mentale & objectif de session</div>
                 <div className="plan-feat">PDF, PPT, DOCX</div>
               </div>
               <Link to="/login"><button className="plan-cta">Commencer gratuitement</button></Link>
             </div>
-            <div className="price-card featured fade-up fade-up-delay-2">
-              <div className="price-badge">Le plus populaire</div>
+            <div className="price-card featured locked fade-up fade-up-delay-2">
+              <div className="price-badge">Bientôt disponible</div>
               <div className="plan-name">Pro</div>
               <div className="plan-price">4€ <span>/ mois</span></div>
               <div className="plan-desc">Pour les étudiants en période d'examen</div>
               <div className="plan-features">
-                <div className="plan-feat">15 résumés / jour</div>
-                <div className="plan-feat">30 quiz / jour</div>
-                <div className="plan-feat">30 flashcards / jour</div>
+                <div className="plan-feat">20 résumés / jour</div>
+                <div className="plan-feat">40 quiz / jour</div>
+                <div className="plan-feat">40 flashcards / jour</div>
                 <div className="plan-feat">20 messages chat / jour</div>
+                <div className="plan-feat">Préparer ma session inclus</div>
+                <div className="plan-feat">Carte mentale & objectif de session</div>
                 <div className="plan-feat">Traitement prioritaire</div>
                 <div className="plan-feat">Historique illimité</div>
               </div>
-              <Link to="/login"><button className="plan-cta">Choisir Pro</button></Link>
+              <button className="plan-cta plan-cta-locked" type="button" disabled title="Les paiements ne sont pas encore disponibles">
+                Paiement bientôt disponible
+              </button>
             </div>
-            <div className="price-card fade-up fade-up-delay-3">
+            <div className="price-card locked fade-up fade-up-delay-3">
+              <div className="price-badge muted">Bientôt disponible</div>
               <div className="plan-name">Max</div>
               <div className="plan-price">9€ <span>/ mois</span></div>
               <div className="plan-desc">Pour une révision intensive sans limites</div>
               <div className="plan-features">
-                <div className="plan-feat">50 résumés / jour</div>
-                <div className="plan-feat">100 quiz / jour</div>
-                <div className="plan-feat">100 flashcards / jour</div>
+                <div className="plan-feat">Résumés illimités</div>
+                <div className="plan-feat">Quiz illimités</div>
+                <div className="plan-feat">Flashcards illimitées</div>
                 <div className="plan-feat">60 messages chat / jour</div>
+                <div className="plan-feat">Préparer ma session illimité</div>
+                <div className="plan-feat">Carte mentale & objectif de session</div>
                 <div className="plan-feat">Traitement prioritaire</div>
                 <div className="plan-feat">Historique illimité</div>
                 <div className="plan-feat">Export PDF des fiches</div>
               </div>
-              <Link to="/login"><button className="plan-cta">Choisir Max</button></Link>
+              <button className="plan-cta plan-cta-locked" type="button" disabled title="Les paiements ne sont pas encore disponibles">
+                Paiement bientôt disponible
+              </button>
             </div>
           </div>
         </div>
@@ -246,21 +260,23 @@ export default function Landing() {
         <div className="section-label fade-up">FAQ</div>
         <h2 className="fade-up fade-up-delay-1">Questions <em>fréquentes</em></h2>
         <div className="faq fade-up fade-up-delay-2">
-          <FaqItem q="Comment l'IA s'adapte-t-elle à mon profil ?" a="Lors de l'inscription, vous renseignez votre niveau (Licence, Master, Doctorat…), vos domaines d'études et votre spécialité. Ces informations sont injectées dans chaque prompt envoyé à l'IA — vocabulaire, exemples, niveau de détail et complexité des questions sont calibrés en conséquence." />
-          <FaqItem q="Puis-je réviser sans charger de fichier ?" a="Oui. La section « Pour vous » de votre tableau de bord propose des sujets clés basés sur vos domaines et votre spécialité. En un clic, vous générez des flashcards ou un quiz sur n'importe quel sujet, sans document à importer." />
-          <FaqItem q="Quels types de fichiers sont acceptés ?" a="PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers simultanément pour générer un résumé ou quiz multi-documents." />
-          <FaqItem q="Comment fonctionne la révision espacée ?" a="L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées. Les cartes maîtrisées reviennent moins souvent, les difficiles plus fréquemment. Votre streak quotidien vous encourage à maintenir le rythme." />
-          <FaqItem q="Mes cours sont-ils stockés sur vos serveurs ?" a="Le contenu textuel de vos cours est conservé sur votre compte lorsque vous les classez dans une matière, ce qui vous permet de les réutiliser sans les recharger. Les fichiers originaux (PDF, PPT) ne sont pas conservés." />
-          <FaqItem q="La qualité des résumés dépend-elle du cours chargé ?" a="Oui — plus le document est structuré (titres, sections claires), meilleurs sont les résultats. Jangalai gère très bien les PDF issus de diaporamas, les polys et les documents Word mis en page." />
-          <FaqItem q="Puis-je annuler mon abonnement ?" a="Oui, à tout moment depuis votre compte. Votre profil repasse automatiquement en plan Gratuit à la fin de la période payée, sans frais cachés." />
+          <FaqItem q="Qu'est-ce que « Préparer ma session » ?" a="C'est le moyen le plus rapide de démarrer une révision complète. En un clic, Jangalai génère simultanément un résumé, un quiz et des flashcards à partir de vos cours — le tout adapté à l'objectif que vous avez défini (examen demain, comprendre, mémoriser ou s'entraîner). Parfait la veille d'une évaluation." />
+          <FaqItem q="Comment fonctionne l'objectif de session ?" a="Juste après avoir chargé votre cours, Jangalai vous demande votre objectif du moment. « Examen demain » génère un quiz difficile court et des cartes essentielles. « Mémoriser » maximise le nombre de flashcards. « S'entraîner » crée beaucoup de questions variées. Vous pouvez toujours passer cette étape et régler les paramètres manuellement." />
+          <FaqItem q="Comment fonctionne « Revoir mes erreurs » ?" a="Après avoir soumis un quiz, le score affiche un bouton « Revoir les erreurs » qui relance un quiz avec uniquement les questions manquées. Vous pouvez aussi cliquer « Erreurs → Flashcards » pour transformer ces questions en cartes de révision instantanément, sans appel à l'IA." />
+          <FaqItem q="Comment l'IA s'adapte-t-elle à mon profil ?" a="Lors de l'inscription, vous renseignez votre niveau (Licence, Master, Doctorat…) et votre domaine. Ces informations sont injectées dans chaque génération — vocabulaire, exemples, niveau de détail et complexité des questions sont calibrés à votre filière. L'objectif de session affine encore davantage le contenu généré." />
+          <FaqItem q="Puis-je réviser sans charger de fichier ?" a="Oui. La section « Pour vous » de votre tableau de bord propose des sujets clés de votre domaine. En un clic, vous générez des flashcards ou un quiz sur n'importe quel sujet, sans rien importer." />
+          <FaqItem q="Quels types de fichiers sont acceptés ?" a="PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers simultanément pour un résumé ou quiz multi-documents." />
+          <FaqItem q="Comment fonctionne la révision espacée ?" a="L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées. Les cartes maîtrisées reviennent moins souvent, les difficiles plus fréquemment. Des notifications push vous rappellent quand des cartes sont à réviser." />
+          <FaqItem q="Mes cours sont-ils stockés sur vos serveurs ?" a="Le contenu textuel est conservé lorsque vous classez un cours dans une matière, ce qui vous permet de le réutiliser sans le recharger. Les fichiers originaux (PDF, PPT) ne sont pas conservés." />
+          <FaqItem q="Les plans payants sont-ils disponibles ?" a="Pas encore. Vous pouvez utiliser le plan Gratuit dès maintenant. Les offres Pro et Max seront activées quand le paiement sera configuré." />
         </div>
       </div>
 
       <div className="cta-section">
-        <h2 className="fade-up">Une IA qui vous <em>connaît</em></h2>
-        <p className="fade-up fade-up-delay-1">Profil personnalisé, suggestions intelligentes, streak quotidien. Rejoignez des milliers d'étudiants qui révisent plus efficacement.</p>
+        <h2 className="fade-up">Votre coach de révision,<br /><em>toujours prêt</em></h2>
+        <p className="fade-up fade-up-delay-1">Objectif de session, "Préparer ma session", révision des erreurs, carte mentale, flashcards SRS. Tout ce dont vous avez besoin avant un examen, en un seul endroit.</p>
         <Link to="/login" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>Créer mon compte gratuit →</Link>
-        <div className="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Profil configuré en 60 secondes</div>
+        <div className="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Prêt en 60 secondes</div>
       </div>
 
       <footer>

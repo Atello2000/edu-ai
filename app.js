@@ -25,7 +25,10 @@ app.use(cookieParser());
 const SW_VERSION = process.env.VERCEL_GIT_COMMIT_SHA || process.env.RAILWAY_GIT_COMMIT_SHA || String(Date.now());
 app.get('/sw.js', (req, res) => {
   const swPath = path.join(__dirname, 'public', 'sw.js');
-  const content = fs.readFileSync(swPath, 'utf8').replace('__CACHE_VERSION__', SW_VERSION);
+  const content = fs
+    .readFileSync(swPath, 'utf8')
+    .replace(/const CACHE = 'jangalai-[^']+';/, `const CACHE = 'jangalai-${SW_VERSION}';`)
+    .replace('__CACHE_VERSION__', SW_VERSION);
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.send(content);

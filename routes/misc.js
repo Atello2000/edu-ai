@@ -78,6 +78,7 @@ router.get('/quota', (req, res, next) => {
   requireAuth(req, res, next);
 }, async (req, res) => {
   try {
+    if (req.user?.plan === 'max') return res.json({ unlimited: true });
     const status = await getQuotaStatus(req);
     if (!status) return res.json({ unlimited: true });
     res.json({ unlimited: false, ...status });

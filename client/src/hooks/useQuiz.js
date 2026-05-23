@@ -89,6 +89,16 @@ export function useQuiz() {
     }
   }, []);
 
+  function retryWrong() {
+    const wrong = questions.filter((q, i) => answers[i] !== q.answer);
+    if (!wrong.length) { alert('Aucune erreur à revoir !'); return; }
+    setQuestions(wrong);
+    setAnswers({});
+    setIdx(0);
+    setSubmitted(false);
+    setScore(null);
+  }
+
   function selectAnswer(questionIdx, letter) {
     setAnswers(prev => ({ ...prev, [questionIdx]: letter }));
   }
@@ -116,6 +126,6 @@ export function useQuiz() {
     questions, answers, idx, submitted, score,
     loading, error, model,
     generate, reset, restoreFrom,
-    selectAnswer, goTo, submit,
+    selectAnswer, goTo, submit, retryWrong,
   };
 }

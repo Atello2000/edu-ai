@@ -24,9 +24,9 @@ const LIMITS = IS_PROD ? {
 
 // Quotas journaliers par plan
 const QUOTA_DAILY = {
-  free: { summarize: 3,  quiz: 5,  flashcards: 5,  chat: 5  },
-  pro:  { summarize: 15, quiz: 30, flashcards: 30, chat: 20 },
-  max:  { summarize: 50, quiz: 100, flashcards: 100, chat: 60 },
+  free: { summarize: 5,   quiz: 8,   flashcards: 8,   chat: 3  },
+  pro:  { summarize: 20,  quiz: 40,  flashcards: 40,  chat: 20 },
+  max:  { summarize: 999, quiz: 999, flashcards: 999, chat: 60 },
 };
 
 const SAFE_FIELDS = { summarize: 'summarize', quiz: 'quiz', flashcards: 'flashcards', chat: 'chat' };

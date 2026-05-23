@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 
 const SUGGESTIONS = [
   'Quels sont les points clés ?',
@@ -46,7 +47,7 @@ function ChatBubble({ msg }) {
           </div>
         )}
         <div className="chat-bubble"
-          dangerouslySetInnerHTML={{ __html: window.marked?.parse(msg.text) ?? msg.text }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(msg.text) ?? msg.text) }}
         />
         <div className="chat-time">{msg.time}</div>
       </div>
@@ -63,11 +64,11 @@ function ChatBubble({ msg }) {
   return (
     <div className="chat-msg ai">
       <div className="chat-bubble"
-        dangerouslySetInnerHTML={{ __html: (window.marked?.parse(msg.text) ?? msg.text) + streamingCursor }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(msg.text) ?? msg.text) + streamingCursor }}
       />
       {!msg.streaming && (
         <div className="chat-meta">
-          {badge && <span dangerouslySetInnerHTML={{ __html: badge }} />}
+          {badge && <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(badge) }} />}
           <button className="chat-copy-btn" title="Copier" onClick={handleCopy}>
             {copied ? '✓' : '⎘'}
           </button>

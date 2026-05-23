@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { buildSummarySections } from '../utils/summaryUtils';
 import { exportSummaryToPDF }   from '../utils/summaryPdf';
 
@@ -35,7 +36,7 @@ function StreamingCard({ name, text }) {
             <div
               className="summary-section-body"
               dangerouslySetInnerHTML={{
-                __html: window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n'),
+                __html: DOMPurify.sanitize(window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n')),
               }}
             />
           </div>
@@ -132,7 +133,7 @@ function SummaryCard({ result }) {
           <div className="summary-section section-autre">
             <div
               className="summary-section-body"
-              dangerouslySetInnerHTML={{ __html: window.marked?.parse(summary) ?? summary }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(summary) ?? summary) }}
             />
           </div>
         ) : (
@@ -152,7 +153,7 @@ function SummaryCard({ result }) {
               <div
                 className="summary-section-body"
                 dangerouslySetInnerHTML={{
-                  __html: window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n'),
+                  __html: DOMPurify.sanitize(window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n')),
                 }}
               />
             </div>

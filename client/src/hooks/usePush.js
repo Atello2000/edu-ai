@@ -62,7 +62,9 @@ export function usePush() {
         });
         await sub.unsubscribe();
       }
-    } catch {}
+    } catch {
+      // Browser subscription cleanup can fail if the service worker is stale.
+    }
     localStorage.removeItem('jangalai-push');
     setSubscribed(false);
   }, []);

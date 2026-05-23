@@ -21,12 +21,14 @@ import MindmapModal from '../components/MindmapModal.jsx';
 import TTSBar from '../components/TTSBar.jsx';
 import UserMenu from '../components/UserMenu.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
+import GoalModal from '../components/GoalModal.jsx';
 import { useSummarize } from '../hooks/useSummarize.js';
 import { useExamSheet } from '../hooks/useExamSheet.js';
 import { useQuiz } from '../hooks/useQuiz.js';
 import { useFlashcards } from '../hooks/useFlashcards.js';
 import { useChat } from '../hooks/useChat.js';
 import { useSessions } from '../hooks/useSessions.js';
+import { getGoalParams } from '../utils/goalParams.js';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -68,7 +70,7 @@ export default function AppPage() {
     questions, answers: quizAnswers, idx: quizIdx, submitted: quizSubmitted,
     score: quizScore, loading: quizLoading,
     generate: generateQuiz, reset: resetQuiz, restoreFrom: restoreQuizFrom,
-    selectAnswer, goTo: quizGoTo, submit: submitQuiz,
+    selectAnswer, goTo: quizGoTo, submit: submitQuiz, retryWrong,
   } = useQuiz();
 
   // ── Flashcards ─────────────────────────────────────────────────────────────
@@ -95,31 +97,16 @@ export default function AppPage() {
   // ── Panel navigation (React-owned) ────────────────────────────────────────
   const [activePanel, setActivePanel] = useState('dashboard-panel');
 
+  // ── Objectif utilisateur + session prep ───────────────────────────────────
+  const [showGoalModal, setShowGoalModal] = useState(false);
+  const [sessionGoal,   setSessionGoal]   = useState(null);
+  const prepLoading = summarizing || quizLoading || fcLoading;
+
   // ── Dashboard ─────────────────────────────────────────────────────────────
   const [lastSession, setLastSession] = useState(null);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
-
-  // ── Compteur utilisateurs en ligne (local uniquement) ────────────────────
-  const [onlineCount, setOnlineCount] = useState(null);
-  useEffect(() => {
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    if (!isLocal) return;
-    if (!sessionStorage.getItem('edu-client-id'))
-      sessionStorage.setItem('edu-client-id', crypto.randomUUID());
-    const clientId = sessionStorage.getItem('edu-client-id');
-    async function ping() {
-      try {
-        const res  = await fetch('/api/ping', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clientId }) });
-        const data = await res.json();
-        setOnlineCount(data.online);
-      } catch {}
-    }
-    ping();
-    const id = setInterval(ping, 30000);
-    return () => clearInterval(id);
-  }, []);
 
   // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
   const hasFiles = uploadedFiles.some(f => f.text || f.path);
@@ -166,8 +153,8 @@ export default function AppPage() {
 
   // ── Sync summaryResults → bridges ───────────────────────────────────────────
   const summaryResultsRef = useRef(summaryResults);
-  summaryResultsRef.current = summaryResults;
   useEffect(() => {
+    summaryResultsRef.current = summaryResults;
     window._setSummaryResults?.(summaryResults);
     window._summaryResultsRef = () => summaryResultsRef.current;
   }, [summaryResults]);
@@ -189,8 +176,35 @@ export default function AppPage() {
     setUploadedFiles(files);
     resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
     setActivePanel('actions-section');
+    setShowGoalModal(true);
     window.__showSaveFolderModal?.(files);
   }, [resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
+
+  const handleGoalSelect = useCallback((goal) => {
+    setSessionGoal(goal);
+    setShowGoalModal(false);
+  }, []);
+
+  // ── Préparer ma session — lance résumé + quiz + flashcards en parallèle ──
+  const handlePrepareSession = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { alert('Chargez d\'abord des fichiers.'); return; }
+    const { quizCount, quizDiff, fcCount } = getGoalParams(sessionGoal);
+    setActivePanel('summary-section');
+    summarize(files);
+    generateQuiz(files, { count: quizCount, difficulty: quizDiff });
+    generateFlashcards(files, { count: fcCount });
+  }, [uploadedFiles, sessionGoal, summarize, generateQuiz, generateFlashcards]);
+
+  // ── Erreurs quiz → Flashcards ─────────────────────────────────────────────
+  const handleErrorsToFlashcards = useCallback((wrongQs) => {
+    const cards = wrongQs.map(q => ({
+      front: q.question,
+      back:  `Bonne réponse : ${q.answer}${q.explanation ? '\n\n' + q.explanation : ''}`,
+    }));
+    restoreFcFrom([{ name: 'Erreurs quiz', flashcards: cards }]);
+    setActivePanel('flashcard-section');
+  }, [restoreFcFrom]);
 
   // ── Lancement du résumé (bouton dans actions-section) ─────────────────────
   const handleSummarize = useCallback(() => {
@@ -303,6 +317,7 @@ export default function AppPage() {
   return (
     <>
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
+      {showGoalModal  && <GoalModal onSelect={handleGoalSelect} />}
       <SettingsDrawer
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -321,11 +336,6 @@ export default function AppPage() {
           <Logo />
         </div>
         <div className="header-right">
-          {onlineCount !== null && (
-            <span id="online-counter" className="online-counter">
-              <span className="online-dot" /><span id="online-count">{onlineCount}</span> en ligne
-            </span>
-          )}
           <UserMenu user={user} />
           <button className="settings-btn" id="settings-btn" title="Paramètres" onClick={() => setShowSettings(true)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -421,6 +431,9 @@ export default function AppPage() {
             onQuiz={handleQuiz}
             onFlashcards={handleFlashcards}
             onOpenChat={handleOpenChat}
+            onPrepareSession={handlePrepareSession}
+            prepLoading={prepLoading}
+            sessionGoal={sessionGoal}
           />
         </div>
 
@@ -489,6 +502,8 @@ export default function AppPage() {
             onSelect={selectAnswer}
             onGoTo={quizGoTo}
             onSubmit={submitQuiz}
+            onRetryWrong={retryWrong}
+            onErrorsToFlashcards={handleErrorsToFlashcards}
           />
         </div>
 

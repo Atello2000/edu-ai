@@ -1,22 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 
 /**
  * Props :
- *   questions  [{question, options, answer, explanation, whyWrong, sourceHint, sourceName}]
- *   answers    { [idx]: letter }
- *   idx        number  — question courante
- *   submitted  bool
- *   score      { correct, total, pct, timeTaken } | null
- *   examMode   bool
- *   examMins   number
- *   onSelect   (idx, letter) => void
- *   onGoTo     (idx) => void
- *   onSubmit   (timeTaken) => void
+ *   questions            [{question, options, answer, explanation, whyWrong, sourceHint, sourceName}]
+ *   answers              { [idx]: letter }
+ *   idx                  number  — question courante
+ *   submitted            bool
+ *   score                { correct, total, pct, timeTaken } | null
+ *   examMode             bool
+ *   examMins             number
+ *   onSelect             (idx, letter) => void
+ *   onGoTo               (idx) => void
+ *   onSubmit             (timeTaken) => void
+ *   onRetryWrong         () => void
+ *   onErrorsToFlashcards (wrongQuestions) => void
  */
 export default function QuizSection({
   questions, answers, idx, submitted, score,
   examMode, examMins,
   onSelect, onGoTo, onSubmit,
+  onRetryWrong, onErrorsToFlashcards,
 }) {
   const [timeLeft,    setTimeLeft]    = useState(null);
   const [timerWarn,   setTimerWarn]   = useState(false);
@@ -79,6 +83,7 @@ export default function QuizSection({
     const timeStr = timeTaken
       ? ` · ${Math.floor(timeTaken / 60)}:${String(timeTaken % 60).padStart(2, '0')} min`
       : '';
+    const wrongQs = questions.filter((q, i) => answers[i] !== q.answer);
 
     return (
       <>
@@ -86,6 +91,18 @@ export default function QuizSection({
           <div className="score-number">{correct}/{tot}</div>
           <div className="score-label">{pct}% de bonnes réponses{timeStr}</div>
           <div className="score-msg">{msg}</div>
+          {wrongQs.length > 0 && (
+            <div className="score-actions">
+              <button className="act-btn blue" onClick={onRetryWrong}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+                Revoir les {wrongQs.length} erreur{wrongQs.length > 1 ? 's' : ''}
+              </button>
+              <button className="act-btn teal" onClick={() => onErrorsToFlashcards?.(wrongQs)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
+                Erreurs → Flashcards
+              </button>
+            </div>
+          )}
         </div>
         <div id="quiz-container">
           {questions.map((q, i) => {
@@ -116,17 +133,17 @@ export default function QuizSection({
                   <div className="quiz-review-line"><strong>Réponse attendue :</strong> {q.answer}</div>
                   {q.explanation && (
                     <div className="explanation"
-                      dangerouslySetInnerHTML={{ __html: '💡 ' + (window.marked?.parseInline(q.explanation) ?? q.explanation) }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize('💡 ' + (window.marked?.parseInline(q.explanation) ?? q.explanation)) }}
                     />
                   )}
                   {q.whyWrong && userLetter && !isCorrect && q.whyWrong[userLetter] && (
                     <div className="quiz-why-wrong"
-                      dangerouslySetInnerHTML={{ __html: '<strong>Pourquoi ce choix bloque :</strong> ' + (window.marked?.parseInline(q.whyWrong[userLetter]) ?? q.whyWrong[userLetter]) }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize('<strong>Pourquoi ce choix bloque :</strong> ' + (window.marked?.parseInline(q.whyWrong[userLetter]) ?? q.whyWrong[userLetter])) }}
                     />
                   )}
                   {q.sourceHint && (
                     <div className="quiz-source-hint"
-                      dangerouslySetInnerHTML={{ __html: '<strong>À revoir :</strong> ' + (window.marked?.parseInline(q.sourceHint) ?? q.sourceHint) }}
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize('<strong>À revoir :</strong> ' + (window.marked?.parseInline(q.sourceHint) ?? q.sourceHint)) }}
                     />
                   )}
                 </div>

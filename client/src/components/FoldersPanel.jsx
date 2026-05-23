@@ -214,7 +214,7 @@ export default function FoldersPanel() {
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div className="modal-box modal-sm">
             <div className="modal-header">
-              <h2 dangerouslySetInnerHTML={{ __html: modalMode === 'rename' ? 'Renommer la <em>matière</em>' : 'Nouvelle <em>matière</em>' }} />
+              <h2>{modalMode === 'rename' ? <>Renommer la <em>matière</em></> : <>Nouvelle <em>matière</em></>}</h2>
             </div>
             <div className="folder-modal-body">
               <label className="folder-modal-label">Nom</label>

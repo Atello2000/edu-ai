@@ -116,7 +116,10 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .price-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 1.75rem; position: relative; transition: transform .25s, box-shadow .25s; }
 .price-card:hover { transform: translateY(-4px); box-shadow: 0 20px 48px rgba(0,0,0,.25); }
 .price-card.featured { border-color: var(--blue); background: var(--blue-bg); }
+.price-card.locked { opacity: .78; }
+.price-card.locked:hover { transform: none; box-shadow: none; }
 .price-badge { position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--blue); color: #fff; font-size: .7rem; font-weight: 700; padding: .22rem .9rem; border-radius: 99px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.price-badge.muted { background: var(--border); color: var(--muted); }
 .plan-name { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
 .plan-price { font-size: 2.6rem; font-weight: 700; line-height: 1; margin-bottom: .25rem; }
 .plan-price span { font-size: .9rem; font-weight: 400; color: var(--muted); }
@@ -127,6 +130,15 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .plan-cta { width: 100%; padding: .75rem; border-radius: var(--radius-sm); font-family: 'Outfit', sans-serif; font-size: .9rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); transition: all .2s; }
 .price-card.featured .plan-cta { background: var(--blue); color: #fff; border-color: var(--blue); }
 .plan-cta:hover { opacity: .88; }
+.plan-cta:disabled,
+.plan-cta-locked {
+  cursor: not-allowed;
+  opacity: .62;
+  background: var(--border) !important;
+  border-color: var(--border) !important;
+  color: var(--muted) !important;
+}
+.plan-cta:disabled:hover { opacity: .62; }
 
 .faq { display: flex; flex-direction: column; gap: .75rem; }
 .faq-item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }

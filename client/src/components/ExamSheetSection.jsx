@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import DOMPurify from 'dompurify';
 import { exportExamSheetToPDF } from '../utils/examSheetPdf';
 
 /**
@@ -59,13 +60,13 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
               Génération en cours…
             </p>
             <div dangerouslySetInnerHTML={{
-              __html: window.marked?.parse(streaming) ?? streaming,
+              __html: DOMPurify.sanitize(window.marked?.parse(streaming) ?? streaming),
             }} />
           </div>
         ) : md ? (
           <div
             className="exam-sheet-card"
-            dangerouslySetInnerHTML={{ __html: window.marked?.parse(md) ?? md }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(md) ?? md) }}
           />
         ) : null}
       </div>
