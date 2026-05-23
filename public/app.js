@@ -106,10 +106,8 @@ function refreshActionsAvailability() {
 // ── REFS ────────────────────────────────────────────────────────────────────
 // NOTE: upload refs removed — Upload migré vers React (UploadZone.jsx)
 // NOTE: summary refs removed — Summary migré vers React (SummarySection.jsx)
-const actionsSection  = document.getElementById('actions-section');
 const uploadedFilesEl = document.getElementById('uploaded-files');
 const selectAll       = document.getElementById('select-all');
-const summarySection  = document.getElementById('summary-section');
 // Quiz/Flashcards/Chat DOM elements managed by React — no longer referenced here
 const loader          = document.getElementById('loader');
 const loaderText      = document.getElementById('loader-text');
