@@ -21,11 +21,22 @@ export function useSummarize() {
   // ref pour accumuler le texte en dehors du cycle React (évite les closures périmées)
   const partials = useRef({});
 
+  // accumulate results outside React state to read final list in finally block
+  const accumulated = useRef([]);
+
   function reset() {
     setResults([]);
     setStreaming({});
     setError(null);
-    partials.current = {};
+    partials.current  = {};
+    accumulated.current = [];
+  }
+
+  /** Restore saved summaries from session history (no API call). */
+  function restoreFrom(savedResults) {
+    if (!Array.isArray(savedResults) || !savedResults.length) return;
+    setResults(savedResults);
+    accumulated.current = savedResults;
   }
 
   const summarize = useCallback(async (files) => {
@@ -64,14 +75,15 @@ export function useSummarize() {
 
           } else if (data.type === 'delta') {
             partials.current[data.name] = (partials.current[data.name] || '') + data.text;
-            // throttle: update streaming state every delta
             const snap = partials.current[data.name];
             setStreaming(prev => ({ ...prev, [data.name]: snap }));
 
           } else if (data.type === 'done') {
             const full = partials.current[data.name] || '';
             delete partials.current[data.name];
-            setResults(r => [...r, { name: data.name, summary: full }]);
+            const entry = { name: data.name, summary: full };
+            accumulated.current = [...accumulated.current, entry];
+            setResults(r => [...r, entry]);
             setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
 
           } else if (data.type === 'error') {
@@ -80,6 +92,13 @@ export function useSummarize() {
           // 'model' and 'end' events are informational — ignored here
         }
       }
+      // Save completed summaries to session history
+      if (accumulated.current.length) {
+        window.__saveSession?.({ summaries: accumulated.current });
+        window.__fetchQuota?.();
+        window.__refreshFloatNav?.();
+        window.__renderDashboard?.();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -87,5 +106,5 @@ export function useSummarize() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { results, streaming, loading, error, summarize, reset };
+  return { results, streaming, loading, error, summarize, reset, restoreFrom };
 }

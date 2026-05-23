@@ -430,9 +430,10 @@ function restoreSession(s) {
   }
   let firstPanel = 'actions-section';
   if (s.summaries) {
-    // React owns the summary display — just sync data so mindmap works
+    // React owns summary display — restore via bridge; also keep local copy for mindmap
     summaryAllResults = s.summaries;
     summaryActiveTab  = 0;
+    window._setSummaryData?.(s.summaries);
     generatedSections.add('summary-section');
     firstPanel = 'summary-section';
   }

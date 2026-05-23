@@ -47,7 +47,8 @@ export default function AppPage() {
   // ── État partagé Upload + Summary (React-owned) ────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const { results: summaryResults, streaming: summaryStreaming,
-          loading: summarizing, summarize, reset: resetSummary } = useSummarize();
+          loading: summarizing, summarize, reset: resetSummary,
+          restoreFrom: restoreSummaryFrom } = useSummarize();
 
   // ── Fiche d'examen ─────────────────────────────────────────────────────────
   const { md: examMd, streaming: examStreaming, loading: examLoading,
@@ -114,15 +115,17 @@ export default function AppPage() {
 
   // ── Bridges session restore (app.js → React) ──────────────────────────────
   useEffect(() => {
+    window._setSummaryData    = arr  => restoreSummaryFrom(arr);
     window._setExamSheetMd    = md   => restoreExamFrom(md);
     window._setQuizData       = data => restoreQuizFrom(data);
     window._setFlashcardsData = data => restoreFcFrom(data);
     return () => {
+      delete window._setSummaryData;
       delete window._setExamSheetMd;
       delete window._setQuizData;
       delete window._setFlashcardsData;
     };
-  }, [restoreExamFrom, restoreQuizFrom, restoreFcFrom]);
+  }, [restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom]);
 
   // ── Quand upload réussit ───────────────────────────────────────────────────
   const handleUploaded = useCallback((files) => {
