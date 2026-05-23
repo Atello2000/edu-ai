@@ -1,3 +1,4 @@
+require('express'); // required for Vercel @vercel/node Express detection
 const { initSchema } = require('../db');
 const app = require('../app');
 
