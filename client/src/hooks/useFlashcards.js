@@ -1,0 +1,157 @@
+import { useState, useCallback } from 'react';
+
+function getLang() {
+  try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
+  catch { return 'fr'; }
+}
+
+/* ── SM-2 / SRS ─────────────────────────────────────────────────────────────── */
+const SRS_KEY = 'jangalai-srs';
+
+function cardHash(front) {
+  let h = 0;
+  for (let i = 0; i < front.length; i++) h = Math.imul(31, h) + front.charCodeAt(i) | 0;
+  return h.toString(36);
+}
+function getSRSData()  { return JSON.parse(localStorage.getItem(SRS_KEY) || '{}'); }
+function setSRSData(d) { localStorage.setItem(SRS_KEY, JSON.stringify(d)); }
+
+export function sm2Update(key, quality) {
+  const data = getSRSData();
+  const c = data[key] || { interval: 1, easeFactor: 2.5, repetitions: 0 };
+  if (quality >= 3) {
+    c.interval = c.repetitions === 0 ? 1 : c.repetitions === 1 ? 6 : Math.round(c.interval * c.easeFactor);
+    c.repetitions++;
+  } else { c.interval = 1; c.repetitions = 0; }
+  c.easeFactor = Math.max(1.3, c.easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+  c.nextReview = Date.now() + c.interval * 86400000;
+  data[key] = c; setSRSData(data); return c;
+}
+
+export function getSRSStatus(front) {
+  const c = getSRSData()[cardHash(front)];
+  if (!c) return null;
+  if (c.nextReview <= Date.now()) return 'due';
+  return (c.nextReview - Date.now()) < 86400000 ? 'soon' : 'learned';
+}
+
+export function getSRSLabel(front) {
+  const c = getSRSData()[cardHash(front)];
+  if (!c) return '';
+  if (c.nextReview <= Date.now()) return '● dû';
+  const h = Math.round((c.nextReview - Date.now()) / 3600000);
+  return h < 24 ? `● ${h}h` : `● ${Math.round(h / 24)}j`;
+}
+
+export { cardHash };
+
+/* ── Hook ────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Gère la génération et l'état des flashcards.
+ *
+ * decks        : [{ name, cards: [{ front, back }] }]
+ * deckIdx      : index du deck courant
+ * cards        : cartes du deck courant (peut être mélangées)
+ * cardStates   : { [cardIdx]: 'known'|'review' }
+ * srsOnlyDue   : bool
+ */
+export function useFlashcards() {
+  const [decks,      setDecks]      = useState([]);
+  const [deckIdx,    setDeckIdx]    = useState(0);
+  const [cards,      setCards]      = useState([]);
+  const [cardStates, setCardStates] = useState({});
+  const [srsOnlyDue, setSrsOnlyDue] = useState(false);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState(null);
+  const [model,      setModel]      = useState('');
+
+  function reset() {
+    setDecks([]); setDeckIdx(0); setCards([]); setCardStates({});
+    setSrsOnlyDue(false); setError(null); setModel('');
+  }
+
+  function loadDeck(idx, allDecks) {
+    const src = allDecks ?? decks;
+    if (!src.length) return;
+    const i = Math.max(0, Math.min(idx, src.length - 1));
+    setDeckIdx(i);
+    setCards([...src[i].cards]);
+    setCardStates({});
+  }
+
+  function restoreFrom(results) {
+    const d = results.map(r => ({ name: r.name, cards: r.flashcards || [] }));
+    setDecks(d);
+    setDeckIdx(0);
+    setCards([...(d[0]?.cards || [])]);
+    setCardStates({});
+  }
+
+  const generate = useCallback(async (files, { count = 10 } = {}) => {
+    if (!files.length) return;
+    reset();
+    setLoading(true);
+    try {
+      const res  = await fetch('/api/flashcards', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ files, count, lang: getLang() }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      const d = data.results.map(r => ({ name: r.name, cards: r.flashcards || [] }));
+      setDecks(d);
+      loadDeck(0, d);
+      if (data.model) setModel(data.model);
+
+      window.__saveSession?.({ flashcards: data.results });
+      window.__fetchQuota?.();
+      window.__refreshFloatNav?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function markCard(cardIdx, state) {
+    setCardStates(prev => ({ ...prev, [cardIdx]: state }));
+    const front = cards[cardIdx]?.front;
+    if (front) sm2Update(cardHash(front), state === 'known' ? 4 : 1);
+  }
+
+  function shuffle() {
+    setCards(prev => {
+      const a = [...prev];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    });
+    setCardStates({});
+  }
+
+  function restart()   { setCardStates({}); }
+
+  function redoWrong() {
+    const wrongIdxs = Object.entries(cardStates)
+      .filter(([, s]) => s === 'review').map(([i]) => +i);
+    if (!wrongIdxs.length) { alert('Aucune carte à revoir !'); return; }
+    setCards(wrongIdxs.map(i => cards[i]));
+    setCardStates({});
+  }
+
+  function switchDeck(i) { loadDeck(i, decks); }
+
+  function toggleSrs() { setSrsOnlyDue(v => !v); }
+
+  return {
+    decks, deckIdx, cards, cardStates, srsOnlyDue,
+    loading, error, model,
+    generate, reset, restoreFrom,
+    markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
+  };
+}

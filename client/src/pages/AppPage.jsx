@@ -10,7 +10,15 @@ import HistoryPanel from '../components/HistoryPanel.jsx';
 import SettingsDrawer from '../components/SettingsDrawer.jsx';
 import UploadZone from '../components/UploadZone.jsx';
 import SummaryResults from '../components/SummarySection.jsx';
+import ExamSheetSection from '../components/ExamSheetSection.jsx';
+import QuizSection from '../components/QuizSection.jsx';
+import FlashcardSection from '../components/FlashcardSection.jsx';
+import ChatSection from '../components/ChatSection.jsx';
 import { useSummarize } from '../hooks/useSummarize.js';
+import { useExamSheet } from '../hooks/useExamSheet.js';
+import { useQuiz } from '../hooks/useQuiz.js';
+import { useFlashcards } from '../hooks/useFlashcards.js';
+import { useChat } from '../hooks/useChat.js';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -41,6 +49,39 @@ export default function AppPage() {
   const { results: summaryResults, streaming: summaryStreaming,
           loading: summarizing, summarize, reset: resetSummary } = useSummarize();
 
+  // ── Fiche d'examen ─────────────────────────────────────────────────────────
+  const { md: examMd, streaming: examStreaming, loading: examLoading,
+          generate: generateExam, reset: resetExam } = useExamSheet();
+
+  // ── Quiz ───────────────────────────────────────────────────────────────────
+  const {
+    questions, answers: quizAnswers, idx: quizIdx, submitted: quizSubmitted,
+    score: quizScore, loading: quizLoading,
+    generate: generateQuiz, reset: resetQuiz, restoreFrom: restoreQuizFrom,
+    selectAnswer, goTo: quizGoTo, submit: submitQuiz,
+  } = useQuiz();
+
+  // ── Flashcards ─────────────────────────────────────────────────────────────
+  const {
+    decks, deckIdx, cards, cardStates, srsOnlyDue,
+    loading: fcLoading,
+    generate: generateFlashcards, reset: resetFlashcards, restoreFrom: restoreFcFrom,
+    markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
+  } = useFlashcards();
+
+  // ── Chat ───────────────────────────────────────────────────────────────────
+  const [chatFiles, setChatFiles] = useState([]);
+  const {
+    messages: chatMessages, loading: chatLoading,
+    attachedFile, setAttachedFile, attachedImage, setAttachedImage,
+    send: sendChat, reset: resetChat,
+    uploadAttachment, readImageAsBase64,
+  } = useChat();
+
+  // Quiz exam-mode settings (managed via DOM refs from JSX)
+  const [examMode, setExamMode] = useState(false);
+  const [examMins, setExamMins] = useState(10);
+
   useEffect(() => {
     if (user && !user.onboarding_done) setShowOnboarding(true);
     window.__editProfile = () => setShowOnboarding(true);
@@ -70,13 +111,25 @@ export default function AppPage() {
     window._setSummaryResults?.(summaryResults);
   }, [summaryResults]);
 
+  // ── Bridges session restore (app.js → React) ──────────────────────────────
+  useEffect(() => {
+    window._setExamSheetMd    = md  => { /* trigger React state via resetExam+generate is not viable; use direct setState via ref */ };
+    window._setQuizData       = data => restoreQuizFrom(data);
+    window._setFlashcardsData = data => restoreFcFrom(data);
+    return () => {
+      delete window._setExamSheetMd;
+      delete window._setQuizData;
+      delete window._setFlashcardsData;
+    };
+  }, [restoreQuizFrom, restoreFcFrom]);
+
   // ── Quand upload réussit ───────────────────────────────────────────────────
   const handleUploaded = useCallback((files) => {
     setUploadedFiles(files);
-    resetSummary();
+    resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
     window.__appShowPanel?.('actions-section');
     window.__showSaveFolderModal?.();
-  }, [resetSummary]);
+  }, [resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
 
   // ── Lancement du résumé (bouton dans actions-section) ─────────────────────
   const handleSummarize = useCallback(() => {
@@ -98,6 +151,69 @@ export default function AppPage() {
       summarize(files);
     }
   }, [uploadedFiles, resetSummary, summarize]);
+
+  // ── Fiche d'examen ─────────────────────────────────────────────────────────
+  const handleExamSheet = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (examMd) { window.__appShowPanel?.('exam-sheet-section'); return; }
+    window.__appShowPanel?.('exam-sheet-section');
+    generateExam(files);
+  }, [uploadedFiles, examMd, generateExam]);
+
+  const handleExamRegen = useCallback(() => {
+    resetExam();
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (files.length) {
+      window.__appShowPanel?.('exam-sheet-section');
+      generateExam(files);
+    }
+  }, [uploadedFiles, resetExam, generateExam]);
+
+  // ── Quiz ───────────────────────────────────────────────────────────────────
+  const handleQuiz = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    const count      = parseInt(document.getElementById('quiz-count')?.value) || 5;
+    const difficulty = document.getElementById('quiz-difficulty')?.value || 'moyen';
+    const em         = document.getElementById('exam-mode-cb')?.checked || false;
+    const emins      = parseInt(document.getElementById('exam-duration')?.value) || 10;
+    setExamMode(em);
+    setExamMins(emins);
+    window.__appShowPanel?.('quiz-section');
+    generateQuiz(files, { count, difficulty });
+  }, [uploadedFiles, generateQuiz]);
+
+  // ── Flashcards ─────────────────────────────────────────────────────────────
+  const handleFlashcards = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    const count = parseInt(document.getElementById('fc-count')?.value) || 10;
+    window.__appShowPanel?.('flashcard-section');
+    generateFlashcards(files, { count });
+  }, [uploadedFiles, generateFlashcards]);
+
+  // ── Chat ───────────────────────────────────────────────────────────────────
+  const handleOpenChat = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { alert('Chargez d\'abord des fichiers.'); return; }
+    setChatFiles(files);
+    window.__appShowPanel?.('chat-section');
+  }, [uploadedFiles]);
+
+  const handleChatAttachFile = useCallback(async (file) => {
+    try {
+      const result = await uploadAttachment(file);
+      setAttachedFile(result);
+    } catch (err) { alert('Erreur : ' + err.message); }
+  }, [uploadAttachment, setAttachedFile]);
+
+  const handleChatAttachImage = useCallback(async (file) => {
+    try {
+      const result = await readImageAsBase64(file);
+      setAttachedImage(result);
+    } catch (err) { alert('Erreur : ' + err.message); }
+  }, [readImageAsBase64, setAttachedImage]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -273,7 +389,9 @@ export default function AppPage() {
                   </select>
                 </label>
               </div>
-              <button className="act-btn blue" id="quiz-btn">Lancer</button>
+              <button className="act-btn blue" id="quiz-btn" onClick={handleQuiz}>
+                {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
+              </button>
             </div>
             <div className="act-card" data-color="teal">
               <div className="act-card-icon teal">
@@ -283,7 +401,9 @@ export default function AppPage() {
                 <strong>Flashcards</strong>
                 <label><input type="number" id="fc-count" defaultValue="10" min="3" max="30" /> cartes</label>
               </div>
-              <button className="act-btn teal" id="flashcard-btn">Lancer</button>
+              <button className="act-btn teal" id="flashcard-btn" onClick={handleFlashcards}>
+                {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
+              </button>
             </div>
             <div className="act-card act-card-wide" data-color="gold">
               <div className="act-card-icon gold">
@@ -293,7 +413,7 @@ export default function AppPage() {
                 <strong>Chat avec le cours</strong>
                 <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
               </div>
-              <button className="act-btn gold" id="chat-open-btn">Ouvrir</button>
+              <button className="act-btn gold" id="chat-open-btn" onClick={handleOpenChat}>Ouvrir</button>
             </div>
             <div className="act-card act-card-wide" data-color="purple">
               <div className="act-card-icon purple">
@@ -303,8 +423,12 @@ export default function AppPage() {
                 <strong>Fiche d&apos;examen</strong>
                 <span>Définitions, pièges, tableaux et questions probables</span>
               </div>
-              <button className="act-btn purple" id="exam-sheet-btn">Créer</button>
-              <button className="regen-link hidden" id="exam-sheet-regen-btn">↺ Régénérer</button>
+              <button className="act-btn purple" id="exam-sheet-btn" onClick={handleExamSheet}>
+                {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
+              </button>
+              {examMd && (
+                <button className="regen-link" id="exam-sheet-regen-btn" onClick={handleExamRegen}>↺ Régénérer</button>
+              )}
             </div>
             <div className="act-card act-card-wide" data-color="teal">
               <div className="act-card-icon teal">
@@ -348,146 +472,102 @@ export default function AppPage() {
           </div>
         </div>
 
-        {/* FICHE D'EXAMEN */}
+        {/* FICHE D'EXAMEN — composant React */}
         <div className="panel hidden" id="exam-sheet-section">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Révision ciblée</div>
-              <h2 className="panel-title">Fiche <em>d&apos;examen</em></h2>
+          {examLoading && (
+            <div className="loader-inline">
+              <div className="spinner" style={{width:20,height:20}}></div>
+              <span>Création de la fiche…</span>
             </div>
-            <div style={{display:'flex',gap:'.5rem',alignItems:'center',flexWrap:'wrap'}}>
-              <button className="ghost-btn" id="exam-sheet-copy-btn">Copier</button>
-              <button className="ghost-btn" id="exam-sheet-pdf-btn">Exporter PDF</button>
-            </div>
-          </div>
-          <div id="exam-sheet-result"></div>
+          )}
+          <ExamSheetSection
+            md={examMd}
+            streaming={examStreaming}
+            fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
+            onRegen={examMd ? handleExamRegen : undefined}
+          />
         </div>
 
-        {/* QUIZ */}
+        {/* QUIZ — composant React */}
         <div className="panel hidden" id="quiz-section">
           <div className="panel-header">
             <div>
               <div className="panel-label">Évaluation</div>
               <h2 className="panel-title">Quiz <em>QCM</em></h2>
             </div>
-            <span className="mono-tag" id="quiz-progress-info"></span>
+            <span className="mono-tag" id="quiz-progress-info">
+              {questions.length > 0 && `${questions.length} question${questions.length > 1 ? 's' : ''}`}
+            </span>
           </div>
-          <div className="quiz-step-header hidden" id="quiz-step-header">
-            <div className="exam-timer hidden" id="exam-timer">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span id="timer-display">00:00</span>
+          {quizLoading && (
+            <div className="loader-inline">
+              <div className="spinner" style={{width:20,height:20}}></div>
+              <span>Génération du quiz…</span>
             </div>
-            <div className="quiz-step-track"><div className="quiz-step-fill" id="quiz-step-fill"></div></div>
-            <div className="quiz-step-nav">
-              <button className="quiz-nav-btn" id="quiz-prev-btn" disabled>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-                Précédent
-              </button>
-              <span className="quiz-step-label" id="quiz-step-label">1 / 5</span>
-              <button className="quiz-nav-btn" id="quiz-next-btn">
-                Suivant
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
-            </div>
-          </div>
-          <div id="quiz-container"></div>
-          <div className="quiz-footer hidden" id="quiz-footer">
-            <button className="act-btn blue large" id="submit-quiz">Valider mes réponses</button>
-          </div>
-          <div id="quiz-score" className="hidden"></div>
+          )}
+          <QuizSection
+            questions={questions}
+            answers={quizAnswers}
+            idx={quizIdx}
+            submitted={quizSubmitted}
+            score={quizScore}
+            examMode={examMode}
+            examMins={examMins}
+            onSelect={selectAnswer}
+            onGoTo={quizGoTo}
+            onSubmit={submitQuiz}
+          />
         </div>
 
-        {/* FLASHCARDS */}
+        {/* FLASHCARDS — composant React */}
         <div className="panel hidden" id="flashcard-section">
           <div className="panel-header">
             <div>
               <div className="panel-label">Mémorisation</div>
               <h2 className="panel-title">Flash<em>cards</em></h2>
             </div>
-            <span className="mono-tag" id="fc-progress-info"></span>
           </div>
-          <div id="fc-viewer">
-            <div className="fc-topbar">
-              <div className="fc-stats" id="fc-stats">
-                <div className="fc-stat green"><span id="fc-known-count">0</span><small>Acquises</small></div>
-                <div className="fc-stat red"><span id="fc-review-count">0</span><small>À revoir</small></div>
-                <div className="fc-stat grey"><span id="fc-remaining-count">0</span><small>Non évaluées</small></div>
-              </div>
-              <div className="fc-top-actions">
-                <button className="ghost-btn srs-mode-btn" id="srs-mode-btn">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 5.5-4 7.5S12 20 12 22c0-2-1-2.5-3-4.5S5 12 5 9a7 7 0 0 1 7-7z"/></svg> Révision espacée
-                </button>
-                <button className="ghost-btn" id="fc-shuffle">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg> Mélanger
-                </button>
-                <button className="ghost-btn" id="fc-restart">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg> Réinitialiser
-                </button>
-              </div>
+          {fcLoading && (
+            <div className="loader-inline">
+              <div className="spinner" style={{width:20,height:20}}></div>
+              <span>Génération des flashcards…</span>
             </div>
-            <div className="fc-srs-bar hidden" id="fc-srs-bar">
-              <span id="srs-due-label" className="srs-due-label"></span>
-              <span className="srs-hint">Cartes dues pour révision aujourd&apos;hui</span>
-            </div>
-            <div className="fc-progress-bar"><div id="fc-bar"></div></div>
-            <div id="fc-file-tabs"></div>
-            <div id="fc-grid"></div>
-          </div>
-          <div className="fc-done hidden" id="fc-done">
-            <div className="fc-done-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
-            <h3>Session terminée !</h3>
-            <div id="fc-done-stats"></div>
-            <div className="fc-done-btns">
-              <button className="act-btn purple" id="fc-redo-wrong">Revoir les cartes ratées</button>
-              <button className="act-btn teal" id="fc-redo-all">Tout réinitialiser</button>
-            </div>
-          </div>
+          )}
+          <FlashcardSection
+            decks={decks}
+            deckIdx={deckIdx}
+            cards={cards}
+            cardStates={cardStates}
+            srsOnlyDue={srsOnlyDue}
+            onMark={markCard}
+            onShuffle={shuffle}
+            onRestart={restart}
+            onRedoWrong={redoWrong}
+            onSwitchDeck={switchDeck}
+            onToggleSrs={toggleSrs}
+          />
         </div>
 
-        {/* CHAT */}
+        {/* CHAT — composant React */}
         <div className="panel hidden" id="chat-section">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Assistant IA</div>
-              <h2 className="panel-title">Chat avec le <em>cours</em></h2>
+          {chatLoading && (
+            <div className="loader-inline" style={{position:'absolute',top:'1rem',right:'1rem'}}>
+              <div className="spinner" style={{width:14,height:14}}></div>
             </div>
-            <button className="ghost-btn" id="chat-clear-btn">Effacer</button>
-          </div>
-          <div className="chat-file-select" id="chat-file-select"></div>
-          <div className="chat-messages" id="chat-messages">
-            <div className="chat-welcome" id="chat-welcome">
-              <div className="chat-welcome-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-              <p>Posez une question ou joignez un devoir / QCM à corriger.</p>
-              <div className="chat-suggestions">
-                <button className="chat-sug">Quels sont les points clés ?</button>
-                <button className="chat-sug">Donne un exemple concret</button>
-                <button className="chat-sug">Explique le concept principal</button>
-                <button className="chat-sug">Quelles sont les définitions importantes ?</button>
-              </div>
-            </div>
-          </div>
-          <div className="chat-attach-bar hidden" id="chat-attach-bar">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            <span id="chat-attach-name"></span>
-            <button className="chat-attach-remove" id="chat-attach-remove" title="Retirer">✕</button>
-          </div>
-          <div className="chat-image-bar hidden" id="chat-image-bar">
-            <img id="chat-image-thumb" className="chat-image-thumb" alt="" />
-            <span id="chat-image-name"></span>
-            <button className="chat-attach-remove" id="chat-image-remove" title="Retirer">✕</button>
-          </div>
-          <div className="chat-input-row">
-            <input type="file" id="chat-file-input" accept=".pdf,.ppt,.pptx,.docx" style={{display:'none'}} />
-            <input type="file" id="chat-image-input" accept="image/jpeg,image/png,image/webp,image/gif" style={{display:'none'}} />
-            <button className="chat-attach-btn" id="chat-attach-btn" title="Joindre un devoir / document">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.41 17.41a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            </button>
-            <button className="chat-attach-btn" id="chat-image-btn" title="Joindre une image">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            </button>
-            <input className="chat-input" id="chat-input" placeholder="Posez une question, joignez un devoir ou une image…" />
-            <button className="act-btn gold" id="chat-send-btn">↑</button>
-          </div>
+          )}
+          <ChatSection
+            files={chatFiles}
+            messages={chatMessages}
+            loading={chatLoading}
+            attachedFile={attachedFile}
+            attachedImage={attachedImage}
+            onSend={sendChat}
+            onClear={resetChat}
+            onAttachFile={handleChatAttachFile}
+            onRemoveFile={() => setAttachedFile(null)}
+            onAttachImage={handleChatAttachImage}
+            onRemoveImage={() => setAttachedImage(null)}
+          />
         </div>
 
       </main>
