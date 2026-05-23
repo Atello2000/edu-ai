@@ -47,6 +47,15 @@ export default function UserMenu({ user }) {
           >
             Mon profil
           </a>
+          {user.is_admin && (
+            <a
+              href="/admin"
+              className="dropdown-item"
+              style={{ display: 'block', textDecoration: 'none', color: 'var(--blue)' }}
+            >
+              ⚙ Administration
+            </a>
+          )}
           <button className="dropdown-item" onClick={handleLogout}>
             Se déconnecter
           </button>
