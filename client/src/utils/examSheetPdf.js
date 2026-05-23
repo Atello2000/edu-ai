@@ -64,9 +64,6 @@ export async function exportExamSheetToPDF(fileName, md) {
   function newPage() { drawFooter(); pdf.addPage(); pageNum++; drawHeader(false); }
   function need(h)   { if (y + h > PH - 16) newPage(); }
 
-  // jsPDF 2.5.1 : splitTextToSize interprète maxLen en points
-  const PT = 2.835;
-
   function renderTable(tableLines) {
     const rows = tableLines
       .filter(l => !/^\|[\s\-:|]+\|$/.test(l.trim()))
@@ -76,7 +73,7 @@ export async function exportExamSheetToPDF(fileName, md) {
     const cols = Math.max(...rows.map(r => r.length));
     const colW = CW / cols;
     const pad  = 2;
-    const cellW = (colW - pad * 2) * PT;
+    const cellW = colW - pad * 2; // en mm, unité du document
 
     rows.forEach((row, ri) => {
       if (ri === 0) { pdf.setFont('helvetica', 'bold');   pdf.setFontSize(8);   }
