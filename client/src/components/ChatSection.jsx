@@ -58,19 +58,22 @@ function ChatBubble({ msg, onCopy }) {
   const badge   = msg.model && isLocal
     ? `<span class="chat-model-badge ${isGroq ? 'groq' : 'claude'}">${msg.model}</span>`
     : '';
+  const streamingCursor = msg.streaming ? '<span class="chat-cursor">▋</span>' : '';
 
   return (
     <div className="chat-msg ai">
       <div className="chat-bubble"
-        dangerouslySetInnerHTML={{ __html: window.marked?.parse(msg.text) ?? msg.text }}
+        dangerouslySetInnerHTML={{ __html: (window.marked?.parse(msg.text) ?? msg.text) + streamingCursor }}
       />
-      <div className="chat-meta">
-        {badge && <span dangerouslySetInnerHTML={{ __html: badge }} />}
-        <button className="chat-copy-btn" title="Copier" onClick={handleCopy}>
-          {copied ? '✓' : '⎘'}
-        </button>
-        <span className="chat-time">{msg.time}</span>
-      </div>
+      {!msg.streaming && (
+        <div className="chat-meta">
+          {badge && <span dangerouslySetInnerHTML={{ __html: badge }} />}
+          <button className="chat-copy-btn" title="Copier" onClick={handleCopy}>
+            {copied ? '✓' : '⎘'}
+          </button>
+          <span className="chat-time">{msg.time}</span>
+        </div>
+      )}
     </div>
   );
 }

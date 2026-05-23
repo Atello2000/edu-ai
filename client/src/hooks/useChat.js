@@ -47,36 +47,76 @@ export function useChat() {
       imgSrc: attachedImageSnap ? `data:${attachedImageSnap.mimeType};base64,${attachedImageSnap.base64}` : null,
       imgName: attachedImageSnap?.name || null,
     };
-    setMessages(prev => [...prev, userMsg]);
+
+    // ID stable pour la bulle IA en cours de streaming
+    const aiMsgId = Date.now();
+    setMessages(prev => [...prev, userMsg, { role: 'typing', id: aiMsgId }]);
     setHistory(prev => [...prev, { role: 'user', content: msgText }]);
     setLoading(true);
-
-    // Typing bubble
-    const typingId = Date.now();
-    setMessages(prev => [...prev, { role: 'typing', id: typingId }]);
 
     try {
       const body = { files, messages: [...history, { role: 'user', content: msgText }] };
       if (attachedFileSnap)  body.attachedFile  = attachedFileSnap;
       if (attachedImageSnap) body.attachedImage = attachedImageSnap;
 
-      const res  = await fetch('/api/chat', {
+      const res = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      if (!res.ok) throw new Error('Erreur serveur');
 
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = '';
+      let   fullText = '';
+      let   chatModel = '';
       const aiTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      setMessages(prev => [
-        ...prev.filter(m => m.id !== typingId),
-        { role: 'ai', text: data.response, model: data.model, time: aiTime },
-      ]);
-      setHistory(prev => [...prev, { role: 'assistant', content: data.response }]);
+
+      // Remplacer la bulle de typing par une bulle IA vide dès le premier chunk
+      let bubbleCreated = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
+
+          if (data.type === 'delta') {
+            fullText += data.text;
+            if (!bubbleCreated) {
+              // Premier delta : remplacer typing par bulle IA en cours
+              bubbleCreated = true;
+              setMessages(prev => [
+                ...prev.filter(m => m.id !== aiMsgId),
+                { role: 'ai', id: aiMsgId, text: fullText, time: aiTime, streaming: true },
+              ]);
+            } else {
+              // Mises à jour suivantes : mettre à jour le texte en place
+              setMessages(prev => prev.map(m =>
+                m.id === aiMsgId ? { ...m, text: fullText } : m
+              ));
+            }
+          } else if (data.type === 'end') {
+            chatModel = data.model || '';
+            // Finaliser — retirer le flag streaming, ajouter le modèle
+            setMessages(prev => prev.map(m =>
+              m.id === aiMsgId ? { ...m, text: fullText, model: chatModel, streaming: false } : m
+            ));
+            setHistory(prev => [...prev, { role: 'assistant', content: fullText }]);
+          } else if (data.type === 'error') {
+            throw new Error(data.message);
+          }
+        }
+      }
     } catch (err) {
       const aiTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       setMessages(prev => [
-        ...prev.filter(m => m.id !== typingId),
+        ...prev.filter(m => m.id !== aiMsgId),
         { role: 'ai', text: '❌ ' + err.message, time: aiTime },
       ]);
     } finally {

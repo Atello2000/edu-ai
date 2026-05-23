@@ -120,6 +120,35 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
   return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: usage(r, 'DeepSeek') };
 }
 
+// Streaming version of aiChat — yields { text, model } then { usage }
+async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage = false) {
+  const oaiMessages = toOpenAIMessages(messages);
+  const allMsgs    = [{ role: 'system', content: systemPrompt }, ...oaiMessages];
+  const streamOpts  = { stream_options: { include_usage: true } };
+
+  if (!hasImage && groq) {
+    try {
+      const stream = await groq.chat.completions.create({ model: GROQ_MODEL, max_tokens: maxTokens, stream: true, ...streamOpts, messages: allMsgs });
+      for await (const chunk of stream) {
+        if (chunk.usage) { yield { usage: { provider: 'Groq', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } }; continue; }
+        const text = chunk.choices[0]?.delta?.content || '';
+        if (text) yield { text, model: 'Groq · Llama 3.3' };
+      }
+      return;
+    } catch (err) {
+      logger.warn('Groq fallback (chat stream)', { status: err?.status, message: err?.message });
+    }
+  }
+
+  if (!deepseek) throw new Error('Aucune clé IA configurée');
+  const stream = await deepseek.chat.completions.create({ model: DEEPSEEK_MODEL, max_tokens: maxTokens, stream: true, ...streamOpts, messages: allMsgs });
+  for await (const chunk of stream) {
+    if (chunk.usage) { yield { usage: { provider: 'DeepSeek', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } }; continue; }
+    const text = chunk.choices[0]?.delta?.content || '';
+    if (text) yield { text, model: 'DeepSeek · Chat' };
+  }
+}
+
 function calcMaxTokens(type, textLen, count = 0) {
   if (type === 'summary') {
     if (textLen < 5000)  return 1200;
@@ -132,4 +161,4 @@ function calcMaxTokens(type, textLen, count = 0) {
   return 2048;
 }
 
-module.exports = { IS_PROD, MODEL_LABEL, deepseek, DEEPSEEK_MODEL, aiComplete, aiCompleteFast, aiStream, aiChat, calcMaxTokens };
+module.exports = { IS_PROD, MODEL_LABEL, deepseek, DEEPSEEK_MODEL, aiComplete, aiCompleteFast, aiStream, aiChat, aiChatStream, calcMaxTokens };

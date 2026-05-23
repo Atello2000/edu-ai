@@ -1,16 +1,26 @@
 const express = require('express');
 const router  = express.Router();
-const { aiChat }               = require('../../services/ai');
+const { aiChatStream }         = require('../../services/ai');
 const { extractText }          = require('../../services/text');
 const { checkQuota, LIMITS }   = require('../../middleware/quota');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { userContext, getFileText } = require('./helpers');
 
-// POST /api/chat — chat contextuel avec le cours (+ support image et fichier joint)
+// POST /api/chat — chat contextuel avec le cours, réponse en streaming SSE
 router.post('/chat', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
+
   const quota = await checkQuota(req, 'chat');
-  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
+  if (!quota.ok) {
+    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
+    return res.end();
+  }
 
   try {
     const { files, messages, attachedFile, attachedImage } = req.body;
@@ -56,13 +66,25 @@ Cours disponibles :${context}${imageNote}`;
     }
 
     const maxTok = attachedFile ? 3000 : attachedImage ? 2000 : 1024;
-    const { text, model, usage } = await aiChat(systemPrompt, finalMessages, maxTok, !!attachedImage);
-    logTokens(req.user?.id, 'chat', usage?.provider, usage?.input, usage?.output);
-    res.json({ success: true, response: text, model });
+    let   fullText  = '';
+    let   chatModel = '';
+
+    for await (const chunk of aiChatStream(systemPrompt, finalMessages, maxTok, !!attachedImage)) {
+      if (chunk.usage) {
+        logTokens(req.user?.id, 'chat', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
+        continue;
+      }
+      fullText  += chunk.text;
+      chatModel  = chunk.model;
+      send({ type: 'delta', text: chunk.text });
+    }
+
+    send({ type: 'end', model: chatModel });
   } catch (err) {
     logger.error('AI chat error', { userId: req.user?.id, message: err.message });
-    res.status(500).json({ error: err.message });
+    send({ type: 'error', message: err.message });
   }
+  res.end();
 });
 
 module.exports = router;
