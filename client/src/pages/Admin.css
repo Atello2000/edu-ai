@@ -105,6 +105,53 @@ tr:hover td { background: rgba(255,255,255,.025); }
 .provider-groq    { color: #f97316; }
 .provider-deepseek { color: #818cf8; }
 
+/* ── Token per user ────────────────────────────────────────────────────────── */
+.token-cell { min-width: 90px; }
+.token-total { font-weight: 600; color: var(--blue); font-size: .84rem; display: block; }
+.token-breakdown { font-size: .72rem; color: var(--muted); display: block; margin-top: .1rem; }
+
+/* ── Section title badge ───────────────────────────────────────────────────── */
+.section-title { display: flex; align-items: center; gap: .6rem; }
+.msg-unread-badge {
+  background: var(--blue); color: #fff;
+  border-radius: 99px; font-size: .68rem; font-weight: 700;
+  padding: .15rem .55rem; letter-spacing: .02em;
+}
+
+/* ── Messages list ─────────────────────────────────────────────────────────── */
+.messages-list { display: flex; flex-direction: column; gap: .65rem; margin-bottom: 3rem; }
+
+.messages-empty {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 2rem;
+  text-align: center; color: var(--muted); font-size: .85rem;
+}
+
+.msg-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: .9rem 1.1rem;
+  transition: border-color .15s;
+}
+.msg-unread { border-left: 3px solid var(--blue); }
+.msg-read   { opacity: .7; }
+.msg-card:hover { border-color: var(--blue); opacity: 1; }
+
+.msg-meta {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: .5rem .75rem; margin-bottom: .55rem;
+}
+.msg-author { font-size: .84rem; display: flex; align-items: center; gap: .3rem; }
+.msg-email  { font-size: .75rem; color: var(--muted); }
+.msg-date   { font-size: .72rem; color: var(--muted); margin-left: auto; }
+.msg-actions { display: flex; gap: .4rem; }
+
+.msg-body {
+  font-size: .85rem; color: var(--text); line-height: 1.6;
+  white-space: pre-wrap; word-break: break-word;
+  background: var(--surface); border-radius: var(--radius-xs);
+  padding: .6rem .8rem;
+}
+
 @media (max-width: 640px) {
   .admin-page { padding: 1rem; }
   .admin-header { flex-direction: column; align-items: flex-start; }
@@ -113,4 +160,5 @@ tr:hover td { background: rgba(255,255,255,.025); }
   .breakdown-row { grid-template-columns: 1fr; }
   .stats-row { grid-template-columns: 1fr 1fr; }
   th, td { padding: .6rem .75rem; }
+  .msg-date { margin-left: 0; }
 }

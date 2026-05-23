@@ -22,11 +22,13 @@ function esc(s) {
 
 export default function Admin() {
   const navigate = useNavigate();
-  const [stats, setStats]   = useState(null);
-  const [tokens, setTokens] = useState(null);
-  const [users, setUsers]   = useState([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats]       = useState(null);
+  const [tokens, setTokens]     = useState(null);
+  const [users, setUsers]       = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [unread, setUnread]     = useState(0);
+  const [search, setSearch]     = useState('');
+  const [loading, setLoading]   = useState(true);
   const [accessError, setAccessError] = useState('');
 
   useEffect(() => {
@@ -39,15 +41,18 @@ export default function Admin() {
           setLoading(false);
           return;
         }
-        const [sRes, uRes, tRes] = await Promise.all([
-          fetch('/api/admin/stats',  { credentials: 'include' }),
-          fetch('/api/admin/users',  { credentials: 'include' }),
-          fetch('/api/admin/tokens', { credentials: 'include' }),
+        const [sRes, uRes, tRes, mRes] = await Promise.all([
+          fetch('/api/admin/stats',    { credentials: 'include' }),
+          fetch('/api/admin/users',    { credentials: 'include' }),
+          fetch('/api/admin/tokens',   { credentials: 'include' }),
+          fetch('/api/admin/messages', { credentials: 'include' }),
         ]);
-        const [s, u, t] = await Promise.all([sRes.json(), uRes.json(), tRes.json()]);
+        const [s, u, t, m] = await Promise.all([sRes.json(), uRes.json(), tRes.json(), mRes.json()]);
         setStats(s);
         setUsers(u.users || []);
         setTokens(t);
+        setMessages(m.messages || []);
+        setUnread(m.unread || 0);
         setLoading(false);
       } catch (err) {
         setAccessError('Erreur réseau : ' + err.message);
@@ -81,6 +86,19 @@ export default function Admin() {
     const [s, u] = await Promise.all([sRes.json(), uRes.json()]);
     setStats(s);
     setUsers(u.users || []);
+  }
+
+  async function markRead(id) {
+    await fetch(`/api/admin/messages/${id}/read`, { method: 'PATCH', credentials: 'include' });
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: 1 } : m));
+    setUnread(prev => Math.max(0, prev - 1));
+  }
+
+  async function deleteMessage(id) {
+    await fetch(`/api/admin/messages/${id}`, { method: 'DELETE', credentials: 'include' });
+    const deleted = messages.find(m => m.id === id);
+    setMessages(prev => prev.filter(m => m.id !== id));
+    if (deleted && !deleted.is_read) setUnread(prev => Math.max(0, prev - 1));
   }
 
   const filtered = users.filter(u =>
@@ -166,7 +184,7 @@ export default function Admin() {
           <thead>
             <tr>
               <th>#</th><th>Nom</th><th>Email</th><th>Plan</th>
-              <th>Quota aujourd&apos;hui</th><th>Inscrit le</th><th>Actions</th>
+              <th>Tokens (total)</th><th>Quota aujourd&apos;hui</th><th>Inscrit le</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -181,6 +199,12 @@ export default function Admin() {
                   <td><strong dangerouslySetInnerHTML={{__html: esc(u.name)}} /></td>
                   <td style={{color:'var(--muted)',fontSize:'.83rem'}} dangerouslySetInnerHTML={{__html: esc(u.email)}} />
                   <td><span className={`plan-badge plan-${u.plan}`}>{planLabel}</span></td>
+                  <td className="token-cell">
+                    <span className="token-total">{fmtTokens(Number(u.total_tokens||0))}</span>
+                    {Number(u.total_tokens||0) > 0 && (
+                      <span className="token-breakdown">↑{fmtTokens(Number(u.input_tokens||0))} ↓{fmtTokens(Number(u.output_tokens||0))}</span>
+                    )}
+                  </td>
                   <td className="quota-mini">
                     📄 {u.q_summarize} résumés &nbsp;
                     ❓ {u.q_quiz} quiz &nbsp;
@@ -209,6 +233,39 @@ export default function Admin() {
           </tbody>
         </table>
       </div>
+
+      {/* ── Messages utilisateurs ─────────────────────────────────────────── */}
+      <div className="section-title" style={{marginTop:'2rem'}}>
+        Messages utilisateurs
+        {unread > 0 && <span className="msg-unread-badge">{unread} non lu{unread > 1 ? 's' : ''}</span>}
+      </div>
+
+      <div className="messages-list">
+        {messages.length === 0 ? (
+          <div className="messages-empty">Aucun message pour l&apos;instant.</div>
+        ) : messages.map(m => (
+          <div key={m.id} className={`msg-card${m.is_read ? ' msg-read' : ' msg-unread'}`}>
+            <div className="msg-meta">
+              <span className="msg-author">
+                <strong dangerouslySetInnerHTML={{__html: esc(m.user_name)}} />
+                <span className={`plan-badge plan-${m.user_plan}`} style={{marginLeft:'.4rem'}}>
+                  {m.user_plan}
+                </span>
+              </span>
+              <span className="msg-email" dangerouslySetInnerHTML={{__html: esc(m.user_email)}} />
+              <span className="msg-date">{new Date(m.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+              <div className="msg-actions">
+                {!m.is_read && (
+                  <button className="btn-sm promote" title="Marquer comme lu" onClick={() => markRead(m.id)}>✓ Lu</button>
+                )}
+                <button className="btn-sm danger" title="Supprimer" onClick={() => deleteMessage(m.id)}>✕</button>
+              </div>
+            </div>
+            <div className="msg-body">{m.message}</div>
+          </div>
+        ))}
+      </div>
+
     </div>
   );
 }

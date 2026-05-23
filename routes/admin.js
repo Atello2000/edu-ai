@@ -19,9 +19,19 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
       COALESCE(q.summarize,  0) AS q_summarize,
       COALESCE(q.quiz,       0) AS q_quiz,
       COALESCE(q.flashcards, 0) AS q_flashcards,
-      COALESCE(q.chat,       0) AS q_chat
+      COALESCE(q.chat,       0) AS q_chat,
+      COALESCE(t.total_tokens, 0) AS total_tokens,
+      COALESCE(t.input_tokens,  0) AS input_tokens,
+      COALESCE(t.output_tokens, 0) AS output_tokens
     FROM users u
     LEFT JOIN user_quota q ON q.user_id = u.id AND q.date = ?
+    LEFT JOIN (
+      SELECT user_id,
+        SUM(input_tokens + output_tokens) AS total_tokens,
+        SUM(input_tokens)  AS input_tokens,
+        SUM(output_tokens) AS output_tokens
+      FROM token_usage GROUP BY user_id
+    ) t ON t.user_id = u.id
     ORDER BY u.created_at DESC
   `).all(today);
   res.json({ users });
@@ -82,6 +92,32 @@ router.get('/tokens', requireAuth, requireAdmin, async (req, res) => {
   `).all();
 
   res.json({ today: todayRow, allTime: allRow, byProvider, byAction });
+});
+
+// ── GET /api/admin/messages ───────────────────────────────────────────────────
+router.get('/messages', requireAuth, requireAdmin, async (req, res) => {
+  const messages = await prepare(`
+    SELECT m.id, m.message, m.created_at, m.is_read,
+           u.name AS user_name, u.email AS user_email, u.plan AS user_plan
+    FROM user_messages m
+    JOIN users u ON u.id = m.user_id
+    ORDER BY m.created_at DESC
+    LIMIT 200
+  `).all();
+  const unread = messages.filter(m => !m.is_read).length;
+  res.json({ messages, unread });
+});
+
+// ── PATCH /api/admin/messages/:id/read ───────────────────────────────────────
+router.patch('/messages/:id/read', requireAuth, requireAdmin, async (req, res) => {
+  await prepare('UPDATE user_messages SET is_read = 1 WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+// ── DELETE /api/admin/messages/:id ───────────────────────────────────────────
+router.delete('/messages/:id', requireAuth, requireAdmin, async (req, res) => {
+  await prepare('DELETE FROM user_messages WHERE id = ?').run(req.params.id);
+  res.json({ ok: true });
 });
 
 module.exports = router;

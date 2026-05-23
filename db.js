@@ -140,6 +140,14 @@ async function initSchema() {
       expires_at TIMESTAMPTZ NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_ai_cache_expires ON ai_cache(expires_at);
+    CREATE TABLE IF NOT EXISTS user_messages (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message    TEXT    NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      is_read    INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_messages_read ON user_messages(is_read);
   `);
 
   const migrations = [

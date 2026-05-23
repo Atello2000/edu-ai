@@ -22,6 +22,7 @@ import TTSBar from '../components/TTSBar.jsx';
 import UserMenu from '../components/UserMenu.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
 import GoalModal from '../components/GoalModal.jsx';
+import FeedbackButton from '../components/FeedbackButton.jsx';
 import { useSummarize } from '../hooks/useSummarize.js';
 import { useExamSheet } from '../hooks/useExamSheet.js';
 import { useQuiz } from '../hooks/useQuiz.js';
@@ -578,6 +579,9 @@ export default function AppPage() {
 
       {/* Save to Folder Modal */}
       <SaveFolderModal />
+
+      {/* Feedback floating button */}
+      <FeedbackButton />
 
     </>
   );
