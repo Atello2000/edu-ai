@@ -55,21 +55,12 @@ self.addEventListener('notificationclick', e => {
 
 const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
 
-// URLs whose content changes on every deploy — always fetch fresh, never cache
-const NO_CACHE_PATTERNS = ['/', '/index.html'];
-
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return;
 
   const url = new URL(e.request.url);
   const isExternal = EXTERNAL.some(h => url.hostname.includes(h));
-
-  // HTML entry points: always network, never fall back to cache
-  if (!isExternal && NO_CACHE_PATTERNS.includes(url.pathname)) {
-    e.respondWith(fetch(e.request));
-    return;
-  }
 
   if (isExternal) {
     // Cache-first pour les ressources CDN/fonts
@@ -83,12 +74,18 @@ self.addEventListener('fetch', e => {
       }))
     );
   } else {
-    // Network-first pour les assets locaux (app.js, style.css…)
+    // Network-first pour les assets locaux (app.js, style.css, /assets/…)
+    // IMPORTANT: never cache HTML responses — they are SPA entry points whose
+    // hashed asset references change on every deploy. Caching them causes a
+    // blank page when the old HTML references asset filenames that no longer exist.
     e.respondWith(
       fetch(e.request).then(res => {
         if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
+          const ct = res.headers.get('content-type') || '';
+          if (!ct.includes('text/html')) {
+            const clone = res.clone();
+            caches.open(CACHE).then(c => c.put(e.request, clone));
+          }
         }
         return res;
       }).catch(() => caches.match(e.request))
