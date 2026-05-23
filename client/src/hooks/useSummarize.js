@@ -96,6 +96,7 @@ export function useSummarize() {
       if (accumulated.current.length) {
         window.__saveSession?.({ summaries: accumulated.current });
         window.__fetchQuota?.();
+        window.__addGeneratedSection?.('summary-section');
         window.__refreshFloatNav?.();
         window.__renderDashboard?.();
       }

@@ -202,6 +202,7 @@ export default function AppPage() {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) { alert('Chargez d\'abord des fichiers.'); return; }
     setChatFiles(files);
+    window.__addGeneratedSection?.('chat-section');
     window.__appShowPanel?.('chat-section');
   }, [uploadedFiles]);
 

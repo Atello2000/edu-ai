@@ -461,11 +461,12 @@ function restoreSession(s) {
 }
 window.__restoreSession = restoreSession;
 // ── Bridges pour React (fonctions app.js utilisées par les hooks) ─────────────
-window.__saveSession    = saveSession;
-window.__fetchQuota     = fetchQuota;
-window.__refreshFloatNav= refreshFloatNav;
-window.__renderDashboard= renderDashboard;
-window.__saveQuizStat   = saveQuizStat;
+window.__saveSession         = saveSession;
+window.__fetchQuota          = fetchQuota;
+window.__refreshFloatNav     = refreshFloatNav;
+window.__renderDashboard     = renderDashboard;
+window.__saveQuizStat        = saveQuizStat;
+window.__addGeneratedSection = id => { generatedSections.add(id); };
 
 
 // ── MES MATIÈRES (FOLDERS) — rendering handled by FoldersPanel React component ─

@@ -55,6 +55,7 @@ export function useExamSheet() {
             // Notify app.js bridges
             window.__saveSession?.({ examSheet: { sheet: text } });
             window.__fetchQuota?.();
+            window.__addGeneratedSection?.('exam-sheet-section');
             window.__refreshFloatNav?.();
             window.__renderDashboard?.();
           } else if (data.type === 'error') {

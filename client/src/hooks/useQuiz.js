@@ -58,6 +58,7 @@ export function useQuiz() {
 
       window.__saveSession?.({ quiz: data.results });
       window.__fetchQuota?.();
+      window.__addGeneratedSection?.('quiz-section');
       window.__refreshFloatNav?.();
     } catch (err) {
       setError(err.message);

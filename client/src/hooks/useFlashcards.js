@@ -108,6 +108,7 @@ export function useFlashcards() {
 
       window.__saveSession?.({ flashcards: data.results });
       window.__fetchQuota?.();
+      window.__addGeneratedSection?.('flashcard-section');
       window.__refreshFloatNav?.();
     } catch (err) {
       setError(err.message);
