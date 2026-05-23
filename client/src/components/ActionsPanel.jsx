@@ -1,0 +1,300 @@
+import { useState, useEffect, useRef } from 'react';
+import QuotaBar from './QuotaBar.jsx';
+
+export default function ActionsPanel({
+  hasFiles,
+  uploadedFiles = [],
+  onGoUpload,
+  summaryResults,
+  examMd,
+  questions,
+  decks,
+  quizLoading,
+  examLoading,
+  fcLoading,
+  onSummarize,
+  onSummaryRegen,
+  onExamSheet,
+  onExamRegen,
+  onQuiz,
+  onFlashcards,
+  onOpenChat,
+}) {
+  // ── Sélection de fichiers (React-owned) ───────────────────────────────────
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+
+  // Refs stables pour le bridge (évite une re-registration à chaque rendu)
+  const uploadedFilesRef = useRef(uploadedFiles);
+  uploadedFilesRef.current = uploadedFiles;
+  const selectedIdsRef   = useRef(selectedIds);
+  selectedIdsRef.current = selectedIds;
+
+  // Quand les fichiers changent (nouvel upload ou restore), tout sélectionner
+  useEffect(() => {
+    setSelectedIds(new Set(uploadedFiles.map(f => f.id)));
+  }, [uploadedFiles]);
+
+  // Bridge pour les hooks AI (résumé, quiz…) qui ont besoin des fichiers sélectionnés
+  useEffect(() => {
+    window.__getSelectedFiles = () => {
+      const files = uploadedFilesRef.current;
+      const ids   = selectedIdsRef.current;
+      if (!ids.size || ids.size === files.length) return files;
+      return files.filter(f => ids.has(f.id));
+    };
+    return () => { delete window.__getSelectedFiles; };
+  }, []);
+
+  async function handleMindmap() {
+    const files = window.__getSelectedFiles?.() || uploadedFilesRef.current;
+    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+
+    // Utilise le résumé déjà généré si disponible
+    const cached = window._summaryResultsRef?.();
+    if (cached?.length) {
+      const r = cached[0];
+      window.__openMindmap?.(r.name, r.summary);
+      return;
+    }
+
+    const loader     = document.getElementById('loader');
+    const loaderText = document.getElementById('loader-text');
+    if (loaderText) loaderText.textContent = 'Génération du mindmap…';
+    loader?.classList.remove('hidden');
+
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files, lang: 'fr' }),
+      });
+      if (!res.ok) throw new Error('Erreur serveur');
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const partials = {};
+      const results  = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
+          if (data.type === 'start') partials[data.name] = { text: '' };
+          if (data.type === 'delta') partials[data.name].text += data.text;
+          if (data.type === 'done')  results.push({ name: data.name, summary: partials[data.name].text });
+          if (data.type === 'error') throw new Error(data.message);
+        }
+      }
+      if (results.length) window.__openMindmap?.(results[0].name, results[0].summary);
+    } catch (err) { alert('Erreur : ' + err.message); }
+    finally { loader?.classList.add('hidden'); }
+  }
+
+  const [examModeOn, setExamModeOn] = useState(false);
+
+  const allSelected = uploadedFiles.length > 0 && selectedIds.size === uploadedFiles.length;
+
+  function toggleOne(id, checked) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(id); else next.delete(id);
+      return next;
+    });
+  }
+
+  return (
+    <>
+      <h2 className="panel-title">Choisir une <em>action</em></h2>
+
+      <QuotaBar />
+
+      {/* Avertissement si aucun fichier en mémoire */}
+      <div className={`no-files-notice${hasFiles ? ' hidden' : ''}`} id="no-files-notice">
+        <span className="no-files-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="13" x2="15" y2="13"/>
+          </svg>
+        </span>
+        <div>
+          <strong>Aucun fichier en mémoire</strong>
+          <p>Les fichiers de la session précédente ne sont plus disponibles. Rechargez votre cours pour utiliser ces actions.</p>
+        </div>
+        <button className="act-btn gold" id="no-files-upload-btn" onClick={onGoUpload}>
+          Charger un fichier
+        </button>
+      </div>
+
+      {/* Liste des fichiers chargés — React-owned */}
+      <div className={`file-select-area${!hasFiles ? ' hidden' : ''}`}>
+        <div className="fsa-header">
+          <span>Fichiers chargés</span>
+          <label className="sel-all">
+            <input
+              type="checkbox"
+              id="select-all"
+              checked={allSelected}
+              onChange={e => setSelectedIds(
+                e.target.checked ? new Set(uploadedFiles.map(f => f.id)) : new Set()
+              )}
+            />
+            Tout sélectionner
+          </label>
+        </div>
+        <div>
+          {uploadedFiles.map(f => (
+            <div key={f.id} className="file-checkbox">
+              <input
+                type="checkbox"
+                value={f.id}
+                checked={selectedIds.has(f.id)}
+                onChange={e => toggleOne(f.id, e.target.checked)}
+              />
+              <span className="file-ext">{f.name.split('.').pop().toUpperCase()}</span>
+              <span>{f.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Cartes d'action */}
+      <div className="action-trio">
+
+        {/* Résumer */}
+        <div className="act-card" data-color="purple">
+          <div className="act-card-icon purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Résumer</strong>
+            <span>Résumé structuré en 5 sections</span>
+          </div>
+          <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
+            {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
+          </button>
+          {summaryResults.length > 0 && (
+            <button className="regen-link" id="summarize-regen-btn" onClick={onSummaryRegen}>↺ Régénérer</button>
+          )}
+        </div>
+
+        {/* Quiz QCM */}
+        <div className="act-card" data-color="blue">
+          <div className="act-card-icon blue">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/>
+              <circle cx="12" cy="12" r="6"/>
+              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Quiz QCM</strong>
+            <label>
+              <input type="number" id="quiz-count" defaultValue="5" min="1" max="20" /> questions ·{' '}
+              <select id="quiz-difficulty">
+                <option value="moyen">Moyen</option>
+                <option value="facile">Facile</option>
+                <option value="difficile">Difficile</option>
+              </select>
+            </label>
+            <label className="exam-toggle-label">
+              <input type="checkbox" id="exam-mode-cb" onChange={e => setExamModeOn(e.target.checked)} /> ⏱ Mode examen{' '}
+              <select id="exam-duration" className={examModeOn ? '' : 'hidden'}>
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
+                <option value="30">30 min</option>
+              </select>
+            </label>
+          </div>
+          <button className="act-btn blue" id="quiz-btn" disabled={!hasFiles} onClick={onQuiz}>
+            {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
+          </button>
+        </div>
+
+        {/* Flashcards */}
+        <div className="act-card" data-color="teal">
+          <div className="act-card-icon teal">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="8" width="16" height="12" rx="2"/>
+              <path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Flashcards</strong>
+            <label><input type="number" id="fc-count" defaultValue="10" min="3" max="30" /> cartes</label>
+          </div>
+          <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
+            {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
+          </button>
+        </div>
+
+        {/* Chat avec le cours */}
+        <div className="act-card act-card-wide" data-color="gold">
+          <div className="act-card-icon gold">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <circle cx="9" cy="11" r=".6" fill="currentColor"/>
+              <circle cx="12" cy="11" r=".6" fill="currentColor"/>
+              <circle cx="15" cy="11" r=".6" fill="currentColor"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Chat avec le cours</strong>
+            <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
+          </div>
+          <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
+        </div>
+
+        {/* Fiche d'examen */}
+        <div className="act-card act-card-wide" data-color="purple">
+          <div className="act-card-icon purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11l3 3L22 4"/>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Fiche d&apos;examen</strong>
+            <span>Définitions, pièges, tableaux et questions probables</span>
+          </div>
+          <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
+            {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
+          </button>
+          {examMd && (
+            <button className="regen-link" id="exam-sheet-regen-btn" onClick={onExamRegen}>↺ Régénérer</button>
+          )}
+        </div>
+
+        {/* Carte mentale — click géré par app.js (window.__openMindmap) */}
+        <div className="act-card act-card-wide" data-color="teal">
+          <div className="act-card-icon teal">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="5" r="2"/>
+              <circle cx="5" cy="19" r="2"/>
+              <circle cx="19" cy="19" r="2"/>
+              <line x1="12" y1="7" x2="12" y2="13"/>
+              <line x1="12" y1="13" x2="5" y2="17"/>
+              <line x1="12" y1="13" x2="19" y2="17"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Carte mentale</strong>
+            <span>Visualise le cours sous forme d&apos;arbre interactif</span>
+          </div>
+          <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
+        </div>
+
+      </div>
+    </>
+  );
+}

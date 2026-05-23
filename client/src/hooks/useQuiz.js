@@ -103,7 +103,13 @@ export function useQuiz() {
     const pct = Math.round(correct / questions.length * 100);
     setScore({ correct, total: questions.length, pct, timeTaken });
     setSubmitted(true);
-    window.__saveQuizStat?.(pct, correct, questions.length);
+
+    const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
+    const stats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
+    stats.unshift({ date: Date.now(), pct, correct, total: questions.length });
+    localStorage.setItem(QUIZ_STATS_KEY, JSON.stringify(stats.slice(0, 50)));
+    window.__refreshStats?.();
+    window.__renderDashboard?.();
   }
 
   return {

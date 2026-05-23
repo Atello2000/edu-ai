@@ -65,7 +65,6 @@ app.use('/api',      require('./routes/misc'));
 app.use('/api',         requireAuth, aiLimiter, require('./routes/ai'));
 app.use('/api/activity', requireAuth, require('./routes/activity'));
 app.use('/api/folders', requireAuth, require('./routes/folders'));
-app.use('/api/pharma',  requireAuth, aiLimiter, require('./routes/pharma'));
 app.use('/api/admin',   requireAuth, require('./routes/admin'));
 app.use('/api/push',    require('./routes/push'));
 

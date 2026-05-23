@@ -33,8 +33,6 @@
   --rose:         #ff6b81;
   --rose-bg:      rgba(255,107,129,.09);
   --emerald:      #34d399;
-  --pharma:       #22c55e;
-  --pharma-bg:    rgba(34,197,94,.09);
 
   --text:         #e8ecf6;
   --muted:        #6b7fa3;
@@ -89,8 +87,6 @@
   --rose:         #e11d48;
   --rose-bg:      rgba(225,29,72,.08);
   --emerald:      #059669;
-  --pharma:       #16a34a;
-  --pharma-bg:    rgba(22,163,74,.08);
 
   --text:         #1c1917;
   --muted:        #78716c;
@@ -350,15 +346,6 @@ main {
   transform:translateY(-2px);
   box-shadow:0 6px 20px rgba(13,148,136,.4);
 }
-.act-btn.pharma {
-  background:linear-gradient(135deg,#14532d,#22c55e);
-  color:#fff;
-  box-shadow:0 3px 12px rgba(20,83,45,.3);
-}
-.act-btn.pharma:not(:disabled):hover {
-  transform:translateY(-2px);
-  box-shadow:0 6px 20px rgba(20,83,45,.4);
-}
 .act-btn.full  { width:100%; justify-content:center; padding:.78rem; font-size:.93rem; margin-top:1rem; }
 .act-btn.large { padding:.78rem 2.5rem; font-size:.96rem; }
 
@@ -511,7 +498,6 @@ main {
 .act-card-icon.blue   { background:linear-gradient(135deg,#1d4ed8,#3d7eff); box-shadow:0 4px 16px rgba(29,78,216,.38);  }
 .act-card-icon.teal   { background:linear-gradient(135deg,#0d9488,#1dd1a1); box-shadow:0 4px 16px rgba(13,148,136,.38); }
 .act-card-icon.gold   { background:linear-gradient(135deg,#92400e,#d4a94c); box-shadow:0 4px 16px rgba(146,64,14,.32);  }
-.act-card-icon.pharma { background:linear-gradient(135deg,#14532d,#22c55e); box-shadow:0 4px 16px rgba(20,83,45,.38);   }
 
 .act-card-body { flex:1; }
 .act-card-body strong { display:block; font-size:.89rem; font-weight:600; margin-bottom:.28rem; }
@@ -1180,7 +1166,6 @@ main {
 }
 .fnav-btn:hover  { background:rgba(255,255,255,.08); color:var(--text); transform:translateY(-2px); }
 .fnav-btn.active { background:var(--gold-bg); color:var(--gold); }
-.fnav-pharma.active { background:var(--pharma-bg); color:var(--pharma); }
 
 .fnav-icon  { font-size:1.05rem; }
 .fnav-label { font-family:'DM Mono',monospace; font-size:.56rem; letter-spacing:.06em; text-transform:uppercase; }
@@ -1389,69 +1374,6 @@ main {
 .quiz-score-mid   { background:var(--gold-bg);              color:var(--gold); }
 .quiz-score-low   { background:rgba(255,107,129,.1);        color:var(--rose); }
 
-/* ════════════════════════════════ PHARMA ════════════════════════════════ */
-
-.pharma-modes    { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.4rem; }
-.pharma-mode-btn {
-  display:flex; align-items:center; gap:.4rem;
-  padding:.46rem 1rem; border-radius:var(--radius-sm);
-  border:1px solid var(--border); background:var(--card);
-  color:var(--muted); font-size:.8rem; cursor:pointer;
-  transition:all .22s; font-family:'DM Mono',monospace; min-height:40px;
-}
-.pharma-mode-btn.active { border-color:var(--pharma); color:var(--pharma); background:var(--pharma-bg); }
-.pharma-mode-btn:hover:not(.active) { color:var(--text); background:var(--surface); transform:translateY(-1px); }
-
-.pharma-config {
-  display:flex; gap:.8rem; flex-wrap:wrap; align-items:center;
-  padding:1rem 1.2rem; background:var(--card); border:1px solid var(--border);
-  border-radius:var(--radius-sm); margin-bottom:1.4rem;
-}
-.pharma-config label { font-size:.8rem; color:var(--muted); display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
-.pharma-config select { background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:var(--radius-sm); padding:.42rem .75rem; font-size:.82rem; flex:1; min-width:180px; }
-.pharma-config input[type=number] { width:54px; padding:.36rem .42rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text); font-size:.82rem; text-align:center; }
-.pharma-sub { display:flex; flex-direction:column; gap:0; }
-#pharma-input:focus { border-color:var(--pharma); }
-.pharma-topic-badge { display:inline-block; padding:.2rem .68rem; border-radius:99px; font-size:.68rem; font-family:'DM Mono',monospace; background:var(--pharma-bg); color:var(--pharma); margin-bottom:.5rem; }
-#pharma-fiche-result { max-height:72vh; overflow-y:auto; border-radius:var(--radius); }
-#pharma-fiche-result .summary-item { border-top:4px solid var(--pharma); }
-#pharma-quiz-container { max-height:72vh; overflow-y:auto; }
-
-.pharma-chat-toolbar {
-  display:flex; align-items:center; justify-content:space-between;
-  margin-bottom:.65rem; padding:.42rem .65rem;
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
-}
-.pharma-ai-badge { display:flex; align-items:center; gap:.4rem; font-family:'DM Mono',monospace; font-size:.68rem; color:var(--pharma); font-weight:500; letter-spacing:.02em; }
-.pharma-chat-actions { display:flex; gap:.35rem; }
-
-#pharma-messages .chat-bubble h1,
-#pharma-messages .chat-bubble h2 {
-  font-family:'Cormorant Garamond',serif; font-size:1.06rem; font-weight:700; color:var(--pharma);
-  border-left:3px solid var(--pharma); padding-left:.68rem; margin:1rem 0 .46rem;
-}
-#pharma-messages .chat-bubble h3 { font-size:.9rem; font-weight:600; color:var(--text); border-left:2px solid var(--border); padding-left:.55rem; margin:.75rem 0 .3rem; }
-#pharma-messages .chat-bubble strong { color:var(--pharma); font-weight:600; }
-#pharma-messages .chat-bubble em    { color:var(--muted); font-style:italic; }
-#pharma-messages .chat-bubble code  { font-family:'DM Mono',monospace; font-size:.78rem; background:var(--pharma-bg); color:var(--pharma); padding:.1rem .36rem; border-radius:4px; }
-#pharma-messages .chat-bubble blockquote { border-left:3px solid var(--pharma); background:var(--pharma-bg); margin:.6rem 0; padding:.56rem .92rem; border-radius:0 7px 7px 0; font-style:normal; color:var(--text); font-size:.84rem; }
-#pharma-messages .chat-bubble table { width:100%; border-collapse:collapse; margin:.72rem 0; font-size:.8rem; }
-#pharma-messages .chat-bubble th   { background:var(--pharma-bg); color:var(--pharma); font-weight:600; text-align:left; padding:.42rem .68rem; border-bottom:2px solid var(--pharma); }
-#pharma-messages .chat-bubble td   { padding:.36rem .68rem; border-bottom:1px solid var(--border); color:var(--text); }
-#pharma-messages .chat-bubble tr:nth-child(even) td { background:var(--surface); }
-#pharma-messages .chat-bubble ul, #pharma-messages .chat-bubble ol { padding-left:1.15rem; margin:.3rem 0; }
-#pharma-messages .chat-bubble ul li, #pharma-messages .chat-bubble ol li { margin:.22rem 0; line-height:1.62; }
-#pharma-messages .chat-bubble ul li::marker { color:var(--pharma); }
-
-#pharma-quiz-score {
-  margin-top:1.2rem; padding:2rem;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); text-align:center;
-  animation:scaleIn .4s cubic-bezier(.4,0,.2,1) both;
-}
-#pharma-quiz-score .score-number { font-family:'Cormorant Garamond',serif; font-size:3.4rem; font-weight:300; color:var(--pharma); }
-#pharma-quiz-score .score-label  { font-size:.85rem; color:var(--muted); margin-top:.3rem; }
-#pharma-quiz-score .score-msg    { font-family:'DM Mono',monospace; font-size:.78rem; letter-spacing:.03em; margin-top:.6rem; }
 
 /* ════════════════════════════════ MISC ════════════════════════════════ */
 
@@ -1513,7 +1435,7 @@ kbd {
 [data-theme="light"] .spinner     { border-color:var(--border); border-top-color:var(--gold); }
 [data-theme="light"] kbd  { background:#f4f2ee; border-color:#d6d0c8; border-bottom-color:#b8b2a8; color:var(--text); }
 [data-theme="light"] .fc-cat-title { color:var(--text); }
-[data-theme="light"] #quiz-score, [data-theme="light"] #pharma-quiz-score { background:#fafaf7; }
+[data-theme="light"] #quiz-score { background:#fafaf7; }
 [data-theme="light"] header .badge { background:rgba(160,114,10,.07); }
 [data-theme="light"] .float-nav   { box-shadow:var(--shadow-md); }
 [data-theme="light"] .fnav-btn:hover { background:rgba(0,0,0,.06); }
@@ -1564,7 +1486,7 @@ kbd {
 
   .header-actions-left  { left:.85rem; }
   .header-actions-right { right:.85rem; }
-  .theme-toggle, .stats-toggle, .pharma-toggle { width:38px; height:38px; font-size:.92rem; }
+  .theme-toggle, .stats-toggle { width:38px; height:38px; font-size:.92rem; }
 
   main { padding:0 .9rem 5rem; gap:1.1rem; }
   .panel { padding:1.3rem 1.1rem; border-radius:14px; }
@@ -1630,7 +1552,7 @@ kbd {
   .fc-card { padding:12px; }
   .fc-card-btns { gap:.4rem; }
 
-  #quiz-score .score-number, #pharma-quiz-score .score-number { font-size:2.8rem; }
+  #quiz-score .score-number { font-size:2.8rem; }
 
   .loader-box { padding:2rem 1.8rem; min-width:0; width:88%; }
 }
@@ -1640,7 +1562,7 @@ kbd {
   header { padding:48px 14px 36px; }
   header h1 { font-size:1.8rem; }
   .panel { padding:1.1rem .95rem; }
-  .theme-toggle, .stats-toggle, .pharma-toggle { width:34px; height:34px; font-size:.82rem; }
+  .theme-toggle, .stats-toggle { width:34px; height:34px; font-size:.82rem; }
   .header-actions { gap:.35rem; }
   .fnav-btn { padding:.32rem .55rem; }
   .stats-grid { grid-template-columns:1fr 1fr; }
@@ -1926,8 +1848,7 @@ main {
 .panel-desc { margin-bottom:1rem; max-width:760px; }
 
 .theme-toggle,
-.stats-toggle,
-.pharma-toggle {
+.stats-toggle {
   width:36px;
   height:36px;
   border-radius:10px;
@@ -1939,8 +1860,7 @@ main {
 .dz-btn,
 .summary-action-btn,
 .quiz-nav-btn,
-.chat-file-chip,
-.pharma-mode-btn {
+.chat-file-chip {
   border-radius:7px;
   box-shadow:none !important;
 }
@@ -1952,16 +1872,14 @@ main {
 .act-btn.gold,
 .act-btn.purple,
 .act-btn.blue,
-.act-btn.teal,
-.act-btn.pharma {
+.act-btn.teal {
   background:var(--text);
   color:var(--bg);
 }
 [data-theme="dark"] .act-btn.gold,
 [data-theme="dark"] .act-btn.purple,
 [data-theme="dark"] .act-btn.blue,
-[data-theme="dark"] .act-btn.teal,
-[data-theme="dark"] .act-btn.pharma {
+[data-theme="dark"] .act-btn.teal {
   background:#e8ecf6;
   color:#070b14;
 }
@@ -2072,8 +1990,7 @@ main {
 .act-card-icon.purple,
 .act-card-icon.blue,
 .act-card-icon.teal,
-.act-card-icon.gold,
-.act-card-icon.pharma {
+.act-card-icon.gold {
   background:var(--card);
   border:1px solid var(--border);
   color:var(--gold);

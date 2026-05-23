@@ -15,11 +15,18 @@ import QuizSection from '../components/QuizSection.jsx';
 import FlashcardSection from '../components/FlashcardSection.jsx';
 import ChatSection from '../components/ChatSection.jsx';
 import DashboardStats from '../components/DashboardStats.jsx';
+import FloatNav from '../components/FloatNav.jsx';
+import SaveFolderModal from '../components/SaveFolderModal.jsx';
+import MindmapModal from '../components/MindmapModal.jsx';
+import TTSBar from '../components/TTSBar.jsx';
+import UserMenu from '../components/UserMenu.jsx';
+import ActionsPanel from '../components/ActionsPanel.jsx';
 import { useSummarize } from '../hooks/useSummarize.js';
 import { useExamSheet } from '../hooks/useExamSheet.js';
 import { useQuiz } from '../hooks/useQuiz.js';
 import { useFlashcards } from '../hooks/useFlashcards.js';
 import { useChat } from '../hooks/useChat.js';
+import { useSessions } from '../hooks/useSessions.js';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -85,25 +92,35 @@ export default function AppPage() {
   const [examMode, setExamMode] = useState(false);
   const [examMins, setExamMins] = useState(10);
 
+  // ── Panel navigation (React-owned) ────────────────────────────────────────
+  const [activePanel, setActivePanel] = useState('dashboard-panel');
+
   // ── Dashboard ─────────────────────────────────────────────────────────────
   const [lastSession, setLastSession] = useState(null);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
-  const handleDashUpload  = useCallback(() => window.__appShowPanel?.('upload-section'), []);
+  // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
+  const hasFiles = uploadedFiles.some(f => f.text || f.path);
+
+  // ── Session history ───────────────────────────────────────────────────────
+  const { restoreSession } = useSessions({
+    uploadedFiles, setUploadedFiles,
+    setActivePanel,
+    restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom,
+  });
+
+  const handleDashUpload   = useCallback(() => setActivePanel('upload-section'), []);
   const handleDashContinue = useCallback(() => {
-    if (lastSession) window.__restoreSession?.(lastSession);
-  }, [lastSession]);
-  const handleDashHistory = useCallback(() => window.__appShowPanel?.('history-panel'), []);
-  const handleDashStats   = useCallback(() => {
+    if (lastSession) restoreSession(lastSession);
+  }, [lastSession, restoreSession]);
+  const handleDashHistory  = useCallback(() => setActivePanel('history-panel'), []);
+  const handleDashStats    = useCallback(() => {
     window.__refreshStats?.();
-    window.__appShowPanel?.('stats-panel');
+    setActivePanel('stats-panel');
   }, []);
-  const handleDashFolders = useCallback(() => {
-    window.__refreshFolders?.();
-    window.__appShowPanel?.('folders-panel');
-  }, []);
+  const handleDashFolders  = useCallback(() => setActivePanel('folders-panel'), []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -117,55 +134,50 @@ export default function AppPage() {
     window.__setFolderFiles = (files) => {
       setUploadedFiles(files);
       resetSummary();
-      // app.js encore responsable de la nav vers actions-section
-      window.__appShowPanel?.('actions-section');
+      setActivePanel('actions-section');
     };
     return () => { delete window.__setFolderFiles; };
   }, [resetSummary]);
 
-  // ── Sync uploadedFiles → window pour les features non-migrées (quiz, etc.) ─
+  // ── Sync uploadedFiles → window.uploadedFilesMeta pour le mindmap (app.js) ─
   useEffect(() => {
     window.uploadedFilesMeta = uploadedFiles;
-    // Re-render la liste dans la section actions (gérée par app.js)
-    window.__renderUploadedFiles?.();
   }, [uploadedFiles]);
 
-  // ── Sync summaryResults → window pour le code mindmap non-migré ────────────
+  // ── Sync summaryResults → bridges ───────────────────────────────────────────
+  const summaryResultsRef = useRef(summaryResults);
+  summaryResultsRef.current = summaryResults;
   useEffect(() => {
     window._setSummaryResults?.(summaryResults);
+    window._summaryResultsRef = () => summaryResultsRef.current;
   }, [summaryResults]);
 
-  // ── Bridges session restore (app.js → React) ──────────────────────────────
+  // ── Bridge navigation → app.js résiduel (mindmap handler) ───────────────
   useEffect(() => {
-    window._setSummaryData    = arr  => restoreSummaryFrom(arr);
-    window._setExamSheetMd    = md   => restoreExamFrom(md);
-    window._setQuizData       = data => restoreQuizFrom(data);
-    window._setFlashcardsData = data => restoreFcFrom(data);
-    return () => {
-      delete window._setSummaryData;
-      delete window._setExamSheetMd;
-      delete window._setQuizData;
-      delete window._setFlashcardsData;
-    };
-  }, [restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom]);
+    window.__appShowPanel = setActivePanel;
+    return () => { delete window.__appShowPanel; };
+  }, []);
+
+  // ── Effets secondaires lors du changement de panneau ─────────────────────
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (activePanel === 'folders-panel') window.__refreshFolders?.();
+  }, [activePanel]);
 
   // ── Quand upload réussit ───────────────────────────────────────────────────
   const handleUploaded = useCallback((files) => {
     setUploadedFiles(files);
     resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
-    window.__appShowPanel?.('actions-section');
-    window.__showSaveFolderModal?.();
+    setActivePanel('actions-section');
+    window.__showSaveFolderModal?.(files);
   }, [resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
 
   // ── Lancement du résumé (bouton dans actions-section) ─────────────────────
   const handleSummarize = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
-    if (summaryResults.length > 0) {
-      window.__appShowPanel?.('summary-section');
-      return;
-    }
-    window.__appShowPanel?.('summary-section');
+    setActivePanel('summary-section');
+    if (summaryResults.length > 0) return;
     summarize(files);
   }, [uploadedFiles, summaryResults, summarize]);
 
@@ -173,7 +185,7 @@ export default function AppPage() {
     resetSummary();
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (files.length) {
-      window.__appShowPanel?.('summary-section');
+      setActivePanel('summary-section');
       summarize(files);
     }
   }, [uploadedFiles, resetSummary, summarize]);
@@ -182,8 +194,8 @@ export default function AppPage() {
   const handleExamSheet = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
-    if (examMd) { window.__appShowPanel?.('exam-sheet-section'); return; }
-    window.__appShowPanel?.('exam-sheet-section');
+    setActivePanel('exam-sheet-section');
+    if (examMd) return;
     generateExam(files);
   }, [uploadedFiles, examMd, generateExam]);
 
@@ -191,7 +203,7 @@ export default function AppPage() {
     resetExam();
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (files.length) {
-      window.__appShowPanel?.('exam-sheet-section');
+      setActivePanel('exam-sheet-section');
       generateExam(files);
     }
   }, [uploadedFiles, resetExam, generateExam]);
@@ -206,7 +218,7 @@ export default function AppPage() {
     const emins      = parseInt(document.getElementById('exam-duration')?.value) || 10;
     setExamMode(em);
     setExamMins(emins);
-    window.__appShowPanel?.('quiz-section');
+    setActivePanel('quiz-section');
     generateQuiz(files, { count, difficulty });
   }, [uploadedFiles, generateQuiz]);
 
@@ -215,7 +227,7 @@ export default function AppPage() {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
     const count = parseInt(document.getElementById('fc-count')?.value) || 10;
-    window.__appShowPanel?.('flashcard-section');
+    setActivePanel('flashcard-section');
     generateFlashcards(files, { count });
   }, [uploadedFiles, generateFlashcards]);
 
@@ -225,7 +237,7 @@ export default function AppPage() {
     if (!files.length) { alert('Chargez d\'abord des fichiers.'); return; }
     setChatFiles(files);
     window.__addGeneratedSection?.('chat-section');
-    window.__appShowPanel?.('chat-section');
+    setActivePanel('chat-section');
   }, [uploadedFiles]);
 
   const handleChatAttachFile = useCallback(async (file) => {
@@ -277,14 +289,20 @@ export default function AppPage() {
         onResetOnboarding={() => setShowOnboarding(true)}
       />
       <header>
-        <button className="back-home-btn hidden" id="back-home-btn" title="Tableau de bord">
+        <button
+          className={`back-home-btn${activePanel === 'dashboard-panel' ? ' hidden' : ''}`}
+          id="back-home-btn"
+          title="Tableau de bord"
+          onClick={() => setActivePanel('dashboard-panel')}
+        >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div className="header-logo" id="header-logo">
+        <div className="header-logo" id="header-logo" onClick={() => setActivePanel('dashboard-panel')} style={{cursor:'pointer'}}>
           <Logo />
         </div>
         <div className="header-right">
-<button className="settings-btn" id="settings-btn" title="Paramètres" onClick={() => setShowSettings(true)}>
+          <UserMenu user={user} />
+          <button className="settings-btn" id="settings-btn" title="Paramètres" onClick={() => setShowSettings(true)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -293,7 +311,7 @@ export default function AppPage() {
       <main>
 
         {/* DASHBOARD */}
-        <div className="panel dashboard-panel" id="dashboard-panel">
+        <div className={`panel dashboard-panel${activePanel !== 'dashboard-panel' ? ' hidden' : ''}`} id="dashboard-panel">
           <div className="dash-greeting">
             <h1 className="dash-greeting-title">
               {greeting}{user ? <>, <em>{user.name.split(' ')[0]}</em></> : null}
@@ -339,141 +357,50 @@ export default function AppPage() {
         </div>
 
         {/* STATISTIQUES */}
-        <div className="panel hidden" id="stats-panel">
+        <div className={`panel${activePanel !== 'stats-panel' ? ' hidden' : ''}`} id="stats-panel">
           <StatsPanel />
         </div>
 
         {/* HISTORIQUE */}
-        <div className="panel hidden" id="history-panel">
+        <div className={`panel${activePanel !== 'history-panel' ? ' hidden' : ''}`} id="history-panel">
           <HistoryPanel />
         </div>
 
         {/* MES MATIÈRES */}
-        <div className="panel hidden" id="folders-panel">
+        <div className={`panel${activePanel !== 'folders-panel' ? ' hidden' : ''}`} id="folders-panel">
           <FoldersPanel />
         </div>
 
         {/* UPLOAD — composant React */}
-        <div className="panel hidden" id="upload-section">
+        <div className={`panel${activePanel !== 'upload-section' ? ' hidden' : ''}`} id="upload-section">
           <UploadZone onUploaded={handleUploaded} />
         </div>
 
         {/* ACTIONS */}
-        <div className="panel hidden" id="actions-section">
-          <h2 className="panel-title">Choisir une <em>action</em></h2>
-          <div className="quota-bar hidden" id="quota-bar"></div>
-          <div className="no-files-notice hidden" id="no-files-notice">
-            <span className="no-files-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="9" y1="13" x2="15" y2="13"/></svg></span>
-            <div>
-              <strong>Aucun fichier en mémoire</strong>
-              <p>Les fichiers de la session précédente ne sont plus disponibles. Rechargez votre cours pour utiliser ces actions.</p>
-            </div>
-            <button className="act-btn gold" id="no-files-upload-btn">Charger un fichier</button>
-          </div>
-          <div className="file-select-area">
-            <div className="fsa-header">
-              <span>Fichiers chargés</span>
-              <label className="sel-all"><input type="checkbox" id="select-all" /> Tout sélectionner</label>
-            </div>
-            <div id="uploaded-files"></div>
-          </div>
-          <div className="action-trio">
-            <div className="act-card" data-color="purple">
-              <div className="act-card-icon purple">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-              </div>
-              <div className="act-card-body">
-                <strong>Résumer</strong>
-                <span>Résumé structuré en 5 sections</span>
-              </div>
-              <button className="act-btn purple" id="summarize-btn" onClick={handleSummarize}>
-                {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
-              </button>
-              {summaryResults.length > 0 && (
-                <button className="regen-link" id="summarize-regen-btn" onClick={handleSummaryRegen}>↺ Régénérer</button>
-              )}
-            </div>
-            <div className="act-card" data-color="blue">
-              <div className="act-card-icon blue">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>
-              </div>
-              <div className="act-card-body">
-                <strong>Quiz QCM</strong>
-                <label>
-                  <input type="number" id="quiz-count" defaultValue="5" min="1" max="20" /> questions ·{' '}
-                  <select id="quiz-difficulty">
-                    <option value="moyen">Moyen</option>
-                    <option value="facile">Facile</option>
-                    <option value="difficile">Difficile</option>
-                  </select>
-                </label>
-                <label className="exam-toggle-label">
-                  <input type="checkbox" id="exam-mode-cb" /> ⏱ Mode examen{' '}
-                  <select id="exam-duration" className="hidden">
-                    <option value="5">5 min</option>
-                    <option value="10">10 min</option>
-                    <option value="15">15 min</option>
-                    <option value="20">20 min</option>
-                    <option value="30">30 min</option>
-                  </select>
-                </label>
-              </div>
-              <button className="act-btn blue" id="quiz-btn" onClick={handleQuiz}>
-                {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
-              </button>
-            </div>
-            <div className="act-card" data-color="teal">
-              <div className="act-card-icon teal">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
-              </div>
-              <div className="act-card-body">
-                <strong>Flashcards</strong>
-                <label><input type="number" id="fc-count" defaultValue="10" min="3" max="30" /> cartes</label>
-              </div>
-              <button className="act-btn teal" id="flashcard-btn" onClick={handleFlashcards}>
-                {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
-              </button>
-            </div>
-            <div className="act-card act-card-wide" data-color="gold">
-              <div className="act-card-icon gold">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="9" cy="11" r=".6" fill="currentColor"/><circle cx="12" cy="11" r=".6" fill="currentColor"/><circle cx="15" cy="11" r=".6" fill="currentColor"/></svg>
-              </div>
-              <div className="act-card-body">
-                <strong>Chat avec le cours</strong>
-                <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-              </div>
-              <button className="act-btn gold" id="chat-open-btn" onClick={handleOpenChat}>Ouvrir</button>
-            </div>
-            <div className="act-card act-card-wide" data-color="purple">
-              <div className="act-card-icon purple">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-              </div>
-              <div className="act-card-body">
-                <strong>Fiche d&apos;examen</strong>
-                <span>Définitions, pièges, tableaux et questions probables</span>
-              </div>
-              <button className="act-btn purple" id="exam-sheet-btn" onClick={handleExamSheet}>
-                {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
-              </button>
-              {examMd && (
-                <button className="regen-link" id="exam-sheet-regen-btn" onClick={handleExamRegen}>↺ Régénérer</button>
-              )}
-            </div>
-            <div className="act-card act-card-wide" data-color="teal">
-              <div className="act-card-icon teal">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/></svg>
-              </div>
-              <div className="act-card-body">
-                <strong>Carte mentale</strong>
-                <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-              </div>
-              <button className="act-btn teal" id="mindmap-action-btn">Créer</button>
-            </div>
-          </div>
+        <div className={`panel${activePanel !== 'actions-section' ? ' hidden' : ''}`} id="actions-section">
+          <ActionsPanel
+            hasFiles={hasFiles}
+            uploadedFiles={uploadedFiles}
+            onGoUpload={() => setActivePanel('upload-section')}
+            summaryResults={summaryResults}
+            examMd={examMd}
+            questions={questions}
+            decks={decks}
+            quizLoading={quizLoading}
+            examLoading={examLoading}
+            fcLoading={fcLoading}
+            onSummarize={handleSummarize}
+            onSummaryRegen={handleSummaryRegen}
+            onExamSheet={handleExamSheet}
+            onExamRegen={handleExamRegen}
+            onQuiz={handleQuiz}
+            onFlashcards={handleFlashcards}
+            onOpenChat={handleOpenChat}
+          />
         </div>
 
         {/* RÉSUMÉS — composant React */}
-        <div className="panel hidden" id="summary-section">
+        <div className={`panel${activePanel !== 'summary-section' ? ' hidden' : ''}`} id="summary-section">
           {summarizing && (
             <div className="loader-inline">
               <div className="spinner" style={{width:20,height:20}}></div>
@@ -489,20 +416,12 @@ export default function AppPage() {
             }}
             onRegen={handleSummaryRegen}
           />
-          {/* TTS bar : toujours dans le DOM pour app.js (sera migrée plus tard) */}
-          <div className="tts-bar hidden" id="tts-bar">
-            <span className="tts-bar-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
-            <select id="tts-voice-select" className="tts-select"></select>
-            <div className="tts-speed-wrap">
-              <span className="tts-speed-lbl">Vitesse</span>
-              <input type="range" id="tts-speed" min="0.5" max="2" step="0.1" defaultValue="0.9" className="tts-slider" />
-              <span id="tts-speed-val">0.9×</span>
-            </div>
-          </div>
+          {/* TTS bar — composant React */}
+          <TTSBar />
         </div>
 
         {/* FICHE D'EXAMEN — composant React */}
-        <div className="panel hidden" id="exam-sheet-section">
+        <div className={`panel${activePanel !== 'exam-sheet-section' ? ' hidden' : ''}`} id="exam-sheet-section">
           {examLoading && (
             <div className="loader-inline">
               <div className="spinner" style={{width:20,height:20}}></div>
@@ -518,7 +437,7 @@ export default function AppPage() {
         </div>
 
         {/* QUIZ — composant React */}
-        <div className="panel hidden" id="quiz-section">
+        <div className={`panel${activePanel !== 'quiz-section' ? ' hidden' : ''}`} id="quiz-section">
           <div className="panel-header">
             <div>
               <div className="panel-label">Évaluation</div>
@@ -549,7 +468,7 @@ export default function AppPage() {
         </div>
 
         {/* FLASHCARDS — composant React */}
-        <div className="panel hidden" id="flashcard-section">
+        <div className={`panel${activePanel !== 'flashcard-section' ? ' hidden' : ''}`} id="flashcard-section">
           <div className="panel-header">
             <div>
               <div className="panel-label">Mémorisation</div>
@@ -578,7 +497,7 @@ export default function AppPage() {
         </div>
 
         {/* CHAT — composant React */}
-        <div className="panel hidden" id="chat-section">
+        <div className={`panel${activePanel !== 'chat-section' ? ' hidden' : ''}`} id="chat-section">
           {chatLoading && (
             <div className="loader-inline" style={{position:'absolute',top:'1rem',right:'1rem'}}>
               <div className="spinner" style={{width:14,height:14}}></div>
@@ -602,52 +521,11 @@ export default function AppPage() {
       </main>
 
       {/* Float Nav */}
-      <nav className="float-nav hidden" id="float-nav">
-        <button className="fnav-btn fnav-home" data-target="dashboard-panel">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>
-          <span className="fnav-label">Accueil</span>
-        </button>
-        <button className="fnav-btn fnav-actions" data-target="actions-section">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg></span>
-          <span className="fnav-label">Actions</span>
-        </button>
-        <div className="fnav-divider"></div>
-        <button className="fnav-btn fnav-generated" data-target="summary-section">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
-          <span className="fnav-label">Résumés</span>
-        </button>
-        <button className="fnav-btn fnav-generated" data-target="quiz-section">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg></span>
-          <span className="fnav-label">Quiz</span>
-        </button>
-        <button className="fnav-btn fnav-generated" data-target="flashcard-section">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg></span>
-          <span className="fnav-label">Flashcards</span>
-        </button>
-        <button className="fnav-btn fnav-generated" data-target="chat-section">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-          <span className="fnav-label">Chat</span>
-        </button>
-        <button className="fnav-btn fnav-generated" data-target="exam-sheet-section">
-          <span className="fnav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
-          <span className="fnav-label">Fiche</span>
-        </button>
-      </nav>
+      <FloatNav hasFiles={uploadedFiles.length > 0} activePanel={activePanel} onNavigate={setActivePanel} />
 
 
       {/* Mindmap Modal */}
-      <div className="mindmap-overlay hidden" id="mindmap-overlay">
-        <div className="mindmap-modal">
-          <div className="mindmap-header">
-            <span className="mindmap-course-name" id="mindmap-course-name">Carte mentale</span>
-            <div className="mindmap-header-actions">
-              <button className="ghost-btn" id="mindmap-fit-btn">Centrer</button>
-              <button className="mindmap-close-btn" id="mindmap-close">✕</button>
-            </div>
-          </div>
-          <svg id="mindmap-svg"></svg>
-        </div>
-      </div>
+      <MindmapModal />
 
       {/* Loader */}
       <div className="loader hidden" id="loader">
@@ -659,22 +537,7 @@ export default function AppPage() {
       </div>
 
       {/* Save to Folder Modal */}
-      <div className="modal-overlay hidden" id="save-folder-modal">
-        <div className="modal-box modal-sm">
-          <div className="modal-header">
-            <h2>Enregistrer dans une <em>matière</em></h2>
-            <p>Classez ces fichiers pour les retrouver facilement</p>
-          </div>
-          <div id="save-folder-list"></div>
-          <div className="save-folder-new">
-            <input type="text" id="save-folder-new-name" placeholder="Nouvelle matière..." className="input-field" />
-            <button className="ghost-btn" id="save-folder-new-btn">Créer</button>
-          </div>
-          <div className="modal-footer">
-            <button className="ghost-btn" id="save-folder-skip">Passer</button>
-          </div>
-        </div>
-      </div>
+      <SaveFolderModal />
 
       {/* Onboarding Modal */}
       <div className="modal-overlay hidden" id="onboarding-modal">
