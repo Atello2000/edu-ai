@@ -127,7 +127,7 @@ function calcMaxTokens(type, textLen, count = 0) {
     if (textLen < 40000) return 3000;
     return 3500;
   }
-  if (type === 'quiz')  return Math.min(count * 200 + 400, 3200);
+  if (type === 'quiz')  return Math.min(count * 350 + 400, 5000); // whyWrong adds ~150 tok/question
   if (type === 'flash') return Math.min(count * 100 + 300, 2200);
   return 2048;
 }

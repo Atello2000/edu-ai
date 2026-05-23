@@ -507,7 +507,7 @@ export default function AppPage() {
           {quizLoading && (
             <div className="loader-inline">
               <div className="spinner" style={{width:20,height:20}}></div>
-              <span>Génération du quiz…</span>
+              <span>{questions.length > 0 ? `${questions.length} question${questions.length > 1 ? 's' : ''} générée${questions.length > 1 ? 's' : ''}…` : 'Génération du quiz…'}</span>
             </div>
           )}
           <QuizSection

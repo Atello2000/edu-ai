@@ -40,26 +40,48 @@ export function useQuiz() {
     reset();
     setLoading(true);
     try {
-      const res  = await fetch('/api/quiz', {
+      const res = await fetch('/api/quiz', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ files, count, difficulty, lang: getLang() }),
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      if (!res.ok) throw new Error('Erreur serveur');
 
-      const qs = [];
-      data.results.forEach(r => (r.quiz?.questions || []).forEach(q => qs.push({ ...q, sourceName: r.name })));
-      if (!qs.length) throw new Error('Aucune question générée');
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = '';
+      const allResults = [];
 
-      setQuestions(qs);
-      setAnswers({}); setIdx(0); setSubmitted(false); setScore(null);
-      if (data.model) setModel(data.model);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
 
-      window.__saveSession?.({ quiz: data.results });
-      window.__fetchQuota?.();
-      window.__addGeneratedSection?.('quiz-section');
-      window.__refreshFloatNav?.();
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
+
+          if (data.type === 'done') {
+            // Questions d'un fichier prêtes — les ajouter au fur et à mesure
+            const newQs = (data.questions || []).map(q => ({ ...q, sourceName: data.name }));
+            if (newQs.length) {
+              setQuestions(prev => [...prev, ...newQs]);
+              allResults.push({ name: data.name, quiz: { questions: data.questions } });
+            }
+          } else if (data.type === 'end') {
+            if (data.model) setModel(data.model);
+            if (!allResults.length) throw new Error('Aucune question générée');
+            window.__saveSession?.({ quiz: allResults });
+            window.__fetchQuota?.();
+            window.__addGeneratedSection?.('quiz-section');
+            window.__refreshFloatNav?.();
+          } else if (data.type === 'error') {
+            throw new Error(data.message);
+          }
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {

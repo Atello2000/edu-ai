@@ -93,23 +93,49 @@ export function useFlashcards() {
     reset();
     setLoading(true);
     try {
-      const res  = await fetch('/api/flashcards', {
+      const res = await fetch('/api/flashcards', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ files, count, lang: getLang() }),
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      if (!res.ok) throw new Error('Erreur serveur');
 
-      const d = data.results.map(r => ({ name: r.name, cards: r.flashcards || [] }));
-      setDecks(d);
-      loadDeck(0, d);
-      if (data.model) setModel(data.model);
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let   buffer  = '';
+      const allDecks   = [];
+      const allResults = [];
 
-      window.__saveSession?.({ flashcards: data.results });
-      window.__fetchQuota?.();
-      window.__addGeneratedSection?.('flashcard-section');
-      window.__refreshFloatNav?.();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
+
+          if (data.type === 'done') {
+            // Cartes d'un fichier prêtes — créer le deck et l'ajouter
+            const deck = { name: data.name, cards: data.cards || [] };
+            allDecks.push(deck);
+            allResults.push({ name: data.name, flashcards: data.cards || [] });
+            setDecks([...allDecks]);
+            if (allDecks.length === 1) loadDeck(0, allDecks); // charger le 1er deck dès qu'il arrive
+          } else if (data.type === 'end') {
+            if (data.model) setModel(data.model);
+            if (!allDecks.length) throw new Error('Aucune flashcard générée');
+            window.__saveSession?.({ flashcards: allResults });
+            window.__fetchQuota?.();
+            window.__addGeneratedSection?.('flashcard-section');
+            window.__refreshFloatNav?.();
+          } else if (data.type === 'error') {
+            throw new Error(data.message);
+          }
+        }
+      }
     } catch (err) {
       setError(err.message);
     } finally {
