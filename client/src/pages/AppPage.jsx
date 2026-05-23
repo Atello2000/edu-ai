@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Logo from '../components/Logo.jsx';
 import Onboarding from './Onboarding.jsx';
@@ -8,6 +8,9 @@ import FoldersPanel from '../components/FoldersPanel.jsx';
 import StatsPanel from '../components/StatsPanel.jsx';
 import HistoryPanel from '../components/HistoryPanel.jsx';
 import SettingsDrawer from '../components/SettingsDrawer.jsx';
+import UploadZone from '../components/UploadZone.jsx';
+import SummaryResults from '../components/SummarySection.jsx';
+import { useSummarize } from '../hooks/useSummarize.js';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -31,12 +34,70 @@ export default function AppPage() {
   const initialized = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
-  const [activityKey, setActivityKey] = useState(0);
+  const [activityKey,    setActivityKey]    = useState(0);
+
+  // ── État partagé Upload + Summary (React-owned) ────────────────────────────
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const { results: summaryResults, streaming: summaryStreaming,
+          loading: summarizing, summarize, reset: resetSummary } = useSummarize();
 
   useEffect(() => {
     if (user && !user.onboarding_done) setShowOnboarding(true);
     window.__editProfile = () => setShowOnboarding(true);
   }, [user]);
+
+  // ── Bridges pour les parties de app.js non encore migrées ─────────────────
+  useEffect(() => {
+    // FoldersPanel charge des fichiers existants → sync vers React + app.js
+    window.__setFolderFiles = (files) => {
+      setUploadedFiles(files);
+      resetSummary();
+      // app.js encore responsable de la nav vers actions-section
+      window.__appShowPanel?.('actions-section');
+    };
+    return () => { delete window.__setFolderFiles; };
+  }, [resetSummary]);
+
+  // ── Sync uploadedFiles → window pour les features non-migrées (quiz, etc.) ─
+  useEffect(() => {
+    window.uploadedFilesMeta = uploadedFiles;
+    // Re-render la liste dans la section actions (gérée par app.js)
+    window.__renderUploadedFiles?.();
+  }, [uploadedFiles]);
+
+  // ── Sync summaryResults → window pour le code mindmap non-migré ────────────
+  useEffect(() => {
+    window._setSummaryResults?.(summaryResults);
+  }, [summaryResults]);
+
+  // ── Quand upload réussit ───────────────────────────────────────────────────
+  const handleUploaded = useCallback((files) => {
+    setUploadedFiles(files);
+    resetSummary();
+    window.__appShowPanel?.('actions-section');
+    window.__showSaveFolderModal?.();
+  }, [resetSummary]);
+
+  // ── Lancement du résumé (bouton dans actions-section) ─────────────────────
+  const handleSummarize = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (summaryResults.length > 0) {
+      window.__appShowPanel?.('summary-section');
+      return;
+    }
+    window.__appShowPanel?.('summary-section');
+    summarize(files);
+  }, [uploadedFiles, summaryResults, summarize]);
+
+  const handleSummaryRegen = useCallback(() => {
+    resetSummary();
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (files.length) {
+      window.__appShowPanel?.('summary-section');
+      summarize(files);
+    }
+  }, [uploadedFiles, resetSummary, summarize]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -147,22 +208,9 @@ export default function AppPage() {
           <FoldersPanel />
         </div>
 
-        {/* UPLOAD */}
+        {/* UPLOAD — composant React */}
         <div className="panel hidden" id="upload-section">
-          <h2 className="panel-title">Charger vos <em>fichiers</em></h2>
-          <p className="panel-desc">Importez vos cours en PDF, PPT, PPTX ou DOCX — jusqu&apos;à <span id="upload-size-hint">20 Mo</span> par fichier</p>
-          <div className="drop-zone" id="drop-zone">
-            <div className="drop-icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-            <p className="drop-main">Glissez vos fichiers ici</p>
-            <p className="drop-or">ou</p>
-            <label className="dz-btn" htmlFor="file-input">Parcourir</label>
-            <input type="file" id="file-input" multiple accept=".pdf,.ppt,.pptx,.docx" hidden />
-            <p className="drop-hint">PDF · PPT · PPTX · DOCX</p>
-          </div>
-          <div id="file-list"></div>
-          <button className="act-btn gold full" id="upload-btn" disabled>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Charger les fichiers
-          </button>
+          <UploadZone onUploaded={handleUploaded} />
         </div>
 
         {/* ACTIONS */}
@@ -193,8 +241,12 @@ export default function AppPage() {
                 <strong>Résumer</strong>
                 <span>Résumé structuré en 5 sections</span>
               </div>
-              <button className="act-btn purple" id="summarize-btn">Lancer</button>
-              <button className="regen-link hidden" id="summarize-regen-btn">↺ Régénérer</button>
+              <button className="act-btn purple" id="summarize-btn" onClick={handleSummarize}>
+                {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
+              </button>
+              {summaryResults.length > 0 && (
+                <button className="regen-link" id="summarize-regen-btn" onClick={handleSummaryRegen}>↺ Régénérer</button>
+              )}
             </div>
             <div className="act-card" data-color="blue">
               <div className="act-card-icon blue">
@@ -267,15 +319,24 @@ export default function AppPage() {
           </div>
         </div>
 
-        {/* RÉSUMÉS */}
+        {/* RÉSUMÉS — composant React */}
         <div className="panel hidden" id="summary-section">
-          <div className="panel-header">
-            <div>
-              <div className="panel-label">Résultats</div>
-              <h2 className="panel-title">Résumés <em>générés</em></h2>
+          {summarizing && (
+            <div className="loader-inline">
+              <div className="spinner" style={{width:20,height:20}}></div>
+              <span>Génération en cours…</span>
             </div>
-            <button className="ghost-btn" id="copy-all-btn">Copier tout</button>
-          </div>
+          )}
+          <SummaryResults
+            results={summaryResults}
+            streaming={summaryStreaming}
+            onCopyAll={() => {
+              const all = summaryResults.map(r => `## ${r.name}\n\n${r.summary}`).join('\n\n---\n\n');
+              navigator.clipboard.writeText(all);
+            }}
+            onRegen={handleSummaryRegen}
+          />
+          {/* TTS bar : toujours dans le DOM pour app.js (sera migrée plus tard) */}
           <div className="tts-bar hidden" id="tts-bar">
             <span className="tts-bar-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
             <select id="tts-voice-select" className="tts-select"></select>
@@ -285,8 +346,6 @@ export default function AppPage() {
               <span id="tts-speed-val">0.9×</span>
             </div>
           </div>
-          <div className="summary-tabs hidden" id="summary-tabs"></div>
-          <div id="summary-results"></div>
         </div>
 
         {/* FICHE D'EXAMEN */}

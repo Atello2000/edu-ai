@@ -86,10 +86,12 @@ function showPanel(id) {
   if (id === 'folders-panel') window.__refreshFolders?.();
   refreshFloatNav();
 }
+// Bridge : React appelle window.__appShowPanel(id) pour naviguer
+window.__appShowPanel = showPanel;
 
 function refreshActionsAvailability() {
   // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
-  const hasFiles = uploadedFilesMeta && uploadedFilesMeta.some(f => f.text || f.path);
+  const hasFiles = getUploadedFiles().some(f => f.text || f.path);
   const notice = document.getElementById('no-files-notice');
   const fileArea = document.querySelector('#actions-section .file-select-area');
   if (notice) notice.classList.toggle('hidden', hasFiles);
@@ -102,18 +104,14 @@ function refreshActionsAvailability() {
 }
 
 // ── REFS ────────────────────────────────────────────────────────────────────
-const fileInput       = document.getElementById('file-input');
-const dropZone        = document.getElementById('drop-zone');
-const fileListEl      = document.getElementById('file-list');
-const uploadBtn       = document.getElementById('upload-btn');
+// NOTE: upload refs removed — Upload migré vers React (UploadZone.jsx)
+// NOTE: summary refs removed — Summary migré vers React (SummarySection.jsx)
 const actionsSection  = document.getElementById('actions-section');
 const uploadedFilesEl = document.getElementById('uploaded-files');
 const selectAll       = document.getElementById('select-all');
-const summarizeBtn    = document.getElementById('summarize-btn');
 const quizBtn         = document.getElementById('quiz-btn');
 const quizCount       = document.getElementById('quiz-count');
 const summarySection  = document.getElementById('summary-section');
-const summaryResults  = document.getElementById('summary-results');
 const quizSection     = document.getElementById('quiz-section');
 const quizContainer   = document.getElementById('quiz-container');
 const submitQuiz      = document.getElementById('submit-quiz');
@@ -122,19 +120,16 @@ const quizScore       = document.getElementById('quiz-score');
 const quizProgressInfo= document.getElementById('quiz-progress-info');
 const loader          = document.getElementById('loader');
 const loaderText      = document.getElementById('loader-text');
-const copyAllBtn      = document.getElementById('copy-all-btn');
-const summaryTabs     = document.getElementById('summary-tabs');
 
-let selectedFiles    = [];
-let uploadedFilesMeta = [];
+// uploadedFilesMeta est désormais géré par React (AppPage.jsx).
+// app.js lit depuis window.uploadedFilesMeta (syncé par React via useEffect).
+function getUploadedFiles() { return window.uploadedFilesMeta || []; }
 
-// Bridge called by FoldersPanel React component
-window.__setFolderFiles = function(files) {
-  uploadedFilesMeta = files;
-  renderUploadedFiles();
-  summaryAllResults = []; summaryActiveTab = 0; examSheetMd = '';
-  updateSummarizeBtnState(); updateExamSheetBtnState();
-  showPanel('actions-section');
+// __setFolderFiles est défini dans AppPage.jsx (React).
+// app.js expose un hook pour que React puisse réinitialiser l'état local (examSheet, etc.)
+window.__resetAppState = function() {
+  examSheetMd = '';
+  updateExamSheetBtnState?.();
 };
 
 // ── THEME ────────────────────────────────────────────────────────────────────
@@ -152,85 +147,40 @@ if (themeToggle) {
   });
 }
 
-// ── UPLOAD ───────────────────────────────────────────────────────────────────
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault(); dropZone.classList.remove('drag-over');
-  addFiles(Array.from(e.dataTransfer.files));
-});
-dropZone.addEventListener('click', e => {
-  if (e.target === fileInput) return;
-  if (e.target.classList.contains('dz-btn') || e.target.htmlFor === 'file-input') return;
-  fileInput.click();
-});
-fileInput.addEventListener('change', () => addFiles(Array.from(fileInput.files)));
+// ── UPLOAD — migré vers React (UploadZone.jsx) ───────────────────────────────
+// Les fonctions d'upload (addFiles, renderFileList, uploadBtn.click…) sont
+// dans client/src/components/UploadZone.jsx + client/src/hooks/useUpload.js
 
-function addFiles(files) {
-  files.forEach(f => {
-    const ext = f.name.split('.').pop().toLowerCase();
-    if (!['pdf','ppt','pptx','docx'].includes(ext)) return;
-    if (!selectedFiles.find(x => x.name === f.name)) selectedFiles.push(f);
-  });
-  renderFileList();
-}
-
-function renderFileList() {
-  fileListEl.innerHTML = '';
-  selectedFiles.forEach((f, i) => {
-    const ext  = f.name.split('.').pop().toUpperCase();
-    const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' Mo' : (f.size/1024).toFixed(0)+' Ko';
-    const div  = document.createElement('div');
-    div.className = 'file-item';
-    div.innerHTML = `<div class="file-item-left"><span class="file-ext">${ext}</span><span>${f.name}</span><span class="file-size">${size}</span></div><span class="remove" data-i="${i}">✕</span>`;
-    fileListEl.appendChild(div);
-  });
-  fileListEl.querySelectorAll('.remove').forEach(btn =>
-    btn.addEventListener('click', e => { selectedFiles.splice(+e.target.dataset.i, 1); renderFileList(); })
-  );
-  uploadBtn.disabled = selectedFiles.length === 0;
-}
-
-uploadBtn.addEventListener('click', async () => {
-  showLoader('Chargement des fichiers...');
-  const formData = new FormData();
-  selectedFiles.forEach(f => formData.append('files', f));
-  try {
-    const res  = await fetch('/api/upload', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.error);
-    uploadedFilesMeta = data.files;
-    renderUploadedFiles();
-    summaryAllResults = []; summaryActiveTab = 0; examSheetMd = '';
-    updateSummarizeBtnState(); updateExamSheetBtnState();
-    showPanel('actions-section');
-    showSaveFolderModal();
-  } catch (err) { alert('Erreur : ' + err.message); }
-  finally { hideLoader(); }
-});
-
+// renderUploadedFiles : toujours nécessaire pour quiz/flashcards/chat (getSelectedUploadedFiles)
 function renderUploadedFiles() {
+  if (!uploadedFilesEl) return;
   uploadedFilesEl.innerHTML = '';
-  uploadedFilesMeta.forEach(f => {
+  getUploadedFiles().forEach(f => {
     const ext = f.name.split('.').pop().toUpperCase();
     const div = document.createElement('div');
     div.className = 'file-checkbox';
-    div.innerHTML = `<input type="checkbox" value="${f.id}" data-name="${f.name}" data-path="${f.path}" checked /><span class="file-ext">${ext}</span><span>${f.name}</span>`;
+    div.innerHTML = `<input type="checkbox" value="${f.id}" data-name="${f.name}" data-path="${f.path || ''}" checked /><span class="file-ext">${ext}</span><span>${f.name}</span>`;
     uploadedFilesEl.appendChild(div);
   });
 }
+window.__renderUploadedFiles = renderUploadedFiles;
 
-selectAll.addEventListener('change', () =>
-  uploadedFilesEl.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = selectAll.checked)
-);
+if (selectAll) {
+  selectAll.addEventListener('change', () =>
+    uploadedFilesEl?.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = selectAll.checked)
+  );
+}
 
 function getSelectedUploadedFiles() {
-  return Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'))
-    .map(c => {
-      const meta = uploadedFilesMeta.find(f => f.id === c.value || f.name === c.dataset.name);
-      return { id: c.value, name: c.dataset.name, path: c.dataset.path || '', text: meta?.text || '' };
-    });
+  if (!uploadedFilesEl) return getUploadedFiles();
+  const checked = Array.from(uploadedFilesEl.querySelectorAll('input[type=checkbox]:checked'));
+  if (!checked.length) return getUploadedFiles();
+  return checked.map(c => {
+    const meta = getUploadedFiles().find(f => f.id === c.value || f.name === c.dataset.name);
+    return { id: c.value, name: c.dataset.name, path: c.dataset.path || '', text: meta?.text || '' };
+  });
 }
+window.__getSelectedFiles = getSelectedUploadedFiles;
 
 
 const SECTION_ICONS = {
@@ -885,17 +835,8 @@ async function exportExamSheetToPDF(title, md) {
 
 let summaryAllResults = [];
 let summaryActiveTab  = 0;
-
-function updateSummarizeBtnState() {
-  const regenBtn = document.getElementById('summarize-regen-btn');
-  if (summaryAllResults.length > 0) {
-    summarizeBtn.textContent = 'Voir le résumé';
-    regenBtn?.classList.remove('hidden');
-  } else {
-    summarizeBtn.textContent = 'Lancer';
-    regenBtn?.classList.add('hidden');
-  }
-}
+// Bridge: React (AppPage) syncs summary results here so mindmap can read them
+window._setSummaryResults = r => { summaryAllResults = r; summaryActiveTab = 0; };
 
 function updateExamSheetBtnState() {
   const regenBtn = document.getElementById('exam-sheet-regen-btn');
@@ -910,173 +851,7 @@ function updateExamSheetBtnState() {
   }
 }
 
-function buildSummaryTabs() {
-  summaryTabs.innerHTML = '';
-  if (summaryAllResults.length <= 1) { summaryTabs.classList.add('hidden'); return; }
-  summaryTabs.classList.remove('hidden');
-  summaryAllResults.forEach((r, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'summary-tab' + (i === summaryActiveTab ? ' active' : '');
-    btn.textContent = r.name.replace(/\.[^.]+$/, '');
-    btn.title = r.name;
-    btn.addEventListener('click', () => switchSummaryTab(i));
-    summaryTabs.appendChild(btn);
-  });
-}
-
-function switchSummaryTab(idx) {
-  summaryActiveTab = idx;
-  summaryTabs.querySelectorAll('.summary-tab').forEach((btn, i) =>
-    btn.classList.toggle('active', i === idx)
-  );
-  summaryResults.querySelectorAll('.summary-item').forEach((el, i) =>
-    el.classList.toggle('hidden', i !== idx)
-  );
-}
-
-summarizeBtn.addEventListener('click', async () => {
-  const files = getSelectedUploadedFiles();
-  if (!files.length) return alert('Sélectionnez au moins un fichier.');
-  if (summaryAllResults.length > 0) { showPanel('summary-section'); return; }
-  summarySection.classList.add('hidden');
-  summaryResults.innerHTML = '';
-  summaryTabs.innerHTML = '';
-  summaryTabs.classList.add('hidden');
-  summaryAllResults = [];
-  summaryActiveTab  = 0;
-  showLoader('Connexion…');
-
-  try {
-    const res = await fetch('/api/summarize', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files, lang: getPrefs().lang || 'fr' })
-    });
-    if (!res.ok) throw new Error('Erreur serveur');
-    hideLoader();
-    generatedSections.add('summary-section');
-    showPanel('summary-section');
-
-    const reader  = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    const partials = {};
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const parts = buffer.split('\n\n');
-      buffer = parts.pop() ?? '';
-      for (const part of parts) {
-        if (!part.startsWith('data: ')) continue;
-        let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
-
-        if (data.type === 'start') {
-          const el = createStreamingItem(data.name);
-          summaryResults.appendChild(el);
-          partials[data.name] = { text: '', el };
-        } else if (data.type === 'delta') {
-          partials[data.name].text += data.text;
-          updateStreamingItem(partials[data.name].el, partials[data.name].text);
-        } else if (data.type === 'done') {
-          const full = partials[data.name].text;
-          summaryAllResults.push({ name: data.name, summary: full });
-          const rendered = renderSummaryItem({ name: data.name, summary: full });
-          partials[data.name].el.replaceWith(rendered);
-          buildSummaryTabs();
-          // Keep only the active tab visible
-          summaryResults.querySelectorAll('.summary-item').forEach((el, i) =>
-            el.classList.toggle('hidden', summaryAllResults.length > 1 && i !== summaryActiveTab)
-          );
-        } else if (data.type === 'model') {
-          setModelBadge('summary-section', data.name);
-        } else if (data.type === 'end') {
-          saveSession({ summaries: summaryAllResults });
-          fetchQuota();
-          updateSummarizeBtnState();
-        } else if (data.type === 'error') {
-          throw new Error(data.message);
-        }
-      }
-    }
-  } catch (err) { alert('Erreur : ' + err.message); }
-  finally { hideLoader(); }
-});
-
-document.getElementById('summarize-regen-btn')?.addEventListener('click', () => {
-  summaryAllResults = []; summaryActiveTab = 0;
-  updateSummarizeBtnState();
-  summarizeBtn.click();
-});
-
-function createStreamingItem(name) {
-  const ext = name.split('.').pop().toUpperCase();
-  const el = document.createElement('div');
-  el.className = 'summary-item';
-  el.innerHTML = `
-    <div class="summary-file-header">
-      <div class="summary-file-header-left">
-        <span class="file-ext">${ext}</span>
-        <strong>${name}</strong>
-      </div>
-      <span class="streaming-badge">✦ Génération en cours…</span>
-    </div>
-    <div class="summary-stream-body"></div>`;
-  return el;
-}
-
-function updateStreamingItem(el, text) {
-  const body = el.querySelector('.summary-stream-body');
-  if (!body) return;
-
-  const sections = buildSummarySections(text);
-  if (!sections.length) { body.innerHTML = marked.parse(text); return; }
-
-  const committed = parseInt(body.dataset.committed || '0');
-
-  // Ajouter les sections terminées (toutes sauf la dernière) une seule fois
-  for (let i = committed; i < sections.length - 1; i++) {
-    const s = sections[i];
-    const sec = document.createElement('div');
-    sec.className = `summary-section ${s.cls}`;
-    sec.innerHTML = `
-      <div class="summary-section-header">
-        <span class="section-icon">${s.icon}</span>
-        <span class="section-title">${s.title}</span>
-        <span class="section-chevron">▼</span>
-      </div>
-      <div class="summary-section-body">${marked.parse(s.lines.join('\n').trim())}</div>`;
-    sec.querySelector('.summary-section-header').addEventListener('click', () => sec.classList.toggle('collapsed'));
-    body.appendChild(sec);
-  }
-  body.dataset.committed = sections.length - 1;
-
-  // Mettre à jour uniquement la section en cours (dernière)
-  const last = sections[sections.length - 1];
-  let lastEl = body.querySelector('.streaming-section');
-  if (!lastEl) {
-    lastEl = document.createElement('div');
-    lastEl.className = `summary-section ${last.cls} streaming-section`;
-    body.appendChild(lastEl);
-  } else {
-    lastEl.className = `summary-section ${last.cls} streaming-section`;
-  }
-  lastEl.innerHTML = `
-    <div class="summary-section-header">
-      <span class="section-icon">${last.icon}</span>
-      <span class="section-title">${last.title}</span>
-      <span class="streaming-badge">✦</span>
-    </div>
-    <div class="summary-section-body">${marked.parse(last.lines.join('\n').trim())}</div>`;
-}
-
-copyAllBtn.addEventListener('click', () => {
-  const parts = Array.from(summaryResults.querySelectorAll('.download-btn'))
-    .map(btn => `=== ${btn.dataset.name} ===\n\n${decodeURIComponent(btn.dataset.text)}`);
-  navigator.clipboard.writeText(parts.join('\n\n---\n\n')).then(() => {
-    copyAllBtn.textContent = 'Copié ✓'; setTimeout(() => copyAllBtn.textContent = 'Copier tout', 2000);
-  });
-});
+// ── Summary DOM handlers removed — React (SummarySection.jsx) owns this now ──
 
 // ── TEXT-TO-SPEECH ───────────────────────────────────────────────────────────
 const TTS_SETTINGS_KEY = 'jangalai-tts';
@@ -1170,15 +945,14 @@ function ttsPlainText(summaryMd) {
 
 let _ttsCurrentMd = '';
 function ttsApply() {
-  if (!_ttsCurrentMd || !ttsActiveBtn) return;
+  if (!_ttsCurrentMd) return;
   const text = ttsPlainText(_ttsCurrentMd);
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'fr-FR';
   utter.rate = parseFloat(ttsSpeedEl.value);
   const voice = getSelectedVoice();
   if (voice) utter.voice = voice;
-  ttsActiveBtn.dataset.state = 'speaking';
-  ttsActiveBtn.innerHTML = `${SVG.pause} Pause`;
+  if (ttsActiveBtn) { ttsActiveBtn.dataset.state = 'speaking'; ttsActiveBtn.innerHTML = `${SVG.pause} Pause`; }
   ttsKeepAlive = setInterval(() => {
     if (speechSynthesis.speaking && !speechSynthesis.paused) { speechSynthesis.pause(); speechSynthesis.resume(); }
   }, 9000);
@@ -1201,18 +975,17 @@ function ttsToggle(summaryMd, speakBtn, stopBtn) {
     alert('La synthèse vocale n\'est pas supportée par ce navigateur.');
     return;
   }
-  const state = speakBtn.dataset.state || '';
+  // speakBtn/stopBtn may be null when called from React components
+  const state = speakBtn?.dataset?.state || '';
   if (state === 'speaking') {
     speechSynthesis.pause();
-    speakBtn.dataset.state = 'paused';
-    speakBtn.innerHTML = `${SVG.resume} Reprendre`;
+    if (speakBtn) { speakBtn.dataset.state = 'paused'; speakBtn.innerHTML = `${SVG.resume} Reprendre`; }
     if (ttsKeepAlive) { clearInterval(ttsKeepAlive); ttsKeepAlive = null; }
     return;
   }
   if (state === 'paused') {
     speechSynthesis.resume();
-    speakBtn.dataset.state = 'speaking';
-    speakBtn.innerHTML = `${SVG.pause} Pause`;
+    if (speakBtn) { speakBtn.dataset.state = 'speaking'; speakBtn.innerHTML = `${SVG.pause} Pause`; }
     ttsKeepAlive = setInterval(() => {
       if (speechSynthesis.speaking && !speechSynthesis.paused) { speechSynthesis.pause(); speechSynthesis.resume(); }
     }, 9000);
@@ -1225,9 +998,10 @@ function ttsToggle(summaryMd, speakBtn, stopBtn) {
   _ttsCurrentMd = summaryMd;
   ttsActiveBtn  = speakBtn;
   ttsActiveStop = stopBtn;
-  stopBtn.classList.remove('hidden');
+  if (stopBtn) stopBtn.classList.remove('hidden');
   ttsApply();
 }
+window.__ttsToggle = ttsToggle;
 
 // ── QUIZ ─────────────────────────────────────────────────────────────────────
 const quizStepHeader  = document.getElementById('quiz-step-header');
@@ -1953,12 +1727,9 @@ function restoreSession(s) {
   }
   let firstPanel = 'actions-section';
   if (s.summaries) {
-    summaryResults.innerHTML = '';
+    // React owns the summary display — just sync data so mindmap works
     summaryAllResults = s.summaries;
     summaryActiveTab  = 0;
-    s.summaries.forEach(r => summaryResults.appendChild(renderSummaryItem(r)));
-    buildSummaryTabs();
-    if (s.summaries.length > 1) switchSummaryTab(0);
     generatedSections.add('summary-section');
     firstPanel = 'summary-section';
   }
@@ -1988,7 +1759,7 @@ function restoreSession(s) {
     generatedSections.add('exam-sheet-section');
     if (firstPanel === 'actions-section') firstPanel = 'exam-sheet-section';
   }
-  updateSummarizeBtnState();
+  // Summary btn state managed by React — only update exam sheet btn
   updateExamSheetBtnState();
   showPanel(firstPanel);
 }
