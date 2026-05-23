@@ -414,7 +414,7 @@ function saveSession(update) {
   Object.assign(sessions[idx], update, { timestamp: Date.now() });
   localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
   window.__refreshHistory?.();
-  renderDashboard();
+  window.__renderDashboard?.();
 }
 
 function restoreSession(s) {
@@ -462,7 +462,7 @@ window.__restoreSession = restoreSession;
 window.__saveSession         = saveSession;
 window.__fetchQuota          = fetchQuota;
 window.__refreshFloatNav     = refreshFloatNav;
-window.__renderDashboard     = renderDashboard;
+// window.__renderDashboard set by React DashboardStats component
 window.__saveQuizStat        = saveQuizStat;
 window.__addGeneratedSection = id => { generatedSections.add(id); };
 
@@ -585,100 +585,12 @@ function saveQuizStat(pct, correct, total) {
   stats.unshift({ date: Date.now(), pct, correct, total });
   localStorage.setItem(QUIZ_STATS_KEY, JSON.stringify(stats.slice(0, 50)));
   window.__refreshStats?.();
-  renderDashboard();
+  window.__renderDashboard?.();  // React DashboardStats component handles re-render
 }
 
-// ── DASHBOARD ────────────────────────────────────────────────────────────────
-const dashboardGrid       = document.getElementById('dashboard-grid');
-const dashboardRefreshBtn = document.getElementById('dashboard-refresh-btn');
-const dashContinueBtn     = document.getElementById('dash-continue-btn');
-const dashUploadBtn       = document.getElementById('dash-upload-btn');
-const dashStatsBtn        = document.getElementById('dash-stats-btn');
-
-function renderDashboard() {
-  if (!dashboardGrid) return;
-
-  const greetEl = document.getElementById('dash-greeting-title');
-  if (greetEl && currentUser) {
-    const h = new Date().getHours();
-    const greet = h < 12 ? 'Bonjour' : h < 18 ? 'Bon après-midi' : 'Bonsoir';
-    greetEl.innerHTML = `${greet}, <em>${currentUser.name.split(' ')[0]}</em>`;
-  }
-
-  const sessions = getSessions();
-  const quizStats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
-  const srsData = Object.values(getSRSData());
-  const dueCards = srsData.filter(c => c.nextReview <= Date.now()).length;
-  const avgPct = quizStats.length ? Math.round(quizStats.reduce((sum, s) => sum + s.pct, 0) / quizStats.length) : null;
-  const lastSession = sessions[0];
-  const cardIcon = {
-    session: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
-    quiz: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>',
-    srs: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>',
-  };
-
-  const cards = [
-    {
-      label: 'Dernière session',
-      icon: cardIcon.session,
-      value: lastSession ? lastSession.files.slice(0, 2).join(' · ') : 'Aucune',
-      note: lastSession ? new Date(lastSession.timestamp).toLocaleDateString('fr-FR', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'Chargez un cours pour commencer',
-      cls: 'blue'
-    },
-    {
-      label: 'Quiz',
-      icon: cardIcon.quiz,
-      value: avgPct !== null ? `${avgPct}%` : '—',
-      note: `${quizStats.length} quiz complété${quizStats.length>1?'s':''}`,
-      cls: avgPct === null ? 'muted' : avgPct >= 80 ? 'green' : avgPct >= 60 ? 'gold' : 'rose'
-    },
-    {
-      label: 'Révision espacée',
-      icon: cardIcon.srs,
-      value: dueCards,
-      note: dueCards ? "cartes dues aujourd'hui" : 'aucune carte due',
-      cls: dueCards ? 'rose' : 'green'
-    },
-  ];
-
-  dashboardGrid.innerHTML = cards.map(c => `
-    <div class="dash-card dash-${c.cls}">
-      <div class="dash-card-top"><span class="dash-card-icon">${c.icon}</span><span class="dash-label">${c.label}</span></div>
-      <div class="dash-value" title="${c.value}">${c.value}</div>
-      <div class="dash-note">${c.note}</div>
-    </div>
-  `).join('');
-
-  if (dashContinueBtn) {
-    const hasSession = !!lastSession;
-    dashContinueBtn.disabled = !hasSession;
-    const hint = dashContinueBtn.querySelector('.dash-qaction-hint');
-    if (hint) hint.textContent = hasSession ? lastSession.files[0] : 'Aucune session';
-  }
-}
-
-window.__renderDashboard = renderDashboard;
-dashboardRefreshBtn?.addEventListener('click', renderDashboard);
-dashContinueBtn?.addEventListener('click', () => {
-  const lastSession = getSessions()[0];
-  if (lastSession) restoreSession(lastSession);
-});
-dashUploadBtn?.addEventListener('click', () => showPanel('upload-section'));
 document.getElementById('no-files-upload-btn')?.addEventListener('click', () => showPanel('upload-section'));
-document.getElementById('dash-history-btn')?.addEventListener('click', () => {
-  showPanel('history-panel');
-});
-dashStatsBtn?.addEventListener('click', () => {
-  window.__refreshStats?.();
-  showPanel('stats-panel');
-});
-document.getElementById('dash-folders-btn')?.addEventListener('click', () => {
-  window.__refreshFolders?.();
-  showPanel('folders-panel');
-});
 
 fetchFolders();
-renderDashboard();
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function showLoader(text) { loaderText.textContent = text; loader.classList.remove('hidden'); }

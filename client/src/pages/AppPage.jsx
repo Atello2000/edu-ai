@@ -14,6 +14,7 @@ import ExamSheetSection from '../components/ExamSheetSection.jsx';
 import QuizSection from '../components/QuizSection.jsx';
 import FlashcardSection from '../components/FlashcardSection.jsx';
 import ChatSection from '../components/ChatSection.jsx';
+import DashboardStats from '../components/DashboardStats.jsx';
 import { useSummarize } from '../hooks/useSummarize.js';
 import { useExamSheet } from '../hooks/useExamSheet.js';
 import { useQuiz } from '../hooks/useQuiz.js';
@@ -83,6 +84,26 @@ export default function AppPage() {
   // Quiz exam-mode settings (managed via DOM refs from JSX)
   const [examMode, setExamMode] = useState(false);
   const [examMins, setExamMins] = useState(10);
+
+  // ── Dashboard ─────────────────────────────────────────────────────────────
+  const [lastSession, setLastSession] = useState(null);
+
+  const hour     = new Date().getHours();
+  const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+
+  const handleDashUpload  = useCallback(() => window.__appShowPanel?.('upload-section'), []);
+  const handleDashContinue = useCallback(() => {
+    if (lastSession) window.__restoreSession?.(lastSession);
+  }, [lastSession]);
+  const handleDashHistory = useCallback(() => window.__appShowPanel?.('history-panel'), []);
+  const handleDashStats   = useCallback(() => {
+    window.__refreshStats?.();
+    window.__appShowPanel?.('stats-panel');
+  }, []);
+  const handleDashFolders = useCallback(() => {
+    window.__refreshFolders?.();
+    window.__appShowPanel?.('folders-panel');
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -274,21 +295,23 @@ export default function AppPage() {
         {/* DASHBOARD */}
         <div className="panel dashboard-panel" id="dashboard-panel">
           <div className="dash-greeting">
-            <h1 className="dash-greeting-title" id="dash-greeting-title">Bonjour</h1>
+            <h1 className="dash-greeting-title">
+              {greeting}{user ? <>, <em>{user.name.split(' ')[0]}</em></> : null}
+            </h1>
             <p className="dash-greeting-sub">Que souhaitez-vous réviser aujourd&apos;hui ?</p>
           </div>
           <div className="dash-quick-actions">
-            <button className="dash-qaction dq-purple" id="dash-upload-btn">
+            <button className="dash-qaction dq-purple" onClick={handleDashUpload}>
               <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
               <span className="dash-qaction-label">Charger un cours</span>
               <span className="dash-qaction-hint">PDF, PPT, DOCX</span>
             </button>
-            <button className="dash-qaction dq-blue" id="dash-continue-btn">
+            <button className="dash-qaction dq-blue" disabled={!lastSession} onClick={handleDashContinue}>
               <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
               <span className="dash-qaction-label">Continuer</span>
-              <span className="dash-qaction-hint">Reprendre la session</span>
+              <span className="dash-qaction-hint">{lastSession?.files?.[0] || 'Aucune session'}</span>
             </button>
-            <button className="dash-qaction dq-gold" id="dash-folders-btn">
+            <button className="dash-qaction dq-gold" onClick={handleDashFolders}>
               <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
               <span className="dash-qaction-label">Mes matières</span>
               <span className="dash-qaction-hint">Cours classés</span>
@@ -297,17 +320,17 @@ export default function AppPage() {
           <div className="dash-stats-row">
             <div className="panel-header" style={{marginBottom:'.5rem'}}>
               <div className="panel-label">Progression</div>
-              <button className="ghost-btn" id="dashboard-refresh-btn">Actualiser</button>
+              <button className="ghost-btn" onClick={() => window.__renderDashboard?.()}>Actualiser</button>
             </div>
-            <div className="dashboard-grid" id="dashboard-grid"></div>
+            <DashboardStats onLastSession={setLastSession} />
           </div>
           <ForYouSection onActivity={() => setActivityKey(k => k + 1)} />
           <div className="dash-bottom-links">
-            <button className="dash-link" id="dash-history-btn">
+            <button className="dash-link" onClick={handleDashHistory}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               Mes cours récents
             </button>
-            <button className="dash-link" id="dash-stats-btn">
+            <button className="dash-link" onClick={handleDashStats}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="1"/><rect x="12" y="7" width="3" height="11" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg>
               Statistiques
             </button>
