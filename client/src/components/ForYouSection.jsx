@@ -233,7 +233,9 @@ export default function ForYouSection({ onActivity }) {
                 </span>
                 <span className="fy-result-topic">{resultTopic}</span>
               </div>
-              <button className="fy-close-btn" onClick={() => setResult(null)}>✕</button>
+              <button className="fy-close-btn" onClick={() => setResult(null)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
             </div>
 
             {resultType === 'flashcards' && result.flashcards?.length > 0 && (
@@ -252,9 +254,13 @@ export default function ForYouSection({ onActivity }) {
                   </div>
                 </div>
                 <div className="fy-fc-nav">
-                  <button onClick={() => { setFcIdx(i => Math.max(0, i - 1)); setFlipped(false); }} disabled={fcIdx === 0}>←</button>
+                  <button onClick={() => { setFcIdx(i => Math.max(0, i - 1)); setFlipped(false); }} disabled={fcIdx === 0}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                  </button>
                   <span>{fcIdx + 1} / {result.flashcards.length}</span>
-                  <button onClick={() => { setFcIdx(i => Math.min(result.flashcards.length - 1, i + 1)); setFlipped(false); }} disabled={fcIdx === result.flashcards.length - 1}>→</button>
+                  <button onClick={() => { setFcIdx(i => Math.min(result.flashcards.length - 1, i + 1)); setFlipped(false); }} disabled={fcIdx === result.flashcards.length - 1}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </button>
                 </div>
               </div>
             )}

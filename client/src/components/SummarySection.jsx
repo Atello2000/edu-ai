@@ -148,7 +148,7 @@ function SummaryCard({ result }) {
               >
                 <span className="section-icon">{s.icon}</span>
                 <span className="section-title">{s.title}</span>
-                <span className="section-chevron">▼</span>
+                <span className="section-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
               <div
                 className="summary-section-body"
@@ -195,7 +195,9 @@ export default function SummaryResults({ results, streaming, onCopyAll, onRegen 
             <button className="ghost-btn" onClick={onCopyAll}>Copier tout</button>
           )}
           {allDone && onRegen && (
-            <button className="ghost-btn" onClick={onRegen}>↺ Régénérer</button>
+            <button className="ghost-btn" onClick={onRegen}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg> Régénérer
+            </button>
           )}
         </div>
       </div>

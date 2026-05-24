@@ -94,11 +94,11 @@ export default function QuizSection({
           {wrongQs.length > 0 && (
             <div className="score-actions">
               <button className="act-btn blue" onClick={onRetryWrong}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
                 Revoir les {wrongQs.length} erreur{wrongQs.length > 1 ? 's' : ''}
               </button>
               <button className="act-btn teal" onClick={() => onErrorsToFlashcards?.(wrongQs)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
                 Erreurs → Flashcards
               </button>
             </div>
@@ -164,7 +164,7 @@ export default function QuizSection({
       <div className="quiz-step-header" id="quiz-step-header">
         {examMode && timeLeft !== null && (
           <div className={`exam-timer${timerWarn ? ' timer-warning' : ''}`} id="exam-timer">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
             <span id="timer-display">{fmtTime(timeLeft)}</span>
@@ -175,13 +175,13 @@ export default function QuizSection({
         </div>
         <div className="quiz-step-nav">
           <button className="quiz-nav-btn" id="quiz-prev-btn" disabled={idx === 0} onClick={() => onGoTo(idx - 1)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
             Précédent
           </button>
           <span className="quiz-step-label" id="quiz-step-label">{idx + 1} / {total}</span>
           <button className="quiz-nav-btn" id="quiz-next-btn" disabled={isLast} onClick={() => onGoTo(idx + 1)}>
             Suivant
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
           </button>
         </div>
       </div>

@@ -196,7 +196,7 @@ export default function FoldersPanel() {
                   <span className="file-ext">{ext}</span>
                   <span className="folder-file-name">{f.orig_name}</span>
                   <span className="folder-file-date">{date}</span>
-                  <button className="folder-file-del" onClick={() => deleteFile(f.id)} title="Retirer">✕</button>
+                  <button className="folder-file-del" onClick={() => deleteFile(f.id)} title="Retirer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               );
             })}

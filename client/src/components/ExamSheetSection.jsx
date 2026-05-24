@@ -38,7 +38,7 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
           <h2 className="panel-title">Fiche <em>d&apos;examen</em></h2>
         </div>
         <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          {onRegen && <button className="ghost-btn" onClick={onRegen}>↺ Régénérer</button>}
+          {onRegen && <button className="ghost-btn" onClick={onRegen}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg> Régénérer</button>}
           <button className="ghost-btn" onClick={handleCopy} disabled={!current}>
             {copying ? 'Copié ✓' : 'Copier'}
           </button>

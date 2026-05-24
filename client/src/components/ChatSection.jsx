@@ -70,7 +70,10 @@ function ChatBubble({ msg }) {
         <div className="chat-meta">
           {badge && <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(badge) }} />}
           <button className="chat-copy-btn" title="Copier" onClick={handleCopy}>
-            {copied ? '✓' : '⎘'}
+            {copied
+              ? <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            }
           </button>
           <span className="chat-time">{msg.time}</span>
         </div>
@@ -223,14 +226,14 @@ export default function ChatSection({
             {attachedFile.name.split('.').pop().toUpperCase()}
           </span>
           <span id="chat-attach-name">{attachedFile.name}</span>
-          <button id="chat-attach-remove" onClick={onRemoveFile}>✕</button>
+          <button id="chat-attach-remove" onClick={onRemoveFile}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       )}
       {attachedImage && (
         <div id="chat-image-bar" className="chat-image-bar">
           <img id="chat-image-thumb" src={`data:${attachedImage.mimeType};base64,${attachedImage.base64}`} alt={attachedImage.name} />
           <span id="chat-image-name">{attachedImage.name}</span>
-          <button id="chat-image-remove" onClick={onRemoveImage}>✕</button>
+          <button id="chat-image-remove" onClick={onRemoveImage}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         </div>
       )}
 

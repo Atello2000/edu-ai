@@ -350,6 +350,7 @@ main {
 .act-btn.large { padding:.78rem 2.5rem; font-size:.96rem; }
 
 .ghost-btn {
+  display:inline-flex; align-items:center; gap:.35rem;
   background:none;
   border:1px solid var(--border);
   color:var(--muted); border-radius:var(--radius-sm);
@@ -899,6 +900,34 @@ main {
 .fc-stat.grey  span { color:var(--muted); }
 
 .fc-top-actions { display:flex; gap:.4rem; flex-wrap:wrap; }
+
+.fc-toolbar {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:.5rem;
+  margin-bottom:1rem;
+}
+.fc-progress-info {
+  font-family:'DM Mono',monospace; font-size:.72rem;
+  color:var(--muted); letter-spacing:.06em;
+}
+.fc-tool-btn {
+  display:inline-flex; align-items:center; gap:.32rem;
+  padding:.3rem .78rem;
+  border:1px solid var(--border); border-radius:20px;
+  background:var(--surface); color:var(--muted);
+  font-family:'DM Mono',monospace; font-size:.72rem;
+  cursor:pointer; transition:color .18s, border-color .18s, background .18s;
+}
+.fc-tool-btn:hover {
+  color:var(--text);
+  border-color:rgba(255,255,255,.18);
+  background:rgba(255,255,255,.04);
+}
+.fc-tool-btn.active {
+  border-color:var(--teal); color:var(--teal);
+  background:rgba(29,209,161,.08);
+}
+.fc-tool-btn svg { flex-shrink:0; }
 
 .fc-progress-bar { height:3px; background:var(--border); border-radius:99px; margin-bottom:1.4rem; overflow:hidden; }
 #fc-bar { height:100%; width:0%; background:linear-gradient(90deg,var(--teal),var(--blue)); border-radius:99px; transition:width .55s cubic-bezier(.4,0,.2,1); }
