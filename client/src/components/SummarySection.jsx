@@ -25,8 +25,7 @@ function SectionIcon({ cls }) {
 
 /* ── Carte de résumé en cours de streaming ────────────────────────────────── */
 function StreamingCard({ name, text }) {
-  const ext      = name.split('.').pop().toUpperCase();
-  const sections = buildSummarySections(text);
+  const ext = name.split('.').pop().toUpperCase();
 
   return (
     <div className="summary-item">
@@ -40,25 +39,7 @@ function StreamingCard({ name, text }) {
         <span className="streaming-badge">✦ Génération en cours…</span>
       </div>
       <div className="summary-stream-body">
-        {sections.length === 0 ? (
-          <div className="summary-stream-raw">{text}</div>
-        ) : (
-          sections.map((s, i) => (
-            <div key={i} className={`summary-section ${s.cls}${i === sections.length - 1 ? ' streaming-section' : ''}`}>
-              <div className="summary-section-header">
-                <SectionIcon cls={s.cls} />
-                <span className="section-title">{s.title}</span>
-                {i === sections.length - 1 && <span className="streaming-badge">✦</span>}
-              </div>
-              <div
-                className="summary-section-body"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n')),
-                }}
-              />
-            </div>
-          ))
-        )}
+        <div className="summary-stream-raw">{text || '…'}</div>
       </div>
     </div>
   );
