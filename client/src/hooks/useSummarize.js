@@ -24,9 +24,27 @@ export function useSummarize() {
 
   // accumulate results outside React state to read final list in finally block
   const accumulated = useRef([]);
-  const navigated   = useRef(false); // navigate to summary section only once per run
+  const navigated   = useRef(false);
+
+  // Ticker: flush partials → React state toutes les 80ms (contourne le batching React 18)
+  const ticker = useRef(null);
+
+  function startTicker() {
+    if (ticker.current) return;
+    ticker.current = setInterval(() => {
+      const snap = { ...partials.current };
+      if (Object.keys(snap).length > 0) {
+        setStreaming(snap);
+      }
+    }, 80);
+  }
+
+  function stopTicker() {
+    if (ticker.current) { clearInterval(ticker.current); ticker.current = null; }
+  }
 
   function reset() {
+    stopTicker();
     setResults([]);
     setStreaming({});
     setError(null);
@@ -74,16 +92,15 @@ export function useSummarize() {
 
           if (data.type === 'start') {
             partials.current[data.name] = '';
-            setStreaming(prev => ({ ...prev, [data.name]: '' }));
             if (!navigated.current) {
               navigated.current = true;
               eventBus.emit('nav:section', 'summary-section');
             }
+            startTicker();
 
           } else if (data.type === 'delta') {
+            // Accumule dans le ref seulement — le ticker flush vers React toutes les 80ms
             partials.current[data.name] = (partials.current[data.name] || '') + data.text;
-            const snap = partials.current[data.name];
-            setStreaming(prev => ({ ...prev, [data.name]: snap }));
 
           } else if (data.type === 'done') {
             const full = partials.current[data.name] || '';
@@ -91,6 +108,7 @@ export function useSummarize() {
             const entry = { name: data.name, summary: full };
             accumulated.current = [...accumulated.current, entry];
             setResults(r => [...r, entry]);
+            // Retire ce fichier du streaming immédiatement
             setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
 
           } else if (data.type === 'error') {
@@ -108,6 +126,7 @@ export function useSummarize() {
     } catch (err) {
       setError(err.message);
     } finally {
+      stopTicker();
       setLoading(false);
     }
   }, []);
