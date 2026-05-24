@@ -2818,3 +2818,46 @@ main {
 .confirm-modal-icon { margin-bottom: .75rem; color: #e0a020; display:flex; justify-content:center; }
 .confirm-modal-msg  { font-size: .92rem; color: var(--text); line-height: 1.5; }
 
+/* ── Maintenance Banner ──────────────────────────────────────────────────── */
+.maintenance-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 9999;
+  background: linear-gradient(90deg, rgba(224,160,32,.15), rgba(255,107,129,.10));
+  border-bottom: 1px solid rgba(224,160,32,.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.maintenance-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: .6rem 1.25rem;
+}
+.maintenance-icon {
+  flex-shrink: 0;
+  color: #e0a020;
+  display: flex;
+}
+.maintenance-text {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  flex-wrap: wrap;
+  font-size: .83rem;
+}
+.maintenance-text strong {
+  color: #e0a020;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.maintenance-text span {
+  color: var(--muted);
+  line-height: 1.4;
+}
+/* Push page content down so it doesn't sit under the banner */
+body:has(.maintenance-banner) #root > * { padding-top: 2.8rem; }
+
