@@ -1322,7 +1322,7 @@ main {
   color:var(--purple); background:var(--purple-bg);
   padding:.15rem .55rem; border-radius:20px;
 }
-.file-checkbox {
+.sel-cb {
   flex-shrink:0; width:15px; height:15px; cursor:pointer;
   accent-color:var(--purple);
 }

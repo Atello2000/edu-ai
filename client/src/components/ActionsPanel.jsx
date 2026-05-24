@@ -158,7 +158,7 @@ export default function ActionsPanel({
                 onChange={e => toggleOne(f.id, e.target.checked)}
               />
               <span className="file-ext">{f.name.split('.').pop().toUpperCase()}</span>
-              <span>{f.name}</span>
+              <span className="file-item-name">{f.name}</span>
             </div>
           ))}
         </div>

@@ -329,7 +329,7 @@ export default function FoldersPanel({ onGoUpload }) {
                 >
                   <input
                     type="checkbox"
-                    className="file-checkbox"
+                    className="sel-cb"
                     checked={selected}
                     onChange={() => toggleFileSelect(f.id)}
                     onClick={e => e.stopPropagation()}

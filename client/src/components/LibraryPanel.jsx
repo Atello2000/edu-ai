@@ -147,7 +147,7 @@ export default function LibraryPanel() {
                 >
                   <input
                     type="checkbox"
-                    className="file-checkbox"
+                    className="sel-cb"
                     checked={selected}
                     onChange={() => toggleSelect(f.id)}
                     onClick={e => e.stopPropagation()}
