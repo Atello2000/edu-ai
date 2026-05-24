@@ -22,8 +22,10 @@ export function buildSummarySections(md) {
     const h2 = line.match(/^##\s+(.*)/);
     if (h2) {
       if (current) sections.push(current);
-      const title = h2[1].trim();
-      const cfg   = SECTION_CONFIG.find(c => c.match.test(title)) || { icon: '📄', cls: 'section-autre' };
+      const rawTitle = h2[1].trim();
+      // Strip leading emojis/symbols that the AI prepends to headings
+      const title    = rawTitle.replace(/^\P{L}+/u, '').trim();
+      const cfg      = SECTION_CONFIG.find(c => c.match.test(rawTitle)) || { icon: '📄', cls: 'section-autre' };
       current = { title, icon: cfg.icon, cls: cfg.cls, lines: [] };
     } else if (current) {
       current.lines.push(line);

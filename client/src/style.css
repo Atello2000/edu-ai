@@ -762,6 +762,7 @@ main {
 /* Streaming */
 .streaming-badge { font-family:'DM Mono',monospace; font-size:.65rem; color:var(--gold); animation:pulse 1.4s ease-in-out infinite; }
 .summary-stream-body { padding:.5rem 0; font-size:.84rem; line-height:1.65; color:var(--text); min-height:40px; }
+.summary-stream-raw  { padding:.75rem 1rem; font-size:.83rem; line-height:1.7; color:var(--muted); white-space:pre-wrap; font-family:'DM Mono',monospace; }
 
 /* TTS bar */
 .tts-bar {

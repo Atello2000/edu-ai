@@ -10,6 +10,19 @@ const DownloadIcon = () => <svg viewBox="0 0 16 16" width="12" height="12" fill=
 const PdfIcon      = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="2" width="10" height="12" rx="1.5"/><line x1="6" y1="6" x2="10" y2="6"/><line x1="6" y1="9" x2="10" y2="9"/><line x1="6" y1="12" x2="8" y2="12"/></svg>;
 const SpeakIcon    = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polygon points="2,5 6,5 10,2 10,14 6,11 2,11" fill="currentColor" stroke="none"/><path d="M12 5.5a4 4 0 0 1 0 5"/></svg>;
 
+/* ── Icônes SVG par type de section ────────────────────────────────────────── */
+const SECTION_ICONS = {
+  'section-objectifs': <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>,
+  'section-points':    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r=".7" fill="currentColor"/><circle cx="3" cy="12" r=".7" fill="currentColor"/><circle cx="3" cy="18" r=".7" fill="currentColor"/></svg>,
+  'section-resume':    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  'section-concepts':  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  'section-retenir':   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  'section-autre':     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>,
+};
+function SectionIcon({ cls }) {
+  return <span className="section-icon">{SECTION_ICONS[cls] ?? SECTION_ICONS['section-autre']}</span>;
+}
+
 /* ── Carte de résumé en cours de streaming ────────────────────────────────── */
 function StreamingCard({ name, text }) {
   const ext      = name.split('.').pop().toUpperCase();
@@ -27,21 +40,25 @@ function StreamingCard({ name, text }) {
         <span className="streaming-badge">✦ Génération en cours…</span>
       </div>
       <div className="summary-stream-body">
-        {sections.map((s, i) => (
-          <div key={i} className={`summary-section ${s.cls}${i === sections.length - 1 ? ' streaming-section' : ''}`}>
-            <div className="summary-section-header">
-              <span className="section-icon">{s.icon}</span>
-              <span className="section-title">{s.title}</span>
-              {i === sections.length - 1 && <span className="streaming-badge">✦</span>}
+        {sections.length === 0 ? (
+          <div className="summary-stream-raw">{text}</div>
+        ) : (
+          sections.map((s, i) => (
+            <div key={i} className={`summary-section ${s.cls}${i === sections.length - 1 ? ' streaming-section' : ''}`}>
+              <div className="summary-section-header">
+                <SectionIcon cls={s.cls} />
+                <span className="section-title">{s.title}</span>
+                {i === sections.length - 1 && <span className="streaming-badge">✦</span>}
+              </div>
+              <div
+                className="summary-section-body"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n')),
+                }}
+              />
             </div>
-            <div
-              className="summary-section-body"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n')),
-              }}
-            />
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
@@ -147,7 +164,7 @@ function SummaryCard({ result }) {
                 className="summary-section-header"
                 onClick={() => {/* per-section collapse handled by child if needed */}}
               >
-                <span className="section-icon">{s.icon}</span>
+                <SectionIcon cls={s.cls} />
                 <span className="section-title">{s.title}</span>
                 <span className="section-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
               </div>
