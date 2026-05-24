@@ -8,12 +8,18 @@ const { VALID_LANGS, langLabel, userContext, getFileText } = require('./helpers'
 
 // POST /api/summarize — résumé pédagogique en streaming SSE
 router.post('/summarize', async (req, res) => {
+  // Disable TCP Nagle buffering and proxy buffering for true streaming
+  req.socket?.setNoDelay(true);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // disable Railway/nginx proxy buffering
   res.flushHeaders();
 
-  const send = data => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const send = data => {
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    res.flush?.(); // flush compression middleware buffer if present
+  };
 
   const quota = await checkQuota(req, 'summarize');
   if (!quota.ok) {

@@ -15,27 +15,22 @@ function getLang() {
  */
 export function useSummarize() {
   const [results,   setResults]   = useState([]);
-  const [streaming, setStreaming] = useState({}); // { [name]: string }
+  const [streaming, setStreaming] = useState({});
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
 
-  // ref pour accumuler le texte en dehors du cycle React (évite les closures périmées)
-  const partials = useRef({});
-
-  // accumulate results outside React state to read final list in finally block
+  const partials    = useRef({});
   const accumulated = useRef([]);
   const navigated   = useRef(false);
 
-  // Ticker: flush partials → React state toutes les 80ms (contourne le batching React 18)
+  // Ticker : flush partials → React state toutes les 80ms (contourne le batching React 18)
   const ticker = useRef(null);
 
   function startTicker() {
     if (ticker.current) return;
     ticker.current = setInterval(() => {
       const snap = { ...partials.current };
-      if (Object.keys(snap).length > 0) {
-        setStreaming(snap);
-      }
+      if (Object.keys(snap).length > 0) setStreaming(snap);
     }, 80);
   }
 
@@ -53,7 +48,6 @@ export function useSummarize() {
     navigated.current   = false;
   }
 
-  /** Restore saved summaries from session history (no API call). */
   function restoreFrom(savedResults) {
     if (!Array.isArray(savedResults) || !savedResults.length) return;
     setResults(savedResults);
@@ -99,25 +93,28 @@ export function useSummarize() {
             startTicker();
 
           } else if (data.type === 'delta') {
-            // Accumule dans le ref seulement — le ticker flush vers React toutes les 80ms
+            // Accumule dans le ref — le ticker flush vers React toutes les 80ms
             partials.current[data.name] = (partials.current[data.name] || '') + data.text;
 
           } else if (data.type === 'done') {
-            const full = partials.current[data.name] || '';
+            const full  = partials.current[data.name] || '';
             delete partials.current[data.name];
             const entry = { name: data.name, summary: full };
             accumulated.current = [...accumulated.current, entry];
-            setResults(r => [...r, entry]);
-            // Retire ce fichier du streaming immédiatement
-            setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
+
+            // Affiche le texte complet dans la streaming card, puis transite vers le résultat final
+            setStreaming(prev => ({ ...prev, [data.name]: full }));
+            setTimeout(() => {
+              setResults(r => [...r, entry]);
+              setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
+            }, 250);
 
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }
-          // 'model' and 'end' events are informational — ignored here
         }
       }
-      // Save completed summaries to session history
+
       if (accumulated.current.length) {
         window.__saveSession?.({ summaries: accumulated.current });
         eventBus.emit('quota:refresh');
