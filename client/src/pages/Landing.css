@@ -80,7 +80,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 2rem; }
 .step-card { position: relative; padding: 2rem 1.75rem; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); }
 .step-number { font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; font-weight: 300; color: var(--blue); opacity: .18; position: absolute; top: 1rem; right: 1.5rem; line-height: 1; }
-.step-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+.step-icon { display:flex; align-items:center; justify-content:center; width:2.75rem; height:2.75rem; margin-bottom:1rem; }
 .step-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: .5rem; }
 .step-card p { font-size: .87rem; color: var(--muted); line-height: 1.6; }
 
