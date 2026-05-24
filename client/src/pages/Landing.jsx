@@ -130,7 +130,7 @@ export default function Landing() {
                 <span>Progression</span>
                 <div className="mockup-progress-bar"><div className="mockup-progress-fill"/></div>
                 <span>68%</span>
-                <span style={{ marginLeft: 'auto', color: 'var(--teal)' }}>🔥 5j de suite</span>
+                <span style={{ marginLeft: 'auto', color: 'var(--teal)', display:'inline-flex', alignItems:'center', gap:'.25rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 13a6 6 0 0 0 12 0c0-5-6-7-6-13z"/><path d="M10 17.5a2.5 2.5 0 0 0 4 0c.5-1-1-2.5-2-3-1 .5-2.5 2-2 3z"/></svg> 5j de suite</span>
               </div>
             </div>
           </div>
