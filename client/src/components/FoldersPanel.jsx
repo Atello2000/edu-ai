@@ -21,6 +21,12 @@ export default function FoldersPanel({ onGoUpload }) {
   const [modalSaving, setModalSaving] = useState(false);
   const modalNameRef = useRef(null);
 
+  // Refs pour accéder aux valeurs courantes depuis les callbacks eventBus
+  const viewRef          = useRef(view);
+  const currentFolderRef = useRef(currentFolder);
+  useEffect(() => { viewRef.current = view; }, [view]);
+  useEffect(() => { currentFolderRef.current = currentFolder; }, [currentFolder]);
+
   async function loadFolders() {
     try {
       const res = await fetch('/api/folders');
@@ -31,19 +37,7 @@ export default function FoldersPanel({ onGoUpload }) {
     }
   }
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadFolders();
-    return eventBus.on('folders:refresh', loadFolders);
-  }, []);
-
-  useEffect(() => {
-    if (modalOpen) setTimeout(() => modalNameRef.current?.focus(), 50);
-  }, [modalOpen]);
-
-  async function openDetail(folder) {
-    setCurrentFolder(folder);
-    setView('detail');
+  async function loadFiles(folder) {
     setFilesLoading(true);
     setFilesError(null);
     try {
@@ -58,7 +52,31 @@ export default function FoldersPanel({ onGoUpload }) {
     }
   }
 
-  async function deleteFile(fileId) {
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadFolders();
+    return eventBus.on('folders:refresh', async () => {
+      await loadFolders();
+      // Si on est en vue détail, recharger aussi les fichiers du dossier courant
+      if (viewRef.current === 'detail' && currentFolderRef.current) {
+        await loadFiles(currentFolderRef.current);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (modalOpen) setTimeout(() => modalNameRef.current?.focus(), 50);
+  }, [modalOpen]);
+
+  async function openDetail(folder) {
+    setCurrentFolder(folder);
+    setView('detail');
+    await loadFiles(folder);
+  }
+
+  async function deleteFile(fileId, fileName) {
+    const ok = await confirm(`Retirer « ${fileName} » de cette matière ?`, { confirmLabel: 'Retirer', danger: true });
+    if (!ok) return;
     await fetch(`/api/folders/${currentFolder.id}/files/${fileId}`, { method: 'DELETE' });
     setFolderFiles(prev => prev.filter(f => f.id !== fileId));
     setFolders(prev => prev.map(f =>
@@ -207,7 +225,7 @@ export default function FoldersPanel({ onGoUpload }) {
                   <span className="file-ext">{ext}</span>
                   <span className="folder-file-name">{f.orig_name}</span>
                   <span className="folder-file-date">{date}</span>
-                  <button className="folder-file-del" onClick={() => deleteFile(f.id)} title="Retirer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                  <button className="folder-file-del" onClick={() => deleteFile(f.id, f.orig_name)} title="Retirer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 </div>
               );
             })}
