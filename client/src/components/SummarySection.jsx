@@ -25,22 +25,54 @@ function SectionIcon({ cls }) {
 
 /* ── Carte de résumé en cours de streaming ────────────────────────────────── */
 function StreamingCard({ name, text }) {
-  const ext = name.split('.').pop().toUpperCase();
+  const ext      = name.split('.').pop().toUpperCase();
+  const sections = buildSummarySections(text || '');
 
   return (
     <div className="summary-item">
+      <div className="summary-item-accent" />
+
       <div className="summary-file-header">
         <div className="summary-file-header-left">
           <div className="summary-file-icon"><span className="file-ext">{ext}</span></div>
           <div className="summary-file-info">
             <strong title={name}>{name}</strong>
+            <div className="summary-file-meta">Résumé IA</div>
           </div>
         </div>
         <span className="streaming-badge">✦ Génération en cours…</span>
       </div>
-      <div className="summary-stream-body">
-        <div className="summary-stream-raw">{text || '…'}</div>
-      </div>
+
+      {sections.length === 0 ? (
+        /* Avant le premier ## : on affiche le texte brut */
+        <div className="summary-stream-body">
+          <div className="summary-stream-raw">{text || '…'}</div>
+        </div>
+      ) : (
+        <div className="summary-sections">
+          {sections.map((s, i) => {
+            const isLast = i === sections.length - 1;
+            const bodyMd = s.lines.join('\n').trim();
+            return (
+              <div key={i} className={`summary-section ${s.cls}`}>
+                <div className="summary-section-header">
+                  <SectionIcon cls={s.cls} />
+                  <span className="section-title">{s.title}</span>
+                  {isLast && <span className="stream-cursor" aria-hidden="true" />}
+                </div>
+                <div
+                  className="summary-section-body"
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(
+                      window.marked?.parse(bodyMd) ?? bodyMd
+                    ),
+                  }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
