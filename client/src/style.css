@@ -2858,6 +2858,7 @@ main {
   color: var(--muted);
   line-height: 1.4;
 }
-/* Push page content down so it doesn't sit under the banner */
-body:has(.maintenance-banner) #root > * { padding-top: 2.8rem; }
+/* Push page content down and keep sticky header below the banner */
+body:has(.maintenance-banner) { padding-top: 2.8rem; }
+body:has(.maintenance-banner) header { top: 2.8rem; }
 

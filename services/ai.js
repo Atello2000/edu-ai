@@ -152,8 +152,10 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
   return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
 }
 
-async function aiCompleteFast(prompt, maxTokens = 2000) {
-  // Always use the fast Groq model if available, otherwise fall back to active provider
+async function aiCompleteFast(prompt, maxTokens = 2000, config = null) {
+  // If user has a personal provider configured, respect it
+  if (config) return aiComplete(prompt, maxTokens, config);
+  // Otherwise try fast Groq model first, then fallback to active global provider
   if (groqClients.length) {
     try {
       const r = await groqComplete({ model: 'llama-3.1-8b-instant', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });

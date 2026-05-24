@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiCompleteFast, calcMaxTokens } = require('../../services/ai');
+const { getUserAiConfig }               = require('../../services/aiConfig');
 const { checkQuota, LIMITS }            = require('../../middleware/quota');
 const { logTokens }                     = require('../../services/tokens');
 const logger                            = require('../../services/logger');
@@ -30,6 +31,8 @@ router.post('/topic', async (req, res) => {
   const quota    = await checkQuota(req, quotaKey);
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
 
+  const aiCfg = await getUserAiConfig(req.user?.id);
+
   try {
     if (type === 'flashcards') {
       const prompt = `${ctx}Tu es un tuteur pédagogique expert. Génère ${count} flashcards ${inLang} sur le sujet : "${topic}".
@@ -51,7 +54,7 @@ Réponds UNIQUEMENT avec ce JSON, sans texte autour :
   ]
 }`;
 
-      const { text: raw, usage } = await aiCompleteFast(prompt, calcMaxTokens('flash', 0, count));
+      const { text: raw, usage } = await aiCompleteFast(prompt, calcMaxTokens('flash', 0, count), aiCfg);
       logTokens(req.user?.id, 'flashcards', usage?.provider, usage?.input, usage?.output);
 
       const parsed = parseJsonResponse(raw, { flashcards: [] });
@@ -81,7 +84,7 @@ Format JSON strict, sans texte autour :
   ]
 }`;
 
-    const { text: raw, usage } = await aiCompleteFast(prompt, calcMaxTokens('quiz', 0, count));
+    const { text: raw, usage } = await aiCompleteFast(prompt, calcMaxTokens('quiz', 0, count), aiCfg);
     logTokens(req.user?.id, 'quiz', usage?.provider, usage?.input, usage?.output);
 
     const parsed = parseJsonResponse(raw, { questions: [] });
