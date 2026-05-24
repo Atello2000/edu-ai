@@ -24,13 +24,15 @@ export function useSummarize() {
 
   // accumulate results outside React state to read final list in finally block
   const accumulated = useRef([]);
+  const navigated   = useRef(false); // navigate to summary section only once per run
 
   function reset() {
     setResults([]);
     setStreaming({});
     setError(null);
-    partials.current  = {};
+    partials.current    = {};
     accumulated.current = [];
+    navigated.current   = false;
   }
 
   /** Restore saved summaries from session history (no API call). */
@@ -73,6 +75,10 @@ export function useSummarize() {
           if (data.type === 'start') {
             partials.current[data.name] = '';
             setStreaming(prev => ({ ...prev, [data.name]: '' }));
+            if (!navigated.current) {
+              navigated.current = true;
+              eventBus.emit('nav:section', 'summary-section');
+            }
 
           } else if (data.type === 'delta') {
             partials.current[data.name] = (partials.current[data.name] || '') + data.text;
@@ -97,7 +103,6 @@ export function useSummarize() {
       if (accumulated.current.length) {
         window.__saveSession?.({ summaries: accumulated.current });
         eventBus.emit('quota:refresh');
-        eventBus.emit('nav:section', 'summary-section');
         eventBus.emit('dashboard:refresh');
       }
     } catch (err) {
