@@ -162,19 +162,26 @@ export default function ChatSection({ files, messages, loading, onSend, onClear 
       <div className="chat-input-row">
         <textarea
           id="chat-input"
+          className="chat-input"
           rows={1}
           placeholder="Posez votre question…"
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => {
+            setInput(e.target.value);
+            // Auto-resize
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
+          }}
           onKeyDown={handleKeyDown}
         />
         <button
           id="chat-send-btn"
           className="chat-send-btn"
-          disabled={loading}
+          disabled={loading || !input.trim()}
           onClick={() => handleSend()}
+          title="Envoyer"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
         </button>
