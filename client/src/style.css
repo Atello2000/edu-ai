@@ -928,22 +928,27 @@ main {
   background:var(--card); border:1px solid var(--border);
   border-radius:12px; padding:14px; cursor:pointer;
   perspective:900px;
-  transition:border-color .22s, transform .22s, box-shadow .22s;
+  transform-style:preserve-3d;
+  transition:border-color .22s, box-shadow .22s;
   position:relative;
 }
-.fc-card:hover { transform:translateY(-2px); border-color:rgba(255,255,255,.14); box-shadow:var(--shadow-md); }
+.fc-card:hover { border-color:rgba(255,255,255,.14); box-shadow:var(--shadow-md); }
 .fc-card.fc-known  { border-color:rgba(29,209,161,.45); background:rgba(29,209,161,.03); }
 .fc-card.fc-review { border-color:rgba(255,107,129,.38); background:rgba(255,107,129,.025); }
 
 .fc-card-inner {
   display:grid; grid-template-areas:"card";
-  transition:transform .44s cubic-bezier(.4,0,.2,1);
+  transition:transform .44s cubic-bezier(.4,0,.2,1), box-shadow .22s;
   transform-style:preserve-3d;
 }
+.fc-card:hover .fc-card-inner { transform:translateY(-2px); }
 .fc-card.flipped .fc-card-inner { transform:rotateY(180deg); }
+.fc-card.flipped:hover .fc-card-inner { transform:rotateY(180deg) translateY(-2px); }
 
 .fc-card-front, .fc-card-back {
-  grid-area:card; backface-visibility:hidden;
+  grid-area:card;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
   display:flex; flex-direction:column; min-height:82px;
 }
 .fc-card-front { justify-content:center; }
@@ -2506,6 +2511,29 @@ main {
   font-size: .75rem;
   font-weight: 600;
   vertical-align: middle;
+}
+
+/* ── More/Less toggle ────────────────────────────────────────────────────── */
+.act-more-row {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding-top: .25rem;
+}
+.act-more-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--muted);
+  font-size: .78rem;
+  padding: .38rem 1.1rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+  font-family: inherit;
+}
+.act-more-btn:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,.2);
 }
 
 /* ── Feedback floating button ─────────────────────────────────────────────── */

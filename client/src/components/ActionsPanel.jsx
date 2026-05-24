@@ -107,6 +107,7 @@ export default function ActionsPanel({
   const [quizCount,     setQuizCount]     = useState(() => getPrefs().quizCount     || 5);
   const [quizDifficulty,setQuizDifficulty]= useState(() => getPrefs().quizDifficulty|| 'moyen');
   const [fcCount,       setFcCount]       = useState(() => getPrefs().fcCount       || 10);
+  const [showMore,      setShowMore]      = useState(false);
 
   // Bridge : SettingsDrawer appelle window.__applyPrefs() après un changement de prefs
   useEffect(() => {
@@ -191,7 +192,7 @@ export default function ActionsPanel({
       {/* Cartes d'action */}
       <div className="action-trio">
 
-        {/* Préparer ma session */}
+        {/* ── Actions principales (toujours visibles) ─────────────────── */}
         <div className="act-card act-card-wide act-card-prepare" data-color="blue">
           <div className="act-card-icon blue">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -214,35 +215,10 @@ export default function ActionsPanel({
           </button>
         </div>
 
-        {/* Résumer */}
-        <div className="act-card" data-color="purple">
-          <div className="act-card-icon purple">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-          </div>
-          <div className="act-card-body">
-            <strong>Résumer</strong>
-            <span>Résumé structuré en 5 sections</span>
-          </div>
-          <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
-            {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
-          </button>
-          {summaryResults.length > 0 && (
-            <button className="regen-link" id="summarize-regen-btn" onClick={onSummaryRegen}>↺ Régénérer</button>
-          )}
-        </div>
-
-        {/* Quiz QCM */}
         <div className="act-card" data-color="blue">
           <div className="act-card-icon blue">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10"/>
-              <circle cx="12" cy="12" r="6"/>
-              <circle cx="12" cy="12" r="2" fill="currentColor"/>
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2" fill="currentColor"/>
             </svg>
           </div>
           <div className="act-card-body">
@@ -250,8 +226,7 @@ export default function ActionsPanel({
             <label>
               <input type="number" id="quiz-count" value={quizCount} min="1" max="20"
                 onChange={e => setQuizCount(parseInt(e.target.value) || 5)} /> questions ·{' '}
-              <select id="quiz-difficulty" value={quizDifficulty}
-                onChange={e => setQuizDifficulty(e.target.value)}>
+              <select id="quiz-difficulty" value={quizDifficulty} onChange={e => setQuizDifficulty(e.target.value)}>
                 <option value="moyen">Moyen</option>
                 <option value="facile">Facile</option>
                 <option value="difficile">Difficile</option>
@@ -260,10 +235,8 @@ export default function ActionsPanel({
             <label className="exam-toggle-label">
               <input type="checkbox" id="exam-mode-cb" onChange={e => setExamModeOn(e.target.checked)} /> ⏱ Mode examen{' '}
               <select id="exam-duration" className={examModeOn ? '' : 'hidden'}>
-                <option value="5">5 min</option>
-                <option value="10">10 min</option>
-                <option value="15">15 min</option>
-                <option value="20">20 min</option>
+                <option value="5">5 min</option><option value="10">10 min</option>
+                <option value="15">15 min</option><option value="20">20 min</option>
                 <option value="30">30 min</option>
               </select>
             </label>
@@ -273,12 +246,10 @@ export default function ActionsPanel({
           </button>
         </div>
 
-        {/* Flashcards */}
         <div className="act-card" data-color="teal">
           <div className="act-card-icon teal">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="8" width="16" height="12" rx="2"/>
-              <path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>
+              <rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>
             </svg>
           </div>
           <div className="act-card-body">
@@ -291,60 +262,77 @@ export default function ActionsPanel({
           </button>
         </div>
 
-        {/* Chat avec le cours */}
-        <div className="act-card act-card-wide" data-color="gold">
-          <div className="act-card-icon gold">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              <circle cx="9" cy="11" r=".6" fill="currentColor"/>
-              <circle cx="12" cy="11" r=".6" fill="currentColor"/>
-              <circle cx="15" cy="11" r=".6" fill="currentColor"/>
-            </svg>
+        {/* ── Actions secondaires (repliées par défaut) ────────────────── */}
+        {showMore && <>
+          <div className="act-card" data-color="purple">
+            <div className="act-card-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Résumer</strong>
+              <span>Résumé structuré en 5 sections</span>
+            </div>
+            <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
+              {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
+            </button>
+            {summaryResults.length > 0 && (
+              <button className="regen-link" id="summarize-regen-btn" onClick={onSummaryRegen}>↺ Régénérer</button>
+            )}
           </div>
-          <div className="act-card-body">
-            <strong>Chat avec le cours</strong>
-            <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-          </div>
-          <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
-        </div>
 
-        {/* Fiche d'examen */}
-        <div className="act-card act-card-wide" data-color="purple">
-          <div className="act-card-icon purple">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11l3 3L22 4"/>
-              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-            </svg>
+          <div className="act-card act-card-wide" data-color="gold">
+            <div className="act-card-icon gold">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <circle cx="9" cy="11" r=".6" fill="currentColor"/><circle cx="12" cy="11" r=".6" fill="currentColor"/><circle cx="15" cy="11" r=".6" fill="currentColor"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Chat avec le cours</strong>
+              <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
+            </div>
+            <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
-          <div className="act-card-body">
-            <strong>Fiche d&apos;examen</strong>
-            <span>Définitions, pièges, tableaux et questions probables</span>
+
+          <div className="act-card act-card-wide" data-color="purple">
+            <div className="act-card-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Fiche d&apos;examen</strong>
+              <span>Définitions, pièges, tableaux et questions probables</span>
+            </div>
+            <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
+              {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
+            </button>
+            {examMd && <button className="regen-link" id="exam-sheet-regen-btn" onClick={onExamRegen}>↺ Régénérer</button>}
           </div>
-          <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
-            {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
+
+          <div className="act-card act-card-wide" data-color="teal">
+            <div className="act-card-icon teal">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
+                <line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Carte mentale</strong>
+              <span>Visualise le cours sous forme d&apos;arbre interactif</span>
+            </div>
+            <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
+          </div>
+        </>}
+
+        {/* Bouton + / − */}
+        <div className="act-more-row">
+          <button className="act-more-btn" onClick={() => setShowMore(m => !m)}>
+            {showMore ? '− Moins d\'options' : '+ Plus d\'options'}
           </button>
-          {examMd && (
-            <button className="regen-link" id="exam-sheet-regen-btn" onClick={onExamRegen}>↺ Régénérer</button>
-          )}
-        </div>
-
-        {/* Carte mentale — click géré par app.js (window.__openMindmap) */}
-        <div className="act-card act-card-wide" data-color="teal">
-          <div className="act-card-icon teal">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="5" r="2"/>
-              <circle cx="5" cy="19" r="2"/>
-              <circle cx="19" cy="19" r="2"/>
-              <line x1="12" y1="7" x2="12" y2="13"/>
-              <line x1="12" y1="13" x2="5" y2="17"/>
-              <line x1="12" y1="13" x2="19" y2="17"/>
-            </svg>
-          </div>
-          <div className="act-card-body">
-            <strong>Carte mentale</strong>
-            <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-          </div>
-          <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
         </div>
 
       </div>
