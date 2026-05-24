@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import eventBus from '../utils/eventBus';
 
 const ITEMS = [
   { k: 'summarize',  label: 'Résumés' },
@@ -24,12 +25,8 @@ export default function QuotaBar() {
     }
 
     load();
-    // Exposé comme bridge pour que les hooks AI déclenchent un refresh
-    window.__fetchQuota = load;
-    return () => {
-      active = false;
-      delete window.__fetchQuota;
-    };
+    const off = eventBus.on('quota:refresh', load);
+    return () => { active = false; off(); };
   }, []);
 
   if (!quota || quota.unlimited) return null;

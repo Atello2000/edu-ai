@@ -1,7 +1,7 @@
 // public/app.js — résiduel minimal
 // Tout le code applicatif est maintenant dans le bundle React (client/src/).
-// Ce fichier est chargé dynamiquement par AppPage.jsx pour initialiser
-// quelques bridges nécessaires au contexte vanilla (pages non-React).
+// Ce fichier est chargé dynamiquement par AppPage.jsx pour s'assurer que
+// l'utilisateur est bien authentifié (fallback vanilla pour les pages non-React).
 
 // ── AUTH (vanilla fallback) ───────────────────────────────────────────────────
 async function initAuth() {
@@ -16,23 +16,6 @@ async function initAuth() {
     return false;
   }
 }
-
-// ── BRIDGES (définis par React, listés ici pour référence) ───────────────────
-// window.__appShowPanel        — AppPage.jsx setActivePanel
-// window.__getSelectedFiles    — ActionsPanel.jsx
-// window.__saveSession         — useSessions.js
-// window.__restoreSession      — useSessions.js
-// window.__fetchQuota          — QuotaBar.jsx
-// window.__renderDashboard     — DashboardStats.jsx
-// window.__refreshFloatNav     — FloatNav.jsx (no-op)
-// window.__addGeneratedSection — FloatNav.jsx
-// window.__showSaveFolderModal — SaveFolderModal.jsx
-// window.__openMindmap         — MindmapModal.jsx
-// window.__refreshHistory      — HistoryPanel.jsx
-// window.__refreshStats        — StatsPanel.jsx
-// window.__applyPrefs          — ActionsPanel.jsx
-// window._summaryResultsRef    — AppPage.jsx
-// window.uploadedFilesMeta     — AppPage.jsx
 
 // Init — appelé par React AppPage après le montage
 async function startApp() {

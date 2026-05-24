@@ -129,9 +129,8 @@ export function useFlashcards() {
             if (data.model) setModel(data.model);
             if (!allDecks.length) throw new Error('Aucune flashcard générée');
             window.__saveSession?.({ flashcards: allResults });
-            window.__fetchQuota?.();
-            window.__addGeneratedSection?.('flashcard-section');
-            window.__refreshFloatNav?.();
+            eventBus.emit('quota:refresh');
+            eventBus.emit('nav:section', 'flashcard-section');
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }

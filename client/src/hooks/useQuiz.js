@@ -75,9 +75,8 @@ export function useQuiz() {
             if (data.model) setModel(data.model);
             if (!allResults.length) throw new Error('Aucune question générée');
             window.__saveSession?.({ quiz: allResults });
-            window.__fetchQuota?.();
-            window.__addGeneratedSection?.('quiz-section');
-            window.__refreshFloatNav?.();
+            eventBus.emit('quota:refresh');
+            eventBus.emit('nav:section', 'quiz-section');
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }
@@ -119,8 +118,8 @@ export function useQuiz() {
     const stats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
     stats.unshift({ date: Date.now(), pct, correct, total: questions.length });
     localStorage.setItem(QUIZ_STATS_KEY, JSON.stringify(stats.slice(0, 50)));
-    window.__refreshStats?.();
-    window.__renderDashboard?.();
+    eventBus.emit('stats:refresh');
+    eventBus.emit('dashboard:refresh');
   }
 
   return {

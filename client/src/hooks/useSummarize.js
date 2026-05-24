@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import eventBus from '../utils/eventBus';
 
 function getLang() {
   try {
@@ -95,10 +96,9 @@ export function useSummarize() {
       // Save completed summaries to session history
       if (accumulated.current.length) {
         window.__saveSession?.({ summaries: accumulated.current });
-        window.__fetchQuota?.();
-        window.__addGeneratedSection?.('summary-section');
-        window.__refreshFloatNav?.();
-        window.__renderDashboard?.();
+        eventBus.emit('quota:refresh');
+        eventBus.emit('nav:section', 'summary-section');
+        eventBus.emit('dashboard:refresh');
       }
     } catch (err) {
       setError(err.message);

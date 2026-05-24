@@ -1,23 +1,15 @@
 import { useState, useEffect } from 'react';
+import eventBus from '../utils/eventBus';
 
 export default function FloatNav({ hasFiles, activePanel, onNavigate }) {
   const [generatedSections, setGeneratedSections] = useState(new Set());
 
-  useEffect(() => {
-    window.__refreshFloatNav     = () => {};  // no-op, garde la compat avec les vieux bridges
-    window.__addGeneratedSection = (id) => {
-      setGeneratedSections(prev => {
-        if (prev.has(id)) return prev;
-        const next = new Set(prev);
-        next.add(id);
-        return next;
-      });
-    };
-    return () => {
-      delete window.__refreshFloatNav;
-      delete window.__addGeneratedSection;
-    };
-  }, []);
+  useEffect(() => eventBus.on('nav:section', (id) => {
+    setGeneratedSections(prev => {
+      if (prev.has(id)) return prev;
+      const next = new Set(prev); next.add(id); return next;
+    });
+  }), []);
 
   const hasActivity = generatedSections.size > 0 || hasFiles;
   if (!hasActivity) return null;

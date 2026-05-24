@@ -1,4 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
+import eventBus from '../utils/eventBus';
 
 const HISTORY_KEY = 'jangalai-sessions';
 
@@ -58,8 +59,8 @@ export function useSessions({
     }
     Object.assign(sessions[idx], update, { timestamp: Date.now() });
     localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
-    window.__refreshHistory?.();
-    window.__renderDashboard?.();
+    eventBus.emit('history:refresh');
+    eventBus.emit('dashboard:refresh');
   }, []); // stable grâce au ref
 
   // ── restoreSession ────────────────────────────────────────────────────────
@@ -77,22 +78,22 @@ export function useSessions({
 
     if (s.summaries) {
       restoreSummaryRef.current(s.summaries);
-      window.__addGeneratedSection?.('summary-section');
+      eventBus.emit('nav:section', 'summary-section');
       firstPanel = 'summary-section';
     }
     if (s.quiz) {
       restoreQuizRef.current(s.quiz);
-      window.__addGeneratedSection?.('quiz-section');
+      eventBus.emit('nav:section', 'quiz-section');
       if (firstPanel === 'actions-section') firstPanel = 'quiz-section';
     }
     if (s.flashcards) {
       restoreFcRef.current(s.flashcards);
-      window.__addGeneratedSection?.('flashcard-section');
+      eventBus.emit('nav:section', 'flashcard-section');
       if (firstPanel === 'actions-section') firstPanel = 'flashcard-section';
     }
     if (s.examSheet) {
       restoreExamRef.current(s.examSheet.sheet || '');
-      window.__addGeneratedSection?.('exam-sheet-section');
+      eventBus.emit('nav:section', 'exam-sheet-section');
       if (firstPanel === 'actions-section') firstPanel = 'exam-sheet-section';
     }
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import eventBus from '../utils/eventBus';
 
 const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
 const SRS_KEY        = 'jangalai-srs';
@@ -43,11 +44,7 @@ export default function DashboardStats({ onLastSession }) {
 
   const refresh = useCallback(() => setStats(readStats()), []);
 
-  // Expose le bridge pour app.js / hooks
-  useEffect(() => {
-    window.__renderDashboard = refresh;
-    return () => { delete window.__renderDashboard; };
-  }, [refresh]);
+  useEffect(() => eventBus.on('dashboard:refresh', refresh), [refresh]);
 
   // Notifie le parent du lastSession courant
   useEffect(() => {

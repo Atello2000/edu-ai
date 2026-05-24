@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import eventBus from '../utils/eventBus';
 
 const HISTORY_KEY = 'jangalai-sessions';
 
@@ -18,22 +19,19 @@ export default function HistoryPanel() {
     setSessions(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')),
   []);
 
-  useEffect(() => {
-    window.__refreshHistory = refresh;
-    return () => { delete window.__refreshHistory; };
-  }, [refresh]);
+  useEffect(() => eventBus.on('history:refresh', refresh), [refresh]);
 
   function deleteSession(id) {
     const updated = sessions.filter(s => s.id !== id);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
     setSessions(updated);
-    window.__renderDashboard?.();
+    eventBus.emit('dashboard:refresh');
   }
 
   function clearAll() {
     localStorage.removeItem(HISTORY_KEY);
     setSessions([]);
-    window.__renderDashboard?.();
+    eventBus.emit('dashboard:refresh');
   }
 
   return (

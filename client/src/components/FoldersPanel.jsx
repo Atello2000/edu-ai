@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from '../utils/toast';
 import { useConfirm } from './ConfirmModal';
+import eventBus from '../utils/eventBus';
 
 const FOLDER_ICONS = ['📁','📂','💊','🧬','⚗️','⚡','📐','💻','🔬','⚖️','🏛️','📿','💉','🧪','📜','🎵','🌍','🩺','📊','🧮'];
 
@@ -33,8 +34,7 @@ export default function FoldersPanel({ onGoUpload }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadFolders();
-    window.__refreshFolders = loadFolders;
-    return () => { delete window.__refreshFolders; };
+    return eventBus.on('folders:refresh', loadFolders);
   }, []);
 
   useEffect(() => {

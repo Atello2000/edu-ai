@@ -31,6 +31,7 @@ import { useChat } from '../hooks/useChat.js';
 import { useSessions } from '../hooks/useSessions.js';
 import { getGoalParams } from '../utils/goalParams.js';
 import toast from '../utils/toast';
+import eventBus from '../utils/eventBus';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -127,7 +128,6 @@ export default function AppPage() {
   }, [lastSession, restoreSession]);
   const handleDashHistory  = useCallback(() => setActivePanel('history-panel'), []);
   const handleDashStats    = useCallback(() => {
-    window.__refreshStats?.();
     setActivePanel('stats-panel');
   }, []);
   const handleDashFolders  = useCallback(() => setActivePanel('folders-panel'), []);
@@ -171,7 +171,7 @@ export default function AppPage() {
   // ── Effets secondaires lors du changement de panneau ─────────────────────
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (activePanel === 'folders-panel') window.__refreshFolders?.();
+    if (activePanel === 'folders-panel') eventBus.emit('folders:refresh');
   }, [activePanel]);
 
   // ── Quand upload réussit ───────────────────────────────────────────────────
@@ -188,7 +188,7 @@ export default function AppPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ files: files.map(f => ({ id: f.id || f.path, name: f.name, size: f.size || 0, text: f.text || '' })) }),
         });
-        window.__refreshFolders?.();
+        eventBus.emit('folders:refresh');
       } catch (_) { /* silencieux */ }
       setPendingFolderId(null);
     } else {
@@ -292,7 +292,7 @@ export default function AppPage() {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
     setChatFiles(files);
-    window.__addGeneratedSection?.('chat-section');
+    eventBus.emit('nav:section', 'chat-section');
     setActivePanel('chat-section');
   }, [uploadedFiles]);
 
@@ -395,7 +395,7 @@ export default function AppPage() {
           <div className="dash-stats-row">
             <div className="panel-header" style={{marginBottom:'.5rem'}}>
               <div className="panel-label">Progression</div>
-              <button className="ghost-btn" onClick={() => window.__renderDashboard?.()}>Actualiser</button>
+              <button className="ghost-btn" onClick={() => eventBus.emit('dashboard:refresh')}>Actualiser</button>
             </div>
             <DashboardStats onLastSession={setLastSession} />
           </div>

@@ -67,8 +67,8 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
     const ok = await confirm("Effacer tout l'historique des sessions ?", { confirmLabel: 'Effacer', danger: true });
     if (!ok) return;
     localStorage.removeItem(HISTORY_KEY);
-    window.__refreshHistory?.();
-    window.__renderDashboard?.();
+    eventBus.emit('history:refresh');
+    eventBus.emit('dashboard:refresh');
     toast.success('Historique effacé.');
   }
 
@@ -76,7 +76,7 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
     const ok = await confirm('Réinitialiser toutes les statistiques quiz ?', { confirmLabel: 'Réinitialiser', danger: true });
     if (!ok) return;
     localStorage.removeItem(QUIZ_STATS_KEY);
-    window.__refreshStats?.();
+    eventBus.emit('stats:refresh');
     toast.success('Statistiques réinitialisées.');
   }
 

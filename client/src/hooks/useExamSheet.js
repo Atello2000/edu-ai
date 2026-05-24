@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import eventBus from '../utils/eventBus';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
@@ -54,10 +55,9 @@ export function useExamSheet() {
             setStreaming('');
             // Notify app.js bridges
             window.__saveSession?.({ examSheet: { sheet: text } });
-            window.__fetchQuota?.();
-            window.__addGeneratedSection?.('exam-sheet-section');
-            window.__refreshFloatNav?.();
-            window.__renderDashboard?.();
+            eventBus.emit('quota:refresh');
+            eventBus.emit('nav:section', 'exam-sheet-section');
+            eventBus.emit('dashboard:refresh');
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }

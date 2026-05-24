@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import eventBus from '../utils/eventBus';
+import { useConfirm } from './ConfirmModal';
 
 const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
 const HISTORY_KEY    = 'jangalai-sessions';
@@ -33,19 +35,18 @@ function readData() {
 
 export default function StatsPanel() {
   const [data, setData] = useState(() => readData());
+  const confirm = useConfirm();
 
   const refresh = useCallback(() => setData(readData()), []);
 
-  useEffect(() => {
-    window.__refreshStats = refresh;
-    return () => { delete window.__refreshStats; };
-  }, [refresh]);
+  useEffect(() => eventBus.on('stats:refresh', refresh), [refresh]);
 
-  function reset() {
-    if (!confirm("Réinitialiser l'historique des quiz ?")) return;
+  async function reset() {
+    const ok = await confirm("Réinitialiser l'historique des quiz ?", { confirmLabel: 'Réinitialiser', danger: true });
+    if (!ok) return;
     localStorage.removeItem(QUIZ_STATS_KEY);
     refresh();
-    window.__renderDashboard?.();
+    eventBus.emit('dashboard:refresh');
   }
 
   const { quiz, srs, sessions } = data;
