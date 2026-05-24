@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiChatStream }         = require('../../services/ai');
+const { getUserAiConfig }      = require('../../services/aiConfig');
 const { checkQuota, LIMITS }   = require('../../middleware/quota');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
@@ -69,7 +70,8 @@ Cours disponibles :${context}${imageNote}`;
     let   fullText  = '';
     let   chatModel = '';
 
-    for await (const chunk of aiChatStream(systemPrompt, finalMessages, maxTok, !!attachedImage)) {
+    const aiCfg = await getUserAiConfig(req.user?.id);
+    for await (const chunk of aiChatStream(systemPrompt, finalMessages, maxTok, !!attachedImage, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'chat', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;

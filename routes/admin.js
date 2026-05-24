@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { prepare } = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const { PROVIDERS, getAiConfig, setAiConfig } = require('../services/aiConfig');
+const { PROVIDERS, getAiConfig, setUserAiConfig, getUserAiConfig } = require('../services/aiConfig');
 
 function requireAdmin(req, res, next) {
   const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
@@ -123,8 +123,7 @@ router.delete('/messages/:id', requireAuth, requireAdmin, async (req, res) => {
 
 // ── GET /api/admin/ai-config ──────────────────────────────────────────────────
 router.get('/ai-config', requireAuth, requireAdmin, async (req, res) => {
-  const cfg = await getAiConfig();
-  // Enrich providers with availability (key present in env)
+  const cfg = await getUserAiConfig(req.user.id); // config perso de l'admin
   const providers = Object.entries(PROVIDERS).map(([id, p]) => ({
     id,
     label:     p.label,
@@ -142,7 +141,7 @@ router.patch('/ai-config', requireAuth, requireAdmin, async (req, res) => {
   const validModels = PROVIDERS[provider].models.map(m => m.id);
   if (!validModels.includes(model))
     return res.status(400).json({ error: 'Modèle invalide pour ce provider.' });
-  await setAiConfig(provider, model);
+  await setUserAiConfig(req.user.id, provider, model);
   res.json({ ok: true, provider, model });
 });
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiStream, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
+const { getUserAiConfig }                      = require('../../services/aiConfig');
 const { checkQuota, LIMITS }                   = require('../../middleware/quota');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
@@ -32,6 +33,7 @@ router.post('/quiz', async (req, res) => {
 
     const allResults  = [];
     let   streamModel = MODEL_LABEL;
+    const aiCfg       = await getUserAiConfig(req.user?.id);
 
     for (const file of files) {
       const text = await getFileText(file);
@@ -91,7 +93,7 @@ Contenu du cours "${file.name}" :
 ${truncated}`;
 
       let raw = '';
-      for await (const chunk of aiStream(prompt, calcMaxTokens('quiz', truncated.length, count))) {
+      for await (const chunk of aiStream(prompt, calcMaxTokens('quiz', truncated.length, count), aiCfg)) {
         if (chunk.usage) {
           logTokens(req.user?.id, 'quiz', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
           continue;

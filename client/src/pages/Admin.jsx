@@ -202,7 +202,7 @@ export default function Admin() {
       )}
 
       {/* ── Configuration IA ──────────────────────────────────────────────── */}
-      <div className="section-title" style={{marginTop:'2rem'}}>Configuration IA</div>
+      <div className="section-title" style={{marginTop:'2rem'}}>Ma configuration IA <span style={{fontSize:'.72rem',fontWeight:400,color:'var(--muted)',marginLeft:'.4rem'}}>(compte admin uniquement)</span></div>
 
       {aiConfig && (
         <div className="ai-config-card">

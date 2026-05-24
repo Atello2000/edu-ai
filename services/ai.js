@@ -120,16 +120,16 @@ async function* streamDeepSeek(model, messages, maxTokens) {
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
-async function* aiStream(prompt, maxTokens = 4096) {
-  const { provider, model } = await getAiConfig();
+async function* aiStream(prompt, maxTokens = 4096, config = null) {
+  const { provider, model } = config || await getAiConfig();
   const messages = [{ role: 'user', content: prompt }];
   if (provider === 'anthropic') { yield* streamAnthropic(model, messages, maxTokens, null); return; }
   if (provider === 'deepseek')  { yield* streamDeepSeek(model, messages, maxTokens); return; }
   yield* streamGroq(model, messages, maxTokens);
 }
 
-async function aiComplete(prompt, maxTokens = 3000) {
-  const { provider, model } = await getAiConfig();
+async function aiComplete(prompt, maxTokens = 3000, config = null) {
+  const { provider, model } = config || await getAiConfig();
   const messages = [{ role: 'user', content: prompt }];
 
   if (provider === 'anthropic') {
@@ -182,8 +182,8 @@ function toOpenAIMessages(messages) {
   });
 }
 
-async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false) {
-  const { provider, model } = await getAiConfig();
+async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false, config = null) {
+  const { provider, model } = config || await getAiConfig();
 
   if (provider === 'anthropic' || hasImage) {
     if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
@@ -205,8 +205,8 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
   return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
 }
 
-async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage = false) {
-  const { provider, model } = await getAiConfig();
+async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage = false, config = null) {
+  const { provider, model } = config || await getAiConfig();
 
   if (provider === 'anthropic' || hasImage) {
     const m = provider === 'anthropic' ? model : 'claude-haiku-4-5-20251001';

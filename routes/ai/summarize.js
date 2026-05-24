@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiStream, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
+const { getUserAiConfig }                      = require('../../services/aiConfig');
 const { checkQuota, LIMITS }                   = require('../../middleware/quota');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
@@ -31,6 +32,7 @@ router.post('/summarize', async (req, res) => {
     const { files } = req.body;
     const lang      = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang    = langLabel(lang);
+    const aiCfg     = await getUserAiConfig(req.user?.id);
     let streamModel = MODEL_LABEL;
 
     for (const file of files) {
@@ -59,7 +61,7 @@ router.post('/summarize', async (req, res) => {
 Contenu du cours "${file.name}" :
 ${truncated}`;
 
-      for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length))) {
+      for await (const chunk of aiStream(prompt, calcMaxTokens('summary', truncated.length), aiCfg)) {
         if (chunk.usage) {
           logTokens(req.user?.id, 'summarize', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
           continue;

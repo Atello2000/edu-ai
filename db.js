@@ -167,6 +167,8 @@ async function initSchema() {
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty TEXT",
     "INSERT INTO app_config (key, value) VALUES ('ai_provider', 'groq') ON CONFLICT DO NOTHING",
     "INSERT INTO app_config (key, value) VALUES ('ai_model', 'llama-3.3-70b-versatile') ON CONFLICT DO NOTHING",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_provider TEXT",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_model TEXT",
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}

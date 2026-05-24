@@ -56,4 +56,27 @@ async function setAiConfig(provider, model) {
   _cache = null;
 }
 
-module.exports = { PROVIDERS, getAiConfig, setAiConfig };
+/**
+ * Retourne la config IA de l'utilisateur si définie,
+ * sinon la config globale (app_config).
+ */
+async function getUserAiConfig(userId) {
+  if (userId) {
+    const row = await prepare(
+      'SELECT ai_provider, ai_model FROM users WHERE id = ? AND ai_provider IS NOT NULL'
+    ).get(userId);
+    if (row?.ai_provider && row?.ai_model) {
+      return { provider: row.ai_provider, model: row.ai_model };
+    }
+  }
+  return getAiConfig();
+}
+
+/**
+ * Enregistre la config IA personnelle d'un utilisateur.
+ */
+async function setUserAiConfig(userId, provider, model) {
+  await prepare('UPDATE users SET ai_provider = ?, ai_model = ? WHERE id = ?').run(provider, model, userId);
+}
+
+module.exports = { PROVIDERS, getAiConfig, setAiConfig, getUserAiConfig, setUserAiConfig };
