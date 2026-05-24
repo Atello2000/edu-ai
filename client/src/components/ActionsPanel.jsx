@@ -59,47 +59,21 @@ export default function ActionsPanel({
     const files = window.__getSelectedFiles?.() || uploadedFilesRef.current;
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
 
-    // Utilise le résumé déjà généré si disponible
-    const cached = window._summaryResultsRef?.();
-    if (cached?.length) {
-      const r = cached[0];
-      window.__openMindmap?.(r.name, r.summary);
-      return;
-    }
-
     const loader     = document.getElementById('loader');
     const loaderText = document.getElementById('loader-text');
     if (loaderText) loaderText.textContent = 'Génération du mindmap…';
     loader?.classList.remove('hidden');
 
     try {
-      const res = await fetch('/api/summarize', {
+      // Un mindmap par fichier — on prend le premier fichier sélectionné
+      const file = files[0];
+      const res  = await fetch('/api/mindmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files, lang: 'fr' }),
+        body: JSON.stringify({ file }),
       });
-      if (!res.ok) throw new Error('Erreur serveur');
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      const partials = {};
-      const results  = [];
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-        for (const part of parts) {
-          if (!part.startsWith('data: ')) continue;
-          let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
-          if (data.type === 'start') partials[data.name] = { text: '' };
-          if (data.type === 'delta') partials[data.name].text += data.text;
-          if (data.type === 'done')  results.push({ name: data.name, summary: partials[data.name].text });
-          if (data.type === 'error') throw new Error(data.message);
-        }
-      }
-      if (results.length) window.__openMindmap?.(results[0].name, results[0].summary);
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');
+      window.__openMindmap?.(file.name, data.markdown);
     } catch (err) { toast.error(err.message); }
     finally { loader?.classList.add('hidden'); }
   }

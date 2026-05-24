@@ -65,7 +65,14 @@ export default function MindmapModal() {
         const { root }    = transformer.transform(md);
 
         svgEl.innerHTML = '';
-        instanceRef.current = Markmap.create(svgEl, { paddingX: 16, duration: 300 }, root);
+        instanceRef.current = Markmap.create(svgEl, {
+          paddingX:         20,
+          duration:         400,
+          maxWidth:         260,
+          colorFreezeLevel: 2,   // couleur figée au niveau 2 → branches cohérentes
+          zoom:             true,
+          pan:              true,
+        }, root);
         instanceRef.current.fit();
       } catch {
         if (cancelled) return;
@@ -103,7 +110,22 @@ export default function MindmapModal() {
         <div className="mindmap-header">
           <span className="mindmap-course-name">{courseName}</span>
           <div className="mindmap-header-actions">
+            <button className="ghost-btn" title="Zoom +" onClick={() => instanceRef.current?.rescale(1.25)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button className="ghost-btn" title="Zoom -" onClick={() => instanceRef.current?.rescale(0.8)}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
             <button className="ghost-btn" onClick={() => instanceRef.current?.fit()}>Centrer</button>
+            <button className="ghost-btn" title="Exporter SVG" onClick={() => {
+              const svg = svgRef.current;
+              if (!svg) return;
+              const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+              const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${courseName.replace(/\.[^.]+$/, '')}-mindmap.svg` });
+              a.click(); URL.revokeObjectURL(a.href);
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
             <button className="mindmap-close-btn" onClick={close}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
