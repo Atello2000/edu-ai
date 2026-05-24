@@ -13,6 +13,7 @@ export default function FoldersPanel({ onGoUpload }) {
   const [folderFiles, setFolderFiles] = useState([]);
   const [filesLoading, setFilesLoading] = useState(false);
   const [filesError, setFilesError] = useState(null);
+  const [fileSelectedIds, setFileSelectedIds] = useState(new Set());
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create');
@@ -71,7 +72,24 @@ export default function FoldersPanel({ onGoUpload }) {
   async function openDetail(folder) {
     setCurrentFolder(folder);
     setView('detail');
+    setFileSelectedIds(new Set());
     await loadFiles(folder);
+  }
+
+  function toggleFileSelect(id) {
+    setFileSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (fileSelectedIds.size === folderFiles.length && folderFiles.length > 0) {
+      setFileSelectedIds(new Set());
+    } else {
+      setFileSelectedIds(new Set(folderFiles.map(f => f.id)));
+    }
   }
 
   async function deleteFile(fileId, fileName) {
@@ -141,7 +159,10 @@ export default function FoldersPanel({ onGoUpload }) {
   }
 
   function useFiles() {
-    const files = folderFiles.map(f => ({
+    const src = fileSelectedIds.size > 0
+      ? folderFiles.filter(f => fileSelectedIds.has(f.id))
+      : folderFiles;
+    const files = src.map(f => ({
       id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size,
     }));
     window.__setFolderFiles?.(files);
@@ -205,6 +226,17 @@ export default function FoldersPanel({ onGoUpload }) {
             <h3 className="folder-detail-title">{currentFolder.icon} {currentFolder.name}</h3>
           </div>
 
+          {!filesLoading && folderFiles.length > 1 && (
+            <div className="folder-select-bar">
+              <button className="ghost-btn" style={{fontSize:'.74rem'}} onClick={toggleSelectAll}>
+                {fileSelectedIds.size === folderFiles.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+              {fileSelectedIds.size > 0 && (
+                <span className="folder-sel-count">{fileSelectedIds.size} sélectionné{fileSelectedIds.size > 1 ? 's' : ''}</span>
+              )}
+            </div>
+          )}
+
           <div id="folder-files-list">
             {filesLoading && (
               <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '1rem' }}>Chargement...</p>
@@ -220,12 +252,27 @@ export default function FoldersPanel({ onGoUpload }) {
             {!filesLoading && !filesError && folderFiles.map(f => {
               const ext = f.orig_name.split('.').pop().toUpperCase();
               const date = new Date(f.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+              const selected = fileSelectedIds.has(f.id);
               return (
-                <div key={f.id} className="folder-file-item">
+                <div
+                  key={f.id}
+                  className={`folder-file-item${selected ? ' file-selected' : ''}`}
+                  onClick={() => toggleFileSelect(f.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <input
+                    type="checkbox"
+                    className="file-checkbox"
+                    checked={selected}
+                    onChange={() => toggleFileSelect(f.id)}
+                    onClick={e => e.stopPropagation()}
+                  />
                   <span className="file-ext">{ext}</span>
                   <span className="folder-file-name">{f.orig_name}</span>
                   <span className="folder-file-date">{date}</span>
-                  <button className="folder-file-del" onClick={() => deleteFile(f.id, f.orig_name)} title="Retirer"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                  <button className="folder-file-del" onClick={e => { e.stopPropagation(); deleteFile(f.id, f.orig_name); }} title="Retirer">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
               );
             })}
@@ -233,7 +280,11 @@ export default function FoldersPanel({ onGoUpload }) {
 
           {!filesLoading && folderFiles.length > 0 && (
             <div className="folder-actions-bar">
-              <button className="act-btn purple" onClick={useFiles}>Utiliser ces cours →</button>
+              <button className="act-btn purple" onClick={useFiles}>
+                {fileSelectedIds.size > 0
+                  ? `Utiliser ${fileSelectedIds.size} cours sélectionné${fileSelectedIds.size > 1 ? 's' : ''} →`
+                  : 'Utiliser tous les cours →'}
+              </button>
             </div>
           )}
         </>

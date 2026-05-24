@@ -17,6 +17,7 @@ import ChatSection from '../components/ChatSection.jsx';
 import DashboardStats from '../components/DashboardStats.jsx';
 import FloatNav from '../components/FloatNav.jsx';
 import SaveFolderModal from '../components/SaveFolderModal.jsx';
+import LibraryPanel from '../components/LibraryPanel.jsx';
 import MindmapModal from '../components/MindmapModal.jsx';
 import TTSBar from '../components/TTSBar.jsx';
 import UserMenu from '../components/UserMenu.jsx';
@@ -131,6 +132,7 @@ export default function AppPage() {
     setActivePanel('stats-panel');
   }, []);
   const handleDashFolders  = useCallback(() => setActivePanel('folders-panel'), []);
+  const handleDashLibrary  = useCallback(() => setActivePanel('library-panel'), []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -397,6 +399,11 @@ export default function AppPage() {
               <span className="dash-qaction-label">Mes matières</span>
               <span className="dash-qaction-hint">Cours classés</span>
             </button>
+            <button className="dash-qaction dq-teal" onClick={handleDashLibrary}>
+              <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
+              <span className="dash-qaction-label">Bibliothèque</span>
+              <span className="dash-qaction-hint">Tous les cours</span>
+            </button>
           </div>
           <div className="dash-stats-row">
             <div className="panel-header" style={{marginBottom:'.5rem'}}>
@@ -432,6 +439,11 @@ export default function AppPage() {
         {/* MES MATIÈRES */}
         <div className={`panel${activePanel !== 'folders-panel' ? ' hidden' : ''}`} id="folders-panel">
           <FoldersPanel onGoUpload={handleGoUploadForFolder} />
+        </div>
+
+        {/* BIBLIOTHÈQUE */}
+        <div className={`panel${activePanel !== 'library-panel' ? ' hidden' : ''}`} id="library-panel">
+          <LibraryPanel />
         </div>
 
         {/* UPLOAD — composant React */}

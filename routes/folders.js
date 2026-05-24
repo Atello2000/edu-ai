@@ -56,6 +56,19 @@ router.delete('/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ── List ALL files across all folders (library) ──────────────────────────────
+router.get('/files/all', async (req, res) => {
+  const files = await prepare(`
+    SELECT ff.id, ff.filename, ff.orig_name, ff.size, ff.text, ff.created_at,
+           f.id AS folder_id, f.name AS folder_name, f.icon AS folder_icon
+    FROM folder_files ff
+    JOIN folders f ON f.id = ff.folder_id
+    WHERE f.user_id = ?
+    ORDER BY LOWER(f.name), LOWER(ff.orig_name)
+  `).all(req.user.id);
+  res.json({ files });
+});
+
 // ── List files in a folder ───────────────────────────────────────────────────
 router.get('/:id/files', async (req, res) => {
   const folder = await prepare('SELECT id FROM folders WHERE id = ? AND user_id = ?')

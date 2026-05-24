@@ -1298,6 +1298,50 @@ main {
   display:flex; justify-content:center; gap:.65rem;
 }
 
+/* ── File selection (folders + library) ────────────────────────────────────── */
+.folder-select-bar {
+  display:flex; align-items:center; gap:.75rem;
+  margin-bottom:.5rem;
+}
+.folder-sel-count {
+  font-family:'DM Mono',monospace; font-size:.7rem;
+  color:var(--purple); background:var(--purple-bg);
+  padding:.15rem .55rem; border-radius:20px;
+}
+.file-checkbox {
+  flex-shrink:0; width:15px; height:15px; cursor:pointer;
+  accent-color:var(--purple);
+}
+.file-selected {
+  border-color:var(--purple) !important;
+  background:var(--purple-bg);
+}
+
+/* ── Library panel ─────────────────────────────────────────────────────────── */
+.lib-search { margin-bottom:1rem; }
+.lib-sel-bar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.45rem .75rem; border-radius:8px;
+  background:var(--purple-bg); border:1px solid rgba(167,139,250,.25);
+  margin-bottom:.75rem;
+  font-family:'DM Mono',monospace; font-size:.72rem; color:var(--purple);
+}
+.lib-groups { display:flex; flex-direction:column; gap:1.1rem; }
+.lib-group-header {
+  display:flex; align-items:center; gap:.5rem;
+  margin-bottom:.5rem; padding-bottom:.4rem;
+  border-bottom:1px solid var(--border-sub);
+}
+.lib-group-icon { font-size:1rem; }
+.lib-group-name {
+  flex:1; font-family:'Outfit',sans-serif; font-size:.8rem;
+  font-weight:600; color:var(--text);
+}
+.lib-group-count {
+  font-family:'DM Mono',monospace; font-size:.65rem; color:var(--muted);
+}
+.lib-item { cursor:pointer; }
+
 /* Save-to-folder modal */
 .modal-sm { max-width:380px; }
 .save-folder-item {
