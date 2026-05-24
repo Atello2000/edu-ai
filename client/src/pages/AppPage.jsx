@@ -89,9 +89,7 @@ export default function AppPage() {
   const [chatFiles, setChatFiles] = useState([]);
   const {
     messages: chatMessages, loading: chatLoading,
-    attachedFile, setAttachedFile, attachedImage, setAttachedImage,
     send: sendChat, reset: resetChat,
-    uploadAttachment, readImageAsBase64,
   } = useChat();
 
   // Quiz exam-mode settings (managed via DOM refs from JSX)
@@ -304,19 +302,6 @@ export default function AppPage() {
     setActivePanel('chat-section');
   }, [uploadedFiles]);
 
-  const handleChatAttachFile = useCallback(async (file) => {
-    try {
-      const result = await uploadAttachment(file);
-      setAttachedFile(result);
-    } catch (err) { toast.error(err.message); }
-  }, [uploadAttachment, setAttachedFile]);
-
-  const handleChatAttachImage = useCallback(async (file) => {
-    try {
-      const result = await readImageAsBase64(file);
-      setAttachedImage(result);
-    } catch (err) { toast.error(err.message); }
-  }, [readImageAsBase64, setAttachedImage]);
 
   useEffect(() => {
     if (initialized.current) return;
@@ -587,14 +572,8 @@ export default function AppPage() {
             files={chatFiles}
             messages={chatMessages}
             loading={chatLoading}
-            attachedFile={attachedFile}
-            attachedImage={attachedImage}
             onSend={sendChat}
             onClear={resetChat}
-            onAttachFile={handleChatAttachFile}
-            onRemoveFile={() => setAttachedFile(null)}
-            onAttachImage={handleChatAttachImage}
-            onRemoveImage={() => setAttachedImage(null)}
           />
         </div>
 

@@ -23,7 +23,7 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    const { files, messages, attachedFile, attachedImage } = req.body;
+    const { files, messages } = req.body;
 
     // Contexte cours
     let context = '';
@@ -32,46 +32,17 @@ router.post('/chat', async (req, res) => {
       context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, LIMITS.chatChars)}`;
     }
 
-    // Fichier joint par l'étudiant (devoir, QCM…)
-    // Le texte est extrait lors de l'upload et stocké dans attachedFile.text
-    let attachedContext = '';
-    if (attachedFile) {
-      const text = attachedFile.text || '';
-      attachedContext = `\n\n=== DOCUMENT SOUMIS PAR L'ÉTUDIANT : ${attachedFile.name} ===\n${text.slice(0, 12000)}`;
-    }
-
-    const imageNote = attachedImage
-      ? `\n\nL'étudiant a également joint une image. Analyse-la en lien avec les cours.`
-      : '';
-
     const ctx = userContext(req.user);
-    const systemPrompt = attachedFile
-      ? `${ctx}Tu es un assistant pédagogique expert. L'étudiant a joint un document (devoir, QCM, liste de questions, exercices…). Réponds à chaque question ou exercice de ce document en t'appuyant UNIQUEMENT sur les cours fournis. Structure ta réponse clairement (une section par question si possible), explique ton raisonnement, cite les notions du cours. Réponds toujours en français. Utilise du markdown (titres, gras, listes).
+    const systemPrompt = `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
 
-Cours de référence :${context}${attachedContext}${imageNote}`
-      : `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
+Cours disponibles :${context}`;
 
-Cours disponibles :${context}${imageNote}`;
-
-    let finalMessages = messages.slice(-10);
-
-    if (attachedImage && finalMessages.length > 0) {
-      const last = finalMessages[finalMessages.length - 1];
-      finalMessages[finalMessages.length - 1] = {
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: attachedImage.mimeType, data: attachedImage.base64 } },
-          { type: 'text', text: typeof last.content === 'string' ? last.content : '' }
-        ]
-      };
-    }
-
-    const maxTok = attachedFile ? 3000 : attachedImage ? 2000 : 1024;
+    const finalMessages = messages.slice(-10);
     let   fullText  = '';
     let   chatModel = '';
 
     const aiCfg = await getUserAiConfig(req.user?.id);
-    for await (const chunk of aiChatStream(systemPrompt, finalMessages, maxTok, !!attachedImage, aiCfg)) {
+    for await (const chunk of aiChatStream(systemPrompt, finalMessages, 1024, false, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'chat', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;

@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
-import toast from '../utils/toast';
 
 const SUGGESTIONS = [
   'Quels sont les points clés ?',
@@ -34,19 +33,6 @@ function ChatBubble({ msg }) {
   if (msg.role === 'user') {
     return (
       <div className="chat-msg user">
-        {msg.attachName && (
-          <div className="chat-attach-preview">
-            <span className="file-ext" style={{ fontSize: '.5rem', padding: '.1rem .3rem' }}>
-              {msg.attachName.split('.').pop().toUpperCase()}
-            </span>
-            <span>{msg.attachName}</span>
-          </div>
-        )}
-        {msg.imgSrc && (
-          <div className="chat-image-preview">
-            <img src={msg.imgSrc} alt={msg.imgName} />
-          </div>
-        )}
         <div className="chat-bubble"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(msg.text) ?? msg.text) }}
         />
@@ -56,8 +42,8 @@ function ChatBubble({ msg }) {
   }
 
   // AI message
-  const isGroq  = msg.model && msg.model.toLowerCase().includes('groq');
-  const badge   = msg.model && isLocal
+  const isGroq = msg.model && msg.model.toLowerCase().includes('groq');
+  const badge  = msg.model && isLocal
     ? `<span class="chat-model-badge ${isGroq ? 'groq' : 'claude'}">${msg.model}</span>`
     : '';
   const streamingCursor = msg.streaming ? '<span class="chat-cursor">▋</span>' : '';
@@ -84,40 +70,16 @@ function ChatBubble({ msg }) {
 }
 
 /* ── Composant principal ──────────────────────────────────────────────────── */
-/**
- * Props :
- *   files          [{ name, path, text, ... }]  — fichiers chargés
- *   messages       [{ role, text, ... }]
- *   loading        bool
- *   attachedFile   { id, name, path } | null
- *   attachedImage  { name, base64, mimeType } | null
- *   onSend         (text, opts) => void
- *   onClear        () => void
- *   onAttachFile   (file) => void
- *   onRemoveFile   () => void
- *   onAttachImage  (file) => void
- *   onRemoveImage  () => void
- */
-export default function ChatSection({
-  files, messages, loading,
-  attachedFile, attachedImage,
-  onSend, onClear,
-  onAttachFile, onRemoveFile,
-  onAttachImage, onRemoveImage,
-}) {
+export default function ChatSection({ files, messages, loading, onSend, onClear }) {
   const [input,       setInput]       = useState('');
   const [activeFiles, setActiveFiles] = useState(() => new Set(files.map((_, i) => i)));
-  const messagesRef  = useRef(null);
-  const fileInputRef = useRef(null);
-  const imgInputRef  = useRef(null);
 
-  // Keep all chips active when files change
+  const messagesRef = useRef(null);
+
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveFiles(new Set(files.map((_, i) => i)));
   }, [files]);
 
-  // Auto scroll
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -143,36 +105,13 @@ export default function ChatSection({
 
   function handleSend(text) {
     const t = text ?? input.trim();
-    if (!t && !attachedFile && !attachedImage) return;
-    const snap  = attachedFile;
-    const isnap = attachedImage;
-    onSend(t, { files: getActiveChatFiles(), attachedFileSnap: snap, attachedImageSnap: isnap });
+    if (!t) return;
+    onSend(t, { files: getActiveChatFiles() });
     setInput('');
-    if (snap)  onRemoveFile();
-    if (isnap) onRemoveImage();
   }
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-  }
-
-  async function handleFileChange(e) {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (!['pdf', 'ppt', 'pptx', 'docx'].includes(ext)) {
-      return toast.warn('Seuls PDF, PPT/PPTX et DOCX sont acceptés.');
-    }
-    onAttachFile(file);
-  }
-
-  async function handleImageChange(e) {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
-    if (file.size > 4 * 1024 * 1024) return toast.warn('Image trop lourde (max 4 Mo).');
-    onAttachImage(file);
   }
 
   const isEmpty = messages.length === 0;
@@ -193,7 +132,6 @@ export default function ChatSection({
           <button
             key={i}
             className={`chat-file-chip${activeFiles.has(i) ? ' active' : ''}`}
-            data-idx={i}
             onClick={() => toggleChip(i)}
           >
             {f.name}
@@ -220,46 +158,8 @@ export default function ChatSection({
         {messages.map((m, i) => <ChatBubble key={i} msg={m} />)}
       </div>
 
-      {/* Attachment bars */}
-      {attachedFile && (
-        <div id="chat-attach-bar" className="chat-attach-bar">
-          <span className="file-ext" style={{ fontSize: '.55rem' }}>
-            {attachedFile.name.split('.').pop().toUpperCase()}
-          </span>
-          <span id="chat-attach-name">{attachedFile.name}</span>
-          <button id="chat-attach-remove" onClick={onRemoveFile}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        </div>
-      )}
-      {attachedImage && (
-        <div id="chat-image-bar" className="chat-image-bar">
-          <img id="chat-image-thumb" src={`data:${attachedImage.mimeType};base64,${attachedImage.base64}`} alt={attachedImage.name} />
-          <span id="chat-image-name">{attachedImage.name}</span>
-          <button id="chat-image-remove" onClick={onRemoveImage}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        </div>
-      )}
-
       {/* Input row */}
       <div className="chat-input-row">
-        <button
-          id="chat-attach-btn"
-          className={`chat-tool-btn${attachedFile ? ' active' : ''}`}
-          title="Joindre un document"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-          </svg>
-        </button>
-        <button
-          id="chat-image-btn"
-          className={`chat-tool-btn${attachedImage ? ' active' : ''}`}
-          title="Joindre une image"
-          onClick={() => imgInputRef.current?.click()}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </button>
         <textarea
           id="chat-input"
           rows={1}
@@ -278,10 +178,6 @@ export default function ChatSection({
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
           </svg>
         </button>
-
-        {/* Hidden file inputs */}
-        <input ref={fileInputRef} type="file" accept=".pdf,.ppt,.pptx,.docx" hidden onChange={handleFileChange} />
-        <input ref={imgInputRef}  type="file" accept="image/*" hidden onChange={handleImageChange} />
       </div>
     </>
   );
