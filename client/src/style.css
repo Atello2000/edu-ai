@@ -423,7 +423,13 @@ main {
   border:1px solid var(--gold-dim);
   border-radius:4px; padding:.15rem .5rem; flex-shrink:0;
 }
-.file-size { font-size:.75rem; color:var(--muted); }
+.file-item-left { min-width:0; }
+.file-item-name {
+  flex:1; min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-size:.85rem;
+}
+.file-size { font-size:.75rem; color:var(--muted); flex-shrink:0; }
 .remove { cursor:pointer; color:var(--border); font-size:1rem; transition:color .15s, transform .15s; }
 .remove:hover { color:var(--rose); transform:scale(1.2); }
 
@@ -1221,7 +1227,10 @@ main {
 }
 .history-item:hover { border-color:var(--gold-dim); transform:translateX(3px); box-shadow:var(--shadow-sm); }
 .history-left   { display:flex; flex-direction:column; gap:.25rem; }
-.history-files  { font-size:.88rem; font-weight:500; color:var(--text); }
+.history-files  {
+  font-size:.88rem; font-weight:500; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
 .history-meta   { font-family:'DM Mono',monospace; font-size:.63rem; color:var(--muted); }
 .history-tags   { display:flex; gap:.35rem; margin-top:.15rem; flex-wrap:wrap; }
 .htag {
@@ -1281,8 +1290,9 @@ main {
 .folder-file-item:hover { border-color:var(--purple); }
 .folder-file-item .file-ext { flex-shrink:0; }
 .folder-file-name {
-  flex:1; font-family:'Outfit',sans-serif; font-size:.78rem;
+  flex:1; min-width:0; font-family:'Outfit',sans-serif; font-size:.78rem;
   font-weight:500; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .folder-file-date {
   font-family:'DM Mono',monospace; font-size:.6rem; color:var(--muted);

@@ -93,7 +93,7 @@ export default function UploadZone({ onUploaded, onError }) {
               <div key={f.name} className="file-item">
                 <div className="file-item-left">
                   <span className="file-ext">{ext}</span>
-                  <span>{f.name}</span>
+                  <span className="file-item-name">{f.name}</span>
                   <span className="file-size">{formatSize(f.size)}</span>
                 </div>
                 <span className="remove" onClick={() => removeFile(i)}>✕</span>
