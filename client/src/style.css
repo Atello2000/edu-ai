@@ -1518,6 +1518,30 @@ main {
 .stat-muted-num { color:var(--muted); }
 .stats-section { margin-bottom:1.5rem; }
 .stats-section-title { font-size:.65rem; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); border-bottom:1px solid var(--border); padding-bottom:.4rem; margin-bottom:.75rem; font-family:'DM Mono',monospace; }
+/* ── Mastery bars ─────────────────────────────────────────────────────────── */
+.mastery-list  { display:flex; flex-direction:column; gap:.55rem; }
+.mastery-row   { display:grid; grid-template-columns:1fr 2fr auto; align-items:center; gap:.75rem; }
+.mastery-topic { font-size:.78rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mastery-track { height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+.mastery-fill  { height:100%; border-radius:99px; transition:width .4s ease; }
+.mastery-good  { background:linear-gradient(90deg,var(--teal),#4ade80); }
+.mastery-mid   { background:linear-gradient(90deg,var(--gold),#f59e0b); }
+.mastery-low   { background:linear-gradient(90deg,#f87171,#ef4444); }
+.mastery-pct   { font-size:.72rem; font-weight:700; font-family:'DM Mono',monospace; white-space:nowrap; }
+.mastery-pct-good { color:var(--teal); }
+.mastery-pct-mid  { color:var(--gold); }
+.mastery-pct-low  { color:#f87171; }
+
+/* ── Chat citation blockquote ─────────────────────────────────────────────── */
+.chat-bubble blockquote {
+  margin:.75rem 0 0;
+  padding:.4rem .75rem;
+  border-left:3px solid var(--gold);
+  background:var(--gold-bg);
+  border-radius:0 var(--radius-xs) var(--radius-xs) 0;
+  font-size:.78rem; color:var(--muted); font-style:normal;
+}
+
 .quiz-history { margin-top:.75rem; }
 .quiz-history-item { display:flex; justify-content:space-between; align-items:center; padding:.48rem 0; border-bottom:1px solid var(--border); font-size:.78rem; color:var(--muted); gap:.5rem; }
 .quiz-history-item:last-child { border-bottom:none; }

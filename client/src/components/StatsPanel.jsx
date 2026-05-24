@@ -34,12 +34,20 @@ function readData() {
 }
 
 export default function StatsPanel() {
-  const [data, setData] = useState(() => readData());
+  const [data,    setData]    = useState(() => readData());
+  const [mastery, setMastery] = useState([]);
   const confirm = useConfirm();
 
   const refresh = useCallback(() => setData(readData()), []);
 
   useEffect(() => eventBus.on('stats:refresh', refresh), [refresh]);
+
+  useEffect(() => {
+    fetch('/api/activity/summary', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => setMastery(d.bestScores || []))
+      .catch(() => {});
+  }, []);
 
   async function reset() {
     const ok = await confirm("Réinitialiser l'historique des quiz ?", { confirmLabel: 'Réinitialiser', danger: true });
@@ -112,6 +120,28 @@ export default function StatsPanel() {
           </div>
         </div>
       </div>
+
+      {mastery.length > 0 && (
+        <div className="stats-section">
+          <div className="stats-section-title">Maîtrise par cours</div>
+          <div className="mastery-list">
+            {mastery.slice(0, 8).map((s, i) => {
+              const pct = Math.round((parseFloat(s.best_pct) || 0) * 100);
+              const cls = pct >= 80 ? 'good' : pct >= 60 ? 'mid' : 'low';
+              const name = s.topic.replace(/\.[^.]+$/, '');
+              return (
+                <div key={i} className="mastery-row">
+                  <div className="mastery-topic" title={s.topic}>{name}</div>
+                  <div className="mastery-track">
+                    <div className={`mastery-fill mastery-${cls}`} style={{ width: `${pct}%` }} />
+                  </div>
+                  <div className={`mastery-pct mastery-pct-${cls}`}>{pct}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="stats-section">
         <div className="stats-section-title">Sessions</div>

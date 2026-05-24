@@ -32,10 +32,17 @@ router.post('/chat', async (req, res) => {
       context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, LIMITS.chatChars)}`;
     }
 
+    const courseNames = files.map(f => `"${f.name}"`).join(', ');
     const ctx = userContext(req.user);
     const systemPrompt = `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
 
-Cours disponibles :${context}`;
+Règle de citation : à la fin de ta réponse, si tu as utilisé des informations d'un cours précis, ajoute une ligne de sources sous cette forme exacte :
+> 📖 Source : [nom du fichier]
+
+Si plusieurs cours sont utilisés : > 📖 Sources : [fichier1], [fichier2]
+Si la question est générale et n'utilise pas le cours : n'ajoute pas de source.
+
+Cours disponibles (${courseNames}) :${context}`;
 
     const finalMessages = messages.slice(-10);
     let   fullText  = '';
