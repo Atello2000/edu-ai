@@ -178,10 +178,9 @@ export default function AppPage() {
   const handleUploaded = useCallback(async (files) => {
     setUploadedFiles(files);
     resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
-    setActivePanel('actions-section');
-    setShowGoalModal(true);
-    // Auto-save dans la matière si on vient d'un dossier
+
     if (pendingFolderId) {
+      // Chemin "Ajouter à une matière" — on sauvegarde et on retourne au dossier
       try {
         await fetch(`/api/folders/${pendingFolderId}/files`, {
           method: 'POST',
@@ -189,9 +188,16 @@ export default function AppPage() {
           body: JSON.stringify({ files: files.map(f => ({ id: f.id || f.path, name: f.name, size: f.size || 0, text: f.text || '' })) }),
         });
         eventBus.emit('folders:refresh');
-      } catch (_) { /* silencieux */ }
+        toast.success('Cours ajouté à la matière.');
+      } catch (_) {
+        toast.error('Erreur lors de l\'ajout à la matière.');
+      }
       setPendingFolderId(null);
+      setActivePanel('folders-panel');
     } else {
+      // Chemin normal — lancer une session
+      setActivePanel('actions-section');
+      setShowGoalModal(true);
       window.__showSaveFolderModal?.(files);
     }
   }, [pendingFolderId, resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
