@@ -31,6 +31,12 @@ export default function Admin() {
   const [loading, setLoading]   = useState(true);
   const [accessError, setAccessError] = useState('');
 
+  // ── AI config ──────────────────────────────────────────────────────────────
+  const [aiConfig,     setAiConfig]     = useState(null);  // { provider, model, providers }
+  const [aiSaving,     setAiSaving]     = useState(false);
+  const [aiSaved,      setAiSaved]      = useState(false);
+  const [aiDraft,      setAiDraft]      = useState({ provider: '', model: '' });
+
   useEffect(() => {
     (async () => {
       try {
@@ -41,18 +47,21 @@ export default function Admin() {
           setLoading(false);
           return;
         }
-        const [sRes, uRes, tRes, mRes] = await Promise.all([
-          fetch('/api/admin/stats',    { credentials: 'include' }),
-          fetch('/api/admin/users',    { credentials: 'include' }),
-          fetch('/api/admin/tokens',   { credentials: 'include' }),
-          fetch('/api/admin/messages', { credentials: 'include' }),
+        const [sRes, uRes, tRes, mRes, aRes] = await Promise.all([
+          fetch('/api/admin/stats',     { credentials: 'include' }),
+          fetch('/api/admin/users',     { credentials: 'include' }),
+          fetch('/api/admin/tokens',    { credentials: 'include' }),
+          fetch('/api/admin/messages',  { credentials: 'include' }),
+          fetch('/api/admin/ai-config', { credentials: 'include' }),
         ]);
-        const [s, u, t, m] = await Promise.all([sRes.json(), uRes.json(), tRes.json(), mRes.json()]);
+        const [s, u, t, m, a] = await Promise.all([sRes.json(), uRes.json(), tRes.json(), mRes.json(), aRes.json()]);
         setStats(s);
         setUsers(u.users || []);
         setTokens(t);
         setMessages(m.messages || []);
         setUnread(m.unread || 0);
+        setAiConfig(a);
+        setAiDraft({ provider: a.provider, model: a.model });
         setLoading(false);
       } catch (err) {
         setAccessError('Erreur réseau : ' + err.message);
@@ -86,6 +95,19 @@ export default function Admin() {
     const [s, u] = await Promise.all([sRes.json(), uRes.json()]);
     setStats(s);
     setUsers(u.users || []);
+  }
+
+  async function saveAiConfig() {
+    setAiSaving(true);
+    await fetch('/api/admin/ai-config', {
+      method: 'PATCH', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(aiDraft),
+    });
+    setAiConfig(prev => ({ ...prev, ...aiDraft }));
+    setAiSaving(false);
+    setAiSaved(true);
+    setTimeout(() => setAiSaved(false), 2500);
   }
 
   async function markRead(id) {
@@ -177,6 +199,68 @@ export default function Admin() {
             </div>
           </div>
         </>
+      )}
+
+      {/* ── Configuration IA ──────────────────────────────────────────────── */}
+      <div className="section-title" style={{marginTop:'2rem'}}>Configuration IA</div>
+
+      {aiConfig && (
+        <div className="ai-config-card">
+          <div className="ai-config-row">
+            <div className="ai-config-field">
+              <label className="ai-config-label">Provider</label>
+              <div className="ai-provider-grid">
+                {aiConfig.providers.map(p => (
+                  <button
+                    key={p.id}
+                    className={`ai-provider-btn${aiDraft.provider === p.id ? ' active' : ''}${!p.available ? ' unavailable' : ''}`}
+                    onClick={() => {
+                      if (!p.available) return;
+                      const firstModel = p.models[0].id;
+                      setAiDraft({ provider: p.id, model: firstModel });
+                    }}
+                    title={!p.available ? 'Clé API non configurée dans .env' : ''}
+                  >
+                    <span className="ai-provider-name">{p.label}</span>
+                    {!p.available && <span className="ai-provider-lock">clé manquante</span>}
+                    {p.available && aiDraft.provider === p.id && (
+                      <span className="ai-provider-check">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="ai-config-field">
+              <label className="ai-config-label">Modèle</label>
+              <div className="ai-model-list">
+                {(aiConfig.providers.find(p => p.id === aiDraft.provider)?.models || []).map(m => (
+                  <button
+                    key={m.id}
+                    className={`ai-model-btn${aiDraft.model === m.id ? ' active' : ''}`}
+                    onClick={() => setAiDraft(d => ({ ...d, model: m.id }))}
+                  >
+                    <span className="ai-model-name">{m.label}</span>
+                    <span className="ai-model-id">{m.id}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="ai-config-footer">
+            <span className="ai-config-current">
+              Actif&nbsp;: <strong>{aiConfig.provider}</strong> / <code>{aiConfig.model}</code>
+            </span>
+            <button
+              className="ai-save-btn"
+              onClick={saveAiConfig}
+              disabled={aiSaving || (aiDraft.provider === aiConfig.provider && aiDraft.model === aiConfig.model)}
+            >
+              {aiSaving ? 'Enregistrement…' : aiSaved ? '✓ Enregistré' : 'Appliquer'}
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="table-wrap">

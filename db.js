@@ -148,6 +148,10 @@ async function initSchema() {
       is_read    INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX IF NOT EXISTS idx_user_messages_read ON user_messages(is_read);
+    CREATE TABLE IF NOT EXISTS app_config (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 
   const migrations = [
@@ -161,6 +165,8 @@ async function initSchema() {
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS domains TEXT NOT NULL DEFAULT '[]'",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_done INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty TEXT",
+    "INSERT INTO app_config (key, value) VALUES ('ai_provider', 'groq') ON CONFLICT DO NOTHING",
+    "INSERT INTO app_config (key, value) VALUES ('ai_model', 'llama-3.3-70b-versatile') ON CONFLICT DO NOTHING",
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}

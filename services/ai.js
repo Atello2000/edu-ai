@@ -1,28 +1,43 @@
 require('dotenv').config();
-const { OpenAI } = require('openai');
-const logger = require('./logger');
+const { OpenAI }    = require('openai');
+const Anthropic     = require('@anthropic-ai/sdk');
+const logger        = require('./logger');
+const { getAiConfig } = require('./aiConfig');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// ── Multi-key Groq rotation ───────────────────────────────────────────────────
-// Supports GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3, …
+// ── Clients ───────────────────────────────────────────────────────────────────
+
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
 const groqClients = ['GROQ_API_KEY', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3']
-  .map(k => process.env[k])
-  .filter(Boolean)
+  .map(k => process.env[k]).filter(Boolean)
   .map(apiKey => new OpenAI({ apiKey, baseURL: GROQ_BASE }));
 
-// Round-robin index (resets per serverless instance — good enough)
 let _groqIdx = 0;
-function nextGroq() {
-  if (!groqClients.length) return null;
-  const client = groqClients[_groqIdx % groqClients.length];
-  _groqIdx++;
-  return client;
-}
 
-// Try all Groq clients in order; skip to next on 429/rate-limit
+const anthropicClient = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null;
+
+const deepseek = process.env.DEEPSEEK_API_KEY
+  ? new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1' })
+  : null;
+
+const MODEL_LABEL = 'IA';
+
+// ── Label helpers ─────────────────────────────────────────────────────────────
+
+const ANTHROPIC_LABELS = {
+  'claude-haiku-4-5-20251001': 'Claude Haiku',
+  'claude-sonnet-4-6':         'Claude Sonnet',
+  'claude-opus-4-7':           'Claude Opus',
+};
+function anthropicLabel(model) { return ANTHROPIC_LABELS[model] || `Claude (${model})`; }
+
+// ── Groq helpers (multi-key rotation + 429 retry) ─────────────────────────────
+
 async function groqComplete(params) {
+  if (!groqClients.length) throw new Error('Aucune clé Groq configurée (GROQ_API_KEY)');
   let lastErr;
   for (let i = 0; i < groqClients.length; i++) {
     const client = groqClients[(_groqIdx + i) % groqClients.length];
@@ -30,17 +45,15 @@ async function groqComplete(params) {
       return await client.chat.completions.create(params);
     } catch (err) {
       lastErr = err;
-      if (err?.status === 429) {
-        logger.warn(`Groq key ${(_groqIdx + i) % groqClients.length} rate-limited, trying next`);
-        continue;
-      }
-      throw err; // non-429 errors bubble up immediately
+      if (err?.status === 429) { logger.warn(`Groq key rate-limited, trying next`); continue; }
+      throw err;
     }
   }
-  throw lastErr; // all keys exhausted
+  throw lastErr;
 }
 
 async function groqStream(params) {
+  if (!groqClients.length) throw new Error('Aucune clé Groq configurée (GROQ_API_KEY)');
   let lastErr;
   for (let i = 0; i < groqClients.length; i++) {
     const client = groqClients[(_groqIdx + i) % groqClients.length];
@@ -48,92 +61,111 @@ async function groqStream(params) {
       return await client.chat.completions.create({ ...params, stream: true });
     } catch (err) {
       lastErr = err;
-      if (err?.status === 429) {
-        logger.warn(`Groq key ${(_groqIdx + i) % groqClients.length} rate-limited (stream), trying next`);
-        continue;
-      }
+      if (err?.status === 429) { logger.warn(`Groq key rate-limited (stream), trying next`); continue; }
       throw err;
     }
   }
   throw lastErr;
 }
 
-const groq = groqClients.length > 0 ? groqClients[0] : null; // kept for legacy checks
+// ── Provider stream generators ────────────────────────────────────────────────
 
-const deepseek = process.env.DEEPSEEK_API_KEY
-  ? new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1' })
-  : null;
-
-const GROQ_MODEL      = 'llama-3.3-70b-versatile';
-const GROQ_FAST_MODEL = 'llama-3.1-8b-instant';
-const DEEPSEEK_MODEL  = 'deepseek-chat';
-
-const MODEL_LABEL = groqClients.length ? `Groq · Llama 3.3 (${groqClients.length} clé${groqClients.length > 1 ? 's' : ''})` : 'DeepSeek · Chat';
-
-function usage(r, provider) {
-  return { provider, input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 };
-}
-
-async function primary(messages, maxTokens) {
-  if (groqClients.length) {
-    try {
-      const r = await groqComplete({ model: GROQ_MODEL, max_tokens: maxTokens, messages });
-      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: usage(r, 'Groq') };
-    } catch (err) {
-      logger.warn('Groq fallback (complete)', { status: err?.status, message: err?.message });
-    }
-  }
-  if (!deepseek) throw new Error('Aucune clé IA configurée (GROQ_API_KEY ou DEEPSEEK_API_KEY requise)');
-  const r = await deepseek.chat.completions.create({ model: DEEPSEEK_MODEL, max_tokens: maxTokens, messages });
-  return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: usage(r, 'DeepSeek') };
-}
-
-async function aiComplete(prompt, maxTokens = 3000, cachedContent = null) {
-  const fullPrompt = cachedContent ? `${cachedContent}\n\n${prompt}` : prompt;
-  return primary([{ role: 'user', content: fullPrompt }], maxTokens);
-}
-
-// Modèle rapide pour tâches simples (génération de topics sans fichier)
-async function aiCompleteFast(prompt, maxTokens = 2000) {
-  if (groqClients.length) {
-    try {
-      const r = await groqComplete({ model: GROQ_FAST_MODEL, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
-      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.1-8b', usage: usage(r, 'Groq') };
-    } catch (err) {
-      logger.warn('Groq fast fallback to primary', { message: err?.message });
-    }
-  }
-  return primary([{ role: 'user', content: prompt }], maxTokens);
-}
-
-// Yields { text, model } pour le contenu, puis { usage } en dernier chunk
-async function* aiStream(prompt, maxTokens = 4096, cachedContent = null) {
-  const fullPrompt = cachedContent ? `${cachedContent}\n\n${prompt}` : prompt;
-  const msgs = [{ role: 'user', content: fullPrompt }];
-  const streamOpts = { stream_options: { include_usage: true } };
-
-  if (groqClients.length) {
-    try {
-      const stream = await groqStream({ model: GROQ_MODEL, max_tokens: maxTokens, ...streamOpts, messages: msgs });
-      for await (const chunk of stream) {
-        if (chunk.usage) { yield { usage: { provider: 'Groq', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } }; continue; }
-        const text = chunk.choices[0]?.delta?.content || '';
-        if (text) yield { text, model: 'Groq · Llama 3.3' };
-      }
-      return;
-    } catch (err) {
-      logger.warn('Groq fallback (stream)', { status: err?.status, message: err?.message });
-    }
-  }
-
-  if (!deepseek) throw new Error('Aucune clé IA configurée');
-  const stream = await deepseek.chat.completions.create({ model: DEEPSEEK_MODEL, max_tokens: maxTokens, stream: true, ...streamOpts, messages: msgs });
+async function* streamGroq(model, messages, maxTokens) {
+  const stream = await groqStream({
+    model, max_tokens: maxTokens, messages,
+    stream_options: { include_usage: true },
+  });
+  const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
   for await (const chunk of stream) {
-    if (chunk.usage) { yield { usage: { provider: 'DeepSeek', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } }; continue; }
+    if (chunk.usage) {
+      yield { usage: { provider: 'Groq', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+      continue;
+    }
+    const text = chunk.choices[0]?.delta?.content || '';
+    if (text) yield { text, model: label };
+  }
+}
+
+async function* streamAnthropic(model, messages, maxTokens, system) {
+  if (!anthropicClient) throw new Error('Clé Anthropic non configurée (ANTHROPIC_API_KEY)');
+  const label = anthropicLabel(model);
+  const params = { model, max_tokens: maxTokens, messages };
+  if (system) params.system = system;
+
+  const stream = anthropicClient.messages.stream(params);
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+      yield { text: event.delta.text, model: label };
+    }
+  }
+  const final = await stream.finalMessage();
+  yield { usage: { provider: 'Anthropic', input: final.usage.input_tokens, output: final.usage.output_tokens } };
+}
+
+async function* streamDeepSeek(model, messages, maxTokens) {
+  if (!deepseek) throw new Error('Clé DeepSeek non configurée (DEEPSEEK_API_KEY)');
+  const stream = await deepseek.chat.completions.create({
+    model, max_tokens: maxTokens, stream: true, messages,
+    stream_options: { include_usage: true },
+  });
+  for await (const chunk of stream) {
+    if (chunk.usage) {
+      yield { usage: { provider: 'DeepSeek', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+      continue;
+    }
     const text = chunk.choices[0]?.delta?.content || '';
     if (text) yield { text, model: 'DeepSeek · Chat' };
   }
 }
+
+// ── Public API ─────────────────────────────────────────────────────────────────
+
+async function* aiStream(prompt, maxTokens = 4096) {
+  const { provider, model } = await getAiConfig();
+  const messages = [{ role: 'user', content: prompt }];
+  if (provider === 'anthropic') { yield* streamAnthropic(model, messages, maxTokens, null); return; }
+  if (provider === 'deepseek')  { yield* streamDeepSeek(model, messages, maxTokens); return; }
+  yield* streamGroq(model, messages, maxTokens);
+}
+
+async function aiComplete(prompt, maxTokens = 3000) {
+  const { provider, model } = await getAiConfig();
+  const messages = [{ role: 'user', content: prompt }];
+
+  if (provider === 'anthropic') {
+    if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
+    const r = await anthropicClient.messages.create({ model, max_tokens: maxTokens, messages });
+    return {
+      text:  r.content[0].text,
+      model: anthropicLabel(model),
+      usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens },
+    };
+  }
+  if (provider === 'deepseek') {
+    if (!deepseek) throw new Error('Clé DeepSeek non configurée');
+    const r = await deepseek.chat.completions.create({ model, max_tokens: maxTokens, messages });
+    return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: { provider: 'DeepSeek', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+  }
+  // groq
+  const r = await groqComplete({ model, max_tokens: maxTokens, messages });
+  const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
+  return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+}
+
+async function aiCompleteFast(prompt, maxTokens = 2000) {
+  // Always use the fast Groq model if available, otherwise fall back to active provider
+  if (groqClients.length) {
+    try {
+      const r = await groqComplete({ model: 'llama-3.1-8b-instant', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
+      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.1-8b', usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+    } catch (err) {
+      logger.warn('Groq fast fallback to active provider', { message: err?.message });
+    }
+  }
+  return aiComplete(prompt, maxTokens);
+}
+
+// ── Chat (with system prompt + history + optional images) ─────────────────────
 
 function toOpenAIMessages(messages) {
   return messages.map(msg => {
@@ -151,50 +183,40 @@ function toOpenAIMessages(messages) {
 }
 
 async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false) {
-  const oaiMessages = toOpenAIMessages(messages);
-  const allMsgs = [{ role: 'system', content: systemPrompt }, ...oaiMessages];
+  const { provider, model } = await getAiConfig();
 
-  if (!hasImage && groqClients.length) {
-    try {
-      const r = await groqComplete({ model: GROQ_MODEL, max_tokens: maxTokens, messages: allMsgs });
-      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: usage(r, 'Groq') };
-    } catch (err) {
-      logger.warn('Groq fallback (chat)', { status: err?.status, message: err?.message });
-    }
+  if (provider === 'anthropic' || hasImage) {
+    if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
+    const r = await anthropicClient.messages.create({
+      model: provider === 'anthropic' ? model : 'claude-haiku-4-5-20251001',
+      system: systemPrompt, max_tokens: maxTokens, messages,
+    });
+    return { text: r.content[0].text, model: anthropicLabel(model), usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens } };
   }
 
-  if (!deepseek) throw new Error('Aucune clé IA configurée');
-  const r = await deepseek.chat.completions.create({ model: DEEPSEEK_MODEL, max_tokens: maxTokens, messages: allMsgs });
-  return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: usage(r, 'DeepSeek') };
+  const oaiMsgs = [{ role: 'system', content: systemPrompt }, ...toOpenAIMessages(messages)];
+  if (provider === 'deepseek') {
+    if (!deepseek) throw new Error('Clé DeepSeek non configurée');
+    const r = await deepseek.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
+    return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: { provider: 'DeepSeek', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+  }
+  const r = await groqComplete({ model, max_tokens: maxTokens, messages: oaiMsgs });
+  const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
+  return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
 }
 
-// Streaming version of aiChat — yields { text, model } then { usage }
 async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage = false) {
-  const oaiMessages = toOpenAIMessages(messages);
-  const allMsgs    = [{ role: 'system', content: systemPrompt }, ...oaiMessages];
-  const streamOpts  = { stream_options: { include_usage: true } };
+  const { provider, model } = await getAiConfig();
 
-  if (!hasImage && groqClients.length) {
-    try {
-      const stream = await groqStream({ model: GROQ_MODEL, max_tokens: maxTokens, ...streamOpts, messages: allMsgs });
-      for await (const chunk of stream) {
-        if (chunk.usage) { yield { usage: { provider: 'Groq', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } }; continue; }
-        const text = chunk.choices[0]?.delta?.content || '';
-        if (text) yield { text, model: 'Groq · Llama 3.3' };
-      }
-      return;
-    } catch (err) {
-      logger.warn('Groq fallback (chat stream)', { status: err?.status, message: err?.message });
-    }
+  if (provider === 'anthropic' || hasImage) {
+    const m = provider === 'anthropic' ? model : 'claude-haiku-4-5-20251001';
+    yield* streamAnthropic(m, messages, maxTokens, systemPrompt);
+    return;
   }
 
-  if (!deepseek) throw new Error('Aucune clé IA configurée');
-  const stream = await deepseek.chat.completions.create({ model: DEEPSEEK_MODEL, max_tokens: maxTokens, stream: true, ...streamOpts, messages: allMsgs });
-  for await (const chunk of stream) {
-    if (chunk.usage) { yield { usage: { provider: 'DeepSeek', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } }; continue; }
-    const text = chunk.choices[0]?.delta?.content || '';
-    if (text) yield { text, model: 'DeepSeek · Chat' };
-  }
+  const oaiMsgs = [{ role: 'system', content: systemPrompt }, ...toOpenAIMessages(messages)];
+  if (provider === 'deepseek') { yield* streamDeepSeek(model, oaiMsgs, maxTokens); return; }
+  yield* streamGroq(model, oaiMsgs, maxTokens);
 }
 
 function calcMaxTokens(type, textLen, count = 0) {
@@ -204,9 +226,13 @@ function calcMaxTokens(type, textLen, count = 0) {
     if (textLen < 40000) return 3000;
     return 3500;
   }
-  if (type === 'quiz')  return Math.min(count * 350 + 400, 5000); // whyWrong adds ~150 tok/question
+  if (type === 'quiz')  return Math.min(count * 350 + 400, 5000);
   if (type === 'flash') return Math.min(count * 100 + 300, 2200);
   return 2048;
 }
 
-module.exports = { IS_PROD, MODEL_LABEL, deepseek, DEEPSEEK_MODEL, aiComplete, aiCompleteFast, aiStream, aiChat, aiChatStream, calcMaxTokens };
+module.exports = {
+  IS_PROD, MODEL_LABEL, deepseek,
+  DEEPSEEK_MODEL: 'deepseek-chat',
+  aiComplete, aiCompleteFast, aiStream, aiChat, aiChatStream, calcMaxTokens,
+};
