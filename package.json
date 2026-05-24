@@ -27,6 +27,9 @@
     "resend": "^6.12.3",
     "web-push": "^3.6.7"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "jest": "^30.4.2",
     "nodemon": "^3.1.0",
