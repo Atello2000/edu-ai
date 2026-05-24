@@ -99,8 +99,9 @@ export default function AppPage() {
   const [activePanel, setActivePanel] = useState('dashboard-panel');
 
   // ── Objectif utilisateur + session prep ───────────────────────────────────
-  const [showGoalModal, setShowGoalModal] = useState(false);
-  const [sessionGoal,   setSessionGoal]   = useState(null);
+  const [showGoalModal,   setShowGoalModal]   = useState(false);
+  const [sessionGoal,     setSessionGoal]     = useState(null);
+  const [pendingFolderId, setPendingFolderId] = useState(null);
   const prepLoading = summarizing || quizLoading || fcLoading;
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
@@ -173,13 +174,32 @@ export default function AppPage() {
   }, [activePanel]);
 
   // ── Quand upload réussit ───────────────────────────────────────────────────
-  const handleUploaded = useCallback((files) => {
+  const handleUploaded = useCallback(async (files) => {
     setUploadedFiles(files);
     resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
     setActivePanel('actions-section');
     setShowGoalModal(true);
-    window.__showSaveFolderModal?.(files);
-  }, [resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
+    // Auto-save dans la matière si on vient d'un dossier
+    if (pendingFolderId) {
+      try {
+        await fetch(`/api/folders/${pendingFolderId}/files`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ files: files.map(f => ({ id: f.id || f.path, name: f.name, size: f.size || 0, text: f.text || '' })) }),
+        });
+        window.__refreshFolders?.();
+      } catch (_) { /* silencieux */ }
+      setPendingFolderId(null);
+    } else {
+      window.__showSaveFolderModal?.(files);
+    }
+  }, [pendingFolderId, resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
+
+  // ── Aller à l'upload depuis une matière ───────────────────────────────────
+  const handleGoUploadForFolder = useCallback((folderId) => {
+    setPendingFolderId(folderId);
+    setActivePanel('upload-section');
+  }, []);
 
   const handleGoalSelect = useCallback((goal) => {
     setSessionGoal(goal);
@@ -404,7 +424,7 @@ export default function AppPage() {
 
         {/* MES MATIÈRES */}
         <div className={`panel${activePanel !== 'folders-panel' ? ' hidden' : ''}`} id="folders-panel">
-          <FoldersPanel />
+          <FoldersPanel onGoUpload={handleGoUploadForFolder} />
         </div>
 
         {/* UPLOAD — composant React */}

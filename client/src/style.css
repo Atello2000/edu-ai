@@ -1268,7 +1268,9 @@ main {
   flex:1; font-family:'Outfit',sans-serif; font-size:1.05rem;
   font-weight:700; color:var(--text); margin:0;
 }
-.folder-detail-actions { display:flex; gap:.35rem; }
+.folder-detail-actions { display:flex; align-items:center; gap:.35rem; }
+.folder-add-btn { color:var(--blue); border-color:rgba(61,126,255,.35); font-size:.78rem; padding:.3rem .7rem; }
+.folder-add-btn:hover { background:rgba(61,126,255,.08); border-color:var(--blue); }
 
 .folder-file-item {
   display:flex; align-items:center; gap:.68rem;
