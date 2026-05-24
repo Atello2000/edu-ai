@@ -7,12 +7,29 @@ function getLang() {
   } catch { return 'fr'; }
 }
 
+function getCsrfToken() {
+  // Read cookie jangalai-csrf if present (set by auth middleware)
+  const m = document.cookie.match(/(?:^|;\s*)jangalai-csrf=([^;]+)/);
+  return m ? m[1] : null;
+}
+
 /**
- * Gère le streaming SSE de POST /api/summarize.
- *
- * streaming : { [fileName]: partialText }  — texte en cours de génération
- * results   : [{ name, summary }]          — résultats finaux
+ * Parse SSE buffer and call onEvent for each complete event.
+ * Returns remaining incomplete buffer.
  */
+function parseSseBuffer(buffer, onEvent) {
+  const parts = buffer.split('\n\n');
+  const remaining = parts.pop() ?? '';
+  for (const part of parts) {
+    const line = part.trim();
+    if (!line.startsWith('data:')) continue;
+    try {
+      onEvent(JSON.parse(line.slice(5).trim()));
+    } catch { /* skip malformed */ }
+  }
+  return remaining;
+}
+
 export function useSummarize() {
   const [results,   setResults]   = useState([]);
   const [streaming, setStreaming] = useState({});
@@ -22,24 +39,10 @@ export function useSummarize() {
   const partials    = useRef({});
   const accumulated = useRef([]);
   const navigated   = useRef(false);
-
-  // Ticker : flush partials → React state toutes les 80ms (contourne le batching React 18)
-  const ticker = useRef(null);
-
-  function startTicker() {
-    if (ticker.current) return;
-    ticker.current = setInterval(() => {
-      const snap = { ...partials.current };
-      if (Object.keys(snap).length > 0) setStreaming(snap);
-    }, 80);
-  }
-
-  function stopTicker() {
-    if (ticker.current) { clearInterval(ticker.current); ticker.current = null; }
-  }
+  const xhrRef      = useRef(null);
 
   function reset() {
-    stopTicker();
+    xhrRef.current?.abort();
     setResults([]);
     setStreaming({});
     setError(null);
@@ -54,78 +57,79 @@ export function useSummarize() {
     accumulated.current = savedResults;
   }
 
-  const summarize = useCallback(async (files) => {
+  const summarize = useCallback((files) => {
     if (!files.length) return;
     reset();
     setLoading(true);
 
-    try {
-      const res = await fetch('/api/summarize', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ files, lang: getLang() }),
-      });
-      if (!res.ok) throw new Error('Erreur serveur');
+    let buffer = '';
 
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let   buffer  = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          if (!part.startsWith('data: ')) continue;
-          let data;
-          try { data = JSON.parse(part.slice(6)); } catch { continue; }
-
-          if (data.type === 'start') {
-            partials.current[data.name] = '';
-            if (!navigated.current) {
-              navigated.current = true;
-              eventBus.emit('nav:section', 'summary-section');
-            }
-            startTicker();
-
-          } else if (data.type === 'delta') {
-            // Accumule dans le ref — le ticker flush vers React toutes les 80ms
-            partials.current[data.name] = (partials.current[data.name] || '') + data.text;
-
-          } else if (data.type === 'done') {
-            const full  = partials.current[data.name] || '';
-            delete partials.current[data.name];
-            const entry = { name: data.name, summary: full };
-            accumulated.current = [...accumulated.current, entry];
-
-            // Affiche le texte complet dans la streaming card, puis transite vers le résultat final
-            setStreaming(prev => ({ ...prev, [data.name]: full }));
-            setTimeout(() => {
-              setResults(r => [...r, entry]);
-              setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
-            }, 250);
-
-          } else if (data.type === 'error') {
-            throw new Error(data.message);
-          }
+    function handleEvent(data) {
+      if (data.type === 'start') {
+        partials.current[data.name] = '';
+        setStreaming(prev => ({ ...prev, [data.name]: '' }));
+        if (!navigated.current) {
+          navigated.current = true;
+          eventBus.emit('nav:section', 'summary-section');
         }
-      }
 
-      if (accumulated.current.length) {
-        window.__saveSession?.({ summaries: accumulated.current });
-        eventBus.emit('quota:refresh');
-        eventBus.emit('dashboard:refresh');
+      } else if (data.type === 'delta') {
+        const next = (partials.current[data.name] || '') + (data.text || '');
+        partials.current[data.name] = next;
+        setStreaming(prev => ({ ...prev, [data.name]: next }));
+
+      } else if (data.type === 'done') {
+        const full  = partials.current[data.name] || '';
+        delete partials.current[data.name];
+        const entry = { name: data.name, summary: full };
+        accumulated.current = [...accumulated.current, entry];
+        setResults(r => [...r, entry]);
+        setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
+
+      } else if (data.type === 'end') {
+        if (accumulated.current.length) {
+          window.__saveSession?.({ summaries: accumulated.current });
+          eventBus.emit('quota:refresh');
+          eventBus.emit('dashboard:refresh');
+        }
+        setLoading(false);
+
+      } else if (data.type === 'error') {
+        setError(data.message);
+        setLoading(false);
       }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      stopTicker();
-      setLoading(false);
     }
+
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    xhr.open('POST', '/api/summarize', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    const csrf = getCsrfToken();
+    if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+
+    let processedLen = 0;
+
+    xhr.onprogress = () => {
+      const chunk = xhr.responseText.slice(processedLen);
+      processedLen = xhr.responseText.length;
+      buffer = parseSseBuffer(buffer + chunk, handleEvent);
+    };
+
+    xhr.onload = () => {
+      // Flush any remaining buffer
+      if (buffer.trim()) parseSseBuffer(buffer + '\n\n', handleEvent);
+      if (!accumulated.current.length) setLoading(false);
+    };
+
+    xhr.onerror = () => {
+      setError('Erreur réseau');
+      setLoading(false);
+    };
+
+    xhr.onabort = () => setLoading(false);
+
+    xhr.withCredentials = true;
+    xhr.send(JSON.stringify({ files, lang: getLang() }));
   }, []);
 
   return { results, streaming, loading, error, summarize, reset, restoreFrom };
