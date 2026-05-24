@@ -30,6 +30,7 @@ import { useFlashcards } from '../hooks/useFlashcards.js';
 import { useChat } from '../hooks/useChat.js';
 import { useSessions } from '../hooks/useSessions.js';
 import { getGoalParams } from '../utils/goalParams.js';
+import toast from '../utils/toast';
 
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
@@ -209,7 +210,7 @@ export default function AppPage() {
   // ── Préparer ma session — lance résumé + quiz + flashcards en parallèle ──
   const handlePrepareSession = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { alert('Chargez d\'abord des fichiers.'); return; }
+    if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
     const { quizCount, quizDiff, fcCount } = getGoalParams(sessionGoal);
     setActivePanel('summary-section');
     summarize(files);
@@ -230,7 +231,7 @@ export default function AppPage() {
   // ── Lancement du résumé (bouton dans actions-section) ─────────────────────
   const handleSummarize = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     setActivePanel('summary-section');
     if (summaryResults.length > 0) return;
     summarize(files);
@@ -248,7 +249,7 @@ export default function AppPage() {
   // ── Fiche d'examen ─────────────────────────────────────────────────────────
   const handleExamSheet = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     setActivePanel('exam-sheet-section');
     if (examMd) return;
     generateExam(files);
@@ -266,7 +267,7 @@ export default function AppPage() {
   // ── Quiz ───────────────────────────────────────────────────────────────────
   const handleQuiz = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     const count      = parseInt(document.getElementById('quiz-count')?.value) || 5;
     const difficulty = document.getElementById('quiz-difficulty')?.value || 'moyen';
     const em         = document.getElementById('exam-mode-cb')?.checked || false;
@@ -280,7 +281,7 @@ export default function AppPage() {
   // ── Flashcards ─────────────────────────────────────────────────────────────
   const handleFlashcards = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     const count = parseInt(document.getElementById('fc-count')?.value) || 10;
     setActivePanel('flashcard-section');
     generateFlashcards(files, { count });
@@ -289,7 +290,7 @@ export default function AppPage() {
   // ── Chat ───────────────────────────────────────────────────────────────────
   const handleOpenChat = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { alert('Chargez d\'abord des fichiers.'); return; }
+    if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
     setChatFiles(files);
     window.__addGeneratedSection?.('chat-section');
     setActivePanel('chat-section');
@@ -299,14 +300,14 @@ export default function AppPage() {
     try {
       const result = await uploadAttachment(file);
       setAttachedFile(result);
-    } catch (err) { alert('Erreur : ' + err.message); }
+    } catch (err) { toast.error(err.message); }
   }, [uploadAttachment, setAttachedFile]);
 
   const handleChatAttachImage = useCallback(async (file) => {
     try {
       const result = await readImageAsBase64(file);
       setAttachedImage(result);
-    } catch (err) { alert('Erreur : ' + err.message); }
+    } catch (err) { toast.error(err.message); }
   }, [readImageAsBase64, setAttachedImage]);
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import QuotaBar from './QuotaBar.jsx';
+import toast from '../utils/toast';
 
 const PREFS_KEY = 'jangalai-prefs';
 function getPrefs() { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
@@ -56,7 +57,7 @@ export default function ActionsPanel({
 
   async function handleMindmap() {
     const files = window.__getSelectedFiles?.() || uploadedFilesRef.current;
-    if (!files.length) { alert('Sélectionnez au moins un fichier.'); return; }
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
 
     // Utilise le résumé déjà généré si disponible
     const cached = window._summaryResultsRef?.();
@@ -99,7 +100,7 @@ export default function ActionsPanel({
         }
       }
       if (results.length) window.__openMindmap?.(results[0].name, results[0].summary);
-    } catch (err) { alert('Erreur : ' + err.message); }
+    } catch (err) { toast.error(err.message); }
     finally { loader?.classList.add('hidden'); }
   }
 

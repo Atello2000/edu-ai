@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DOMPurify from 'dompurify';
+import toast from '../utils/toast';
 import { buildSummarySections } from '../utils/summaryUtils';
 import { exportSummaryToPDF }   from '../utils/summaryPdf';
 
@@ -78,7 +79,7 @@ function SummaryCard({ result }) {
   async function handlePdf() {
     setPdfLoading(true);
     try { await exportSummaryToPDF(baseName, summary); }
-    catch (err) { alert('Erreur PDF : ' + err.message); }
+    catch (err) { toast.error('Erreur PDF : ' + err.message); }
     finally { setPdfLoading(false); }
   }
 

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import toast from '../utils/toast';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
@@ -91,7 +92,7 @@ export function useQuiz() {
 
   function retryWrong() {
     const wrong = questions.filter((q, i) => answers[i] !== q.answer);
-    if (!wrong.length) { alert('Aucune erreur à revoir !'); return; }
+    if (!wrong.length) { toast.info('Aucune erreur à revoir !'); return; }
     setQuestions(wrong);
     setAnswers({});
     setIdx(0);

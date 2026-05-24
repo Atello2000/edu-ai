@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth.jsx';
 import { ThemeProvider } from './hooks/useTheme.jsx';
+import { ConfirmProvider } from './components/ConfirmModal.jsx';
+import ToastContainer from './components/ToastContainer.jsx';
 import App from './App.jsx';
 import './style.css';
 
@@ -45,7 +47,10 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <App />
+          <ConfirmProvider>
+            <App />
+            <ToastContainer />
+          </ConfirmProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

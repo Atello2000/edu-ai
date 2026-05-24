@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import toast from '../utils/toast';
 import { useAuth } from '../hooks/useAuth';
 import './ForYouSection.css';
 
@@ -115,7 +116,7 @@ export default function ForYouSection({ onActivity }) {
       setResult(data); setResultType(type); setResultTopic(topic);
       setFcIdx(0); setFlipped(false);
       if (type === 'flashcards') postActivity(topic, 'flashcards').then(() => onActivity?.());
-    } catch (err) { alert(err.message); }
+    } catch (err) { toast.error(err.message); }
     finally { setLoadingKey(''); }
   }
 

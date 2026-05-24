@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import toast from '../utils/toast';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
@@ -166,7 +167,7 @@ export function useFlashcards() {
   function redoWrong() {
     const wrongIdxs = Object.entries(cardStates)
       .filter(([, s]) => s === 'review').map(([i]) => +i);
-    if (!wrongIdxs.length) { alert('Aucune carte à revoir !'); return; }
+    if (!wrongIdxs.length) { toast.info('Aucune carte à revoir !'); return; }
     setCards(wrongIdxs.map(i => cards[i]));
     setCardStates({});
   }

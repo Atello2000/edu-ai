@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
+import toast from '../utils/toast';
 
 const SUGGESTIONS = [
   'Quels sont les points clés ?',
@@ -161,7 +162,7 @@ export default function ChatSection({
     if (!file) return;
     const ext = file.name.split('.').pop().toLowerCase();
     if (!['pdf', 'ppt', 'pptx', 'docx'].includes(ext)) {
-      return alert('Seuls PDF, PPT/PPTX et DOCX sont acceptés.');
+      return toast.warn('Seuls PDF, PPT/PPTX et DOCX sont acceptés.');
     }
     onAttachFile(file);
   }
@@ -170,7 +171,7 @@ export default function ChatSection({
     const file = e.target.files[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > 4 * 1024 * 1024) return alert('Image trop lourde (max 4 Mo).');
+    if (file.size > 4 * 1024 * 1024) return toast.warn('Image trop lourde (max 4 Mo).');
     onAttachImage(file);
   }
 

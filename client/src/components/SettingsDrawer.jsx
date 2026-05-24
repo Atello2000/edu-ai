@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import toast from '../utils/toast';
+import { useConfirm } from './ConfirmModal';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { usePush } from '../hooks/usePush.js';
 import Logo from './Logo.jsx';
@@ -18,6 +20,7 @@ function savePrefs(patch) {
 
 export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
   const { user } = useAuth();
+  const confirm  = useConfirm();
   const { subscribed: pushSubscribed, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePush();
   const [theme,        setTheme]        = useState(() => document.documentElement.getAttribute('data-theme') || 'light');
   const [reduceMotion, setReduceMotion] = useState(() => !!getPrefs().reduceMotion);
@@ -60,19 +63,21 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
     window.__applyPrefs?.();
   }
 
-  function clearHistory() {
-    if (!confirm("Effacer tout l'historique des sessions ?")) return;
+  async function clearHistory() {
+    const ok = await confirm("Effacer tout l'historique des sessions ?", { confirmLabel: 'Effacer', danger: true });
+    if (!ok) return;
     localStorage.removeItem(HISTORY_KEY);
     window.__refreshHistory?.();
     window.__renderDashboard?.();
-    alert('Historique effacé.');
+    toast.success('Historique effacé.');
   }
 
-  function clearStats() {
-    if (!confirm('Réinitialiser toutes les statistiques quiz ?')) return;
+  async function clearStats() {
+    const ok = await confirm('Réinitialiser toutes les statistiques quiz ?', { confirmLabel: 'Réinitialiser', danger: true });
+    if (!ok) return;
     localStorage.removeItem(QUIZ_STATS_KEY);
     window.__refreshStats?.();
-    alert('Statistiques réinitialisées.');
+    toast.success('Statistiques réinitialisées.');
   }
 
   function resetOnboarding() {
@@ -186,7 +191,7 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
                   onChange={async e => {
                     if (e.target.checked) {
                       const ok = await pushSubscribe();
-                      if (!ok) alert('Notifications refusées ou non disponibles sur ce navigateur.');
+                      if (!ok) toast.warn('Notifications refusées ou non disponibles sur ce navigateur.');
                     } else {
                       await pushUnsubscribe();
                     }

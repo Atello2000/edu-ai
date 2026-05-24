@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import toast from '../utils/toast';
+import { useConfirm } from './ConfirmModal';
 
 const FOLDER_ICONS = ['📁','📂','💊','🧬','⚗️','⚡','📐','💻','🔬','⚖️','🏛️','📿','💉','🧪','📜','🎵','🌍','🩺','📊','🧮'];
 
 export default function FoldersPanel({ onGoUpload }) {
+  const confirm = useConfirm();
   const [folders, setFolders] = useState([]);
   const [view, setView] = useState('list');
   const [currentFolder, setCurrentFolder] = useState(null);
@@ -88,7 +91,7 @@ export default function FoldersPanel({ onGoUpload }) {
           body: JSON.stringify({ name: modalName.trim(), icon: modalIcon }),
         });
         const data = await res.json();
-        if (data.error) { alert(data.error); return; }
+        if (data.error) { toast.error(data.error); return; }
         await loadFolders();
         setCurrentFolder(f => ({ ...f, name: modalName.trim(), icon: modalIcon }));
       } else {
@@ -98,23 +101,25 @@ export default function FoldersPanel({ onGoUpload }) {
           body: JSON.stringify({ name: modalName.trim(), icon: modalIcon }),
         });
         const data = await res.json();
-        if (data.error) { alert(data.error); return; }
+        if (data.error) { toast.error(data.error); return; }
         await loadFolders();
       }
       setModalOpen(false);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setModalSaving(false);
     }
   }
 
   async function deleteFolder() {
-    if (!confirm(`Supprimer la matière « ${currentFolder.name} » et tous ses fichiers ?`)) return;
+    const ok = await confirm(`Supprimer la matière « ${currentFolder.name} » et tous ses fichiers ?`, { confirmLabel: 'Supprimer', danger: true });
+    if (!ok) return;
     await fetch(`/api/folders/${currentFolder.id}`, { method: 'DELETE' });
     await loadFolders();
     setView('list');
     setCurrentFolder(null);
+    toast.success('Matière supprimée.');
   }
 
   function useFiles() {

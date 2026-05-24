@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import toast from '../utils/toast';
 
 /**
  * Modal « Enregistrer dans une matière » affiché après chaque upload.
@@ -46,9 +47,10 @@ export default function SaveFolderModal() {
           files: files.map(f => ({ id: f.id, name: f.name, size: f.size, text: f.text })),
         }),
       });
+      toast.success('Cours enregistré dans la matière.');
       close();
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
@@ -65,11 +67,11 @@ export default function SaveFolderModal() {
         body: JSON.stringify({ name }),
       });
       const data = await res.json();
-      if (data.error) { alert(data.error); return; }
+      if (data.error) { toast.error(data.error); return; }
       setNewName('');
       await saveToFolder(data.id);
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }

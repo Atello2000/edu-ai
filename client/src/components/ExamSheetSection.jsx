@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import DOMPurify from 'dompurify';
+import toast from '../utils/toast';
 import { exportExamSheetToPDF } from '../utils/examSheetPdf';
 
 /**
@@ -26,7 +27,7 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
     if (!md) return;
     setPdfLoading(true);
     try { await exportExamSheetToPDF(fileName, md); }
-    catch (err) { alert('Erreur PDF : ' + err.message); }
+    catch (err) { toast.error('Erreur PDF : ' + err.message); }
     finally { setPdfLoading(false); }
   }
 
