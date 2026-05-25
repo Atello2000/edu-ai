@@ -104,7 +104,6 @@ ${truncated}`;
       }
 
       const parsed = parseJsonResponse(raw, { questions: [] });
-      if (!parsed.questions?.length) send({ type: 'debug', rawLen: raw.length, raw: raw.slice(0, 600) });
       const result  = { name: file.name, quiz: parsed };
       allResults.push(result);
       send({ type: 'done', name: file.name, questions: parsed.questions || [] });
