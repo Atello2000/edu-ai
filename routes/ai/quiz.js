@@ -102,8 +102,11 @@ ${truncated}`;
         streamModel = chunk.model;
       }
 
-      logger.info('Quiz raw response', { userId: req.user?.id, rawLen: raw.length, rawPreview: raw.slice(0, 300) });
       const parsed = parseJsonResponse(raw, { questions: [] });
+      // Temporary debug: expose raw when questions empty
+      if (!parsed.questions?.length) {
+        send({ type: 'debug', rawLen: raw.length, rawPreview: raw.slice(0, 400) });
+      }
       const result  = { name: file.name, quiz: parsed };
       allResults.push(result);
       send({ type: 'done', name: file.name, questions: parsed.questions || [] });
