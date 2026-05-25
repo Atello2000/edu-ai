@@ -627,7 +627,7 @@ main {
 .summary-section:nth-child(5){animation-delay:.25s}
 
 .summary-section-header {
-  display:flex; align-items:center; gap:.8rem;
+  display:flex; flex-direction:row; align-items:center; gap:.8rem;
   padding:.9rem 1.15rem;
   cursor:pointer; user-select:none; transition:background .15s;
 }
@@ -635,13 +635,17 @@ main {
 
 .section-icon {
   width:36px; height:36px; border-radius:10px;
-  display:inline-flex; align-items:center; justify-content:center;
-  flex-shrink:0; align-self:center;
+  display:flex; align-items:center; justify-content:center;
+  flex:0 0 36px;
   transition:transform .2s, box-shadow .2s;
 }
 .summary-section-header:hover .section-icon { transform:scale(1.12); box-shadow:0 4px 12px rgba(0,0,0,.28); }
 
-.section-title  { font-size:.87rem; font-weight:600; flex:1; letter-spacing:.01em; }
+.section-title {
+  font-size:.87rem; font-weight:600; flex:1;
+  letter-spacing:.01em; line-height:1.2;
+  display:flex; align-items:center;
+}
 .section-chevron {
   width:22px; height:22px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
@@ -1722,8 +1726,8 @@ kbd {
   .act-card-body strong { font-size:.84rem; }
 
   .summary-sections { padding:.6rem .6rem .8rem; }
-  .summary-section-header { padding:.78rem .85rem; gap:.65rem; }
-  .section-icon { width:32px; height:32px; border-radius:8px; }
+  .summary-section-header { padding:.78rem .85rem; gap:.65rem; align-items:center; }
+  .section-icon { width:32px; height:32px; border-radius:8px; flex:0 0 32px; }
   .summary-section-body { padding:.85rem 1rem 1rem; }
 
   .quiz-question { padding:1.1rem 1.1rem; }
