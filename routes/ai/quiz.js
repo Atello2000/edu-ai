@@ -102,6 +102,7 @@ ${truncated}`;
         streamModel = chunk.model;
       }
 
+      logger.info('Quiz raw response', { userId: req.user?.id, rawLen: raw.length, rawPreview: raw.slice(0, 300) });
       const parsed = parseJsonResponse(raw, { questions: [] });
       const result  = { name: file.name, quiz: parsed };
       allResults.push(result);
