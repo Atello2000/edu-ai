@@ -635,8 +635,8 @@ main {
 
 .section-icon {
   width:36px; height:36px; border-radius:10px;
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0;
+  display:inline-flex; align-items:center; justify-content:center;
+  flex-shrink:0; align-self:center;
   transition:transform .2s, box-shadow .2s;
 }
 .summary-section-header:hover .section-icon { transform:scale(1.12); box-shadow:0 4px 12px rgba(0,0,0,.28); }
@@ -760,15 +760,24 @@ main {
 
 /* Streaming */
 .streaming-badge { font-family:'DM Mono',monospace; font-size:.65rem; color:var(--gold); animation:pulse 1.4s ease-in-out infinite; }
-.summary-stream-body { padding:.5rem 0; font-size:.84rem; line-height:1.65; color:var(--text); min-height:40px; }
-.summary-stream-raw  { padding:.75rem 1rem; font-size:.83rem; line-height:1.7; color:var(--muted); white-space:pre-wrap; font-family:'DM Mono',monospace; }
+.summary-stream-body { padding:.75rem 1rem 1rem; min-height:80px; }
+.summary-skeleton { display:flex; flex-direction:column; gap:.55rem; }
+.skel-line {
+  height:.7rem; border-radius:4px;
+  background:linear-gradient(90deg,var(--border) 25%,var(--border-sub) 50%,var(--border) 75%);
+  background-size:200% 100%;
+  animation:skel-shimmer 1.4s ease-in-out infinite;
+  width:100%;
+}
+.skel-title { height:.85rem; width:45%; margin-bottom:.2rem; }
+@keyframes skel-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
 /* Curseur clignotant sur la section en cours de génération */
 .stream-cursor {
-  display: inline-block; width: 2px; height: .9em;
+  display: inline-flex; width: 2px; height: 1em;
   background: var(--gold); border-radius: 1px; margin-left: auto;
   animation: blink-cursor .7s step-end infinite;
-  vertical-align: middle; flex-shrink: 0;
+  align-self: center; flex-shrink: 0;
 }
 @keyframes blink-cursor { 0%,100%{opacity:1} 50%{opacity:0} }
 

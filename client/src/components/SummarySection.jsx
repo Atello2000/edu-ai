@@ -44,9 +44,14 @@ function StreamingCard({ name, text }) {
       </div>
 
       {sections.length === 0 ? (
-        /* Avant le premier ## : on affiche le texte brut */
+        /* Avant le premier ## : skeleton neutre, pas de texte brut */
         <div className="summary-stream-body">
-          <div className="summary-stream-raw">{text || '…'}</div>
+          <div className="summary-skeleton">
+            <div className="skel-line skel-title" />
+            <div className="skel-line" style={{width:'92%'}} />
+            <div className="skel-line" style={{width:'78%'}} />
+            <div className="skel-line" style={{width:'85%'}} />
+          </div>
         </div>
       ) : (
         <div className="summary-sections">

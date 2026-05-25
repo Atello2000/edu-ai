@@ -23,8 +23,12 @@ export function buildSummarySections(md) {
     if (h2) {
       if (current) sections.push(current);
       const rawTitle = h2[1].trim();
-      // Strip leading emojis/symbols that the AI prepends to headings
-      const title    = rawTitle.replace(/^\P{L}+/u, '').trim();
+      // Strip bold/italic markers then leading non-letter symbols (emojis, etc.)
+      const title    = rawTitle
+        .replace(/\*\*/g, '')
+        .replace(/\*/g,   '')
+        .replace(/^\P{L}+/u, '')
+        .trim();
       const cfg      = SECTION_CONFIG.find(c => c.match.test(rawTitle)) || { icon: '📄', cls: 'section-autre' };
       current = { title, icon: cfg.icon, cls: cfg.cls, lines: [] };
     } else if (current) {
