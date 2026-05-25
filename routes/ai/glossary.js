@@ -53,7 +53,7 @@ Consignes :
 ---
 ${context}`;
 
-    const aiCfg = getJsonAiConfig();
+    const aiCfg = await getJsonAiConfig();
     const { text: raw, usage } = await aiComplete(prompt, GLOSSARY_MAX_TOKENS, aiCfg);
 
     if (usage) logTokens(req.user?.id, 'summarize', usage.provider, usage.input, usage.output);

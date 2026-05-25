@@ -31,7 +31,7 @@ router.post('/topic', async (req, res) => {
   const quota    = await checkQuota(req, quotaKey);
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
 
-  const aiCfg = getJsonAiConfig();
+  const aiCfg = await getJsonAiConfig();
 
   try {
     if (type === 'flashcards') {

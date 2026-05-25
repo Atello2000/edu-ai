@@ -33,7 +33,7 @@ router.post('/quiz', async (req, res) => {
 
     const allResults  = [];
     let   streamModel = MODEL_LABEL;
-    const aiCfg       = getJsonAiConfig();
+    const aiCfg       = await getJsonAiConfig();
 
     for (const file of files) {
       const text = await getFileText(file);

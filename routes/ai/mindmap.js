@@ -45,7 +45,7 @@ FORMAT ATTENDU (remplace par le contenu réel) :
 Cours "${file.name}" :
 ${truncated}`;
 
-    const aiCfg = getJsonAiConfig();
+    const aiCfg = await getJsonAiConfig();
     const { text: md, usage } = await aiComplete(prompt, 1200, aiCfg);
 
     if (usage) logTokens(req.user?.id, 'mindmap', usage.provider, usage.input, usage.output);

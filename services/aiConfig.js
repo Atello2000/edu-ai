@@ -83,10 +83,11 @@ async function getUserAiConfig(userId) {
 
 /**
  * Config fixe pour les tâches JSON (quiz, flashcards, glossaire, topic, mindmap).
- * Toujours Haiku — meilleure fiabilité JSON, coût faible.
+ * Utilise la config globale (identique au résumé) pour une fiabilité maximale.
+ * Fallback vers Haiku si Anthropic est disponible et la config globale est vide.
  */
-function getJsonAiConfig() {
-  return { provider: 'anthropic', model: 'claude-haiku-4-5-20251001' };
+async function getJsonAiConfig() {
+  return getAiConfig();
 }
 
 /**
