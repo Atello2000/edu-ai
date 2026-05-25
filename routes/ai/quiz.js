@@ -72,21 +72,21 @@ Pour chaque question, donne exactement ce format JSON :
       "question": "...",
       "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
       "answer": "A",
-      "explanation": "Explique clairement pourquoi la bonne réponse est correcte (2-3 phrases).",
+      "explanation": "1-2 phrases max : pourquoi la bonne réponse est correcte.",
       "whyWrong": {
-        "B": "Explication courte de pourquoi B est incorrect.",
-        "C": "Explication courte de pourquoi C est incorrect.",
-        "D": "Explication courte de pourquoi D est incorrect."
+        "B": "Erreur en 10 mots max.",
+        "C": "Erreur en 10 mots max.",
+        "D": "Erreur en 10 mots max."
       },
-      "sourceHint": "Indique la notion ou le passage du cours à revoir pour consolider la réponse."
+      "sourceHint": "Notion clé à revoir (5-8 mots)."
     }
   ]
 }
 
 Règles :
-- Les distracteurs (mauvaises réponses) doivent être plausibles mais clairement incorrects si on maîtrise le cours.
-- Les explications doivent être pédagogiques, concrètes et utiles pour réviser.
+- Les distracteurs doivent être plausibles mais incorrects si on maîtrise le cours.
 - whyWrong doit contenir une entrée pour chaque mauvaise option (toutes sauf answer).
+- Sois très concis : chaque question complète (question + options + explication) doit tenir en 150 mots max.
 - Réponds UNIQUEMENT avec le JSON, sans texte autour.
 
 ---
