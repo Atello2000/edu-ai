@@ -81,7 +81,7 @@ tr:hover td { background: rgba(255,255,255,.025); }
 }
 .search-input:focus { border-color: var(--blue); }
 
-.section-title {
+.admin-section-title {
   font-size: .78rem; font-weight: 600; text-transform: uppercase;
   letter-spacing: .06em; color: var(--muted); margin: 1.75rem 0 .75rem;
 }

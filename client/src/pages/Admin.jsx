@@ -163,7 +163,7 @@ export default function Admin() {
         </div>
       )}
 
-      <div className="section-title">Consommation tokens IA</div>
+      <div className="admin-section-title">Consommation tokens IA</div>
 
       {tokens && (
         <>
@@ -202,7 +202,7 @@ export default function Admin() {
       )}
 
       {/* ── Configuration IA ──────────────────────────────────────────────── */}
-      <div className="section-title" style={{marginTop:'2rem'}}>Ma configuration IA <span style={{fontSize:'.72rem',fontWeight:400,color:'var(--muted)',marginLeft:'.4rem'}}>(compte admin uniquement)</span></div>
+      <div className="admin-section-title" style={{marginTop:'2rem'}}>Ma configuration IA <span style={{fontSize:'.72rem',fontWeight:400,color:'var(--muted)',marginLeft:'.4rem'}}>(compte admin uniquement)</span></div>
 
       {aiConfig && (
         <div className="ai-config-card">
@@ -319,7 +319,7 @@ export default function Admin() {
       </div>
 
       {/* ── Messages utilisateurs ─────────────────────────────────────────── */}
-      <div className="section-title" style={{marginTop:'2rem'}}>
+      <div className="admin-section-title" style={{marginTop:'2rem'}}>
         Messages utilisateurs
         {unread > 0 && <span className="msg-unread-badge">{unread} non lu{unread > 1 ? 's' : ''}</span>}
       </div>
