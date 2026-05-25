@@ -88,4 +88,25 @@ router.get('/quota', (req, res, next) => {
   }
 });
 
+// GET /api/health — diagnostic rapide (no auth)
+router.get('/health', async (req, res) => {
+  try {
+    const { getAiConfig } = require('../services/aiConfig');
+    const cfg = await getAiConfig().catch(e => ({ error: e.message }));
+    res.json({
+      status: 'ok',
+      env: process.env.NODE_ENV || 'development',
+      ai_config: cfg,
+      providers_configured: {
+        groq:      !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3),
+        anthropic: !!process.env.ANTHROPIC_API_KEY,
+        mistral:   !!process.env.MISTRAL_API_KEY,
+        deepseek:  !!process.env.DEEPSEEK_API_KEY,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
 module.exports = router;
