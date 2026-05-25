@@ -14,6 +14,7 @@ import ExamSheetSection from '../components/ExamSheetSection.jsx';
 import QuizSection from '../components/QuizSection.jsx';
 import FlashcardSection from '../components/FlashcardSection.jsx';
 import ChatSection from '../components/ChatSection.jsx';
+import GlossarySection from '../components/GlossarySection.jsx';
 import DashboardStats from '../components/DashboardStats.jsx';
 import FloatNav from '../components/FloatNav.jsx';
 import SaveFolderModal from '../components/SaveFolderModal.jsx';
@@ -29,6 +30,7 @@ import { useExamSheet } from '../hooks/useExamSheet.js';
 import { useQuiz } from '../hooks/useQuiz.js';
 import { useFlashcards } from '../hooks/useFlashcards.js';
 import { useChat } from '../hooks/useChat.js';
+import { useGlossary } from '../hooks/useGlossary.js';
 import { useSessions } from '../hooks/useSessions.js';
 import { getGoalParams } from '../utils/goalParams.js';
 import toast from '../utils/toast';
@@ -84,6 +86,10 @@ export default function AppPage() {
     generate: generateFlashcards, reset: resetFlashcards, restoreFrom: restoreFcFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
   } = useFlashcards();
+
+  // ── Glossaire ─────────────────────────────────────────────────────────────
+  const { terms: glossaryTerms, loading: glossaryLoading, error: glossaryError,
+          generate: generateGlossary, reset: resetGlossary } = useGlossary();
 
   // ── Chat ───────────────────────────────────────────────────────────────────
   const [chatFiles, setChatFiles] = useState([]);
@@ -293,6 +299,25 @@ export default function AppPage() {
     generateFlashcards(files, { count });
   }, [uploadedFiles, generateFlashcards]);
 
+  // ── Glossaire ─────────────────────────────────────────────────────────────
+  const handleGlossary = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
+    eventBus.emit('nav:section', 'glossary-section');
+    setActivePanel('glossary-section');
+    if (glossaryTerms.length > 0) return;
+    generateGlossary(files);
+  }, [uploadedFiles, glossaryTerms, generateGlossary]);
+
+  const handleGlossaryRegen = useCallback(() => {
+    resetGlossary();
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (files.length) {
+      setActivePanel('glossary-section');
+      generateGlossary(files);
+    }
+  }, [uploadedFiles, resetGlossary, generateGlossary]);
+
   // ── Chat ───────────────────────────────────────────────────────────────────
   const handleOpenChat = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
@@ -456,6 +481,9 @@ export default function AppPage() {
             onQuiz={handleQuiz}
             onFlashcards={handleFlashcards}
             onOpenChat={handleOpenChat}
+            onGlossary={handleGlossary}
+            glossaryTerms={glossaryTerms}
+            glossaryLoading={glossaryLoading}
             onPrepareSession={handlePrepareSession}
             prepLoading={prepLoading}
             sessionGoal={sessionGoal}
@@ -558,6 +586,16 @@ export default function AppPage() {
             onRedoWrong={redoWrong}
             onSwitchDeck={switchDeck}
             onToggleSrs={toggleSrs}
+          />
+        </div>
+
+        {/* GLOSSAIRE — composant React */}
+        <div className={`panel${activePanel !== 'glossary-section' ? ' hidden' : ''}`} id="glossary-section">
+          <GlossarySection
+            terms={glossaryTerms}
+            loading={glossaryLoading}
+            error={glossaryError}
+            onRegen={glossaryTerms.length > 0 ? handleGlossaryRegen : undefined}
           />
         </div>
 

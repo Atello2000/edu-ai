@@ -12,5 +12,6 @@ router.use(require('./flashcards'));
 router.use(require('./chat'));
 router.use(require('./topic'));
 router.use(require('./mindmap'));
+router.use(require('./glossary'));
 
 module.exports = router;

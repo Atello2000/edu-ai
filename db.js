@@ -169,6 +169,9 @@ async function initSchema() {
     "INSERT INTO app_config (key, value) VALUES ('ai_model', 'llama-3.3-70b-versatile') ON CONFLICT DO NOTHING",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_provider TEXT",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_model TEXT",
+    // Migrer le provider global de groq → mistral si jamais touché
+    "UPDATE app_config SET value = 'mistral' WHERE key = 'ai_provider' AND value = 'groq'",
+    "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'",
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}

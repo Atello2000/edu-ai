@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiComplete } = require('../../services/ai');
-const { getUserAiConfig }       = require('../../services/aiConfig');
+const { getJsonAiConfig }       = require('../../services/aiConfig');
 const { checkQuota, LIMITS }    = require('../../middleware/quota');
 const { logTokens }             = require('../../services/tokens');
 const logger                    = require('../../services/logger');
@@ -45,7 +45,7 @@ FORMAT ATTENDU (remplace par le contenu réel) :
 Cours "${file.name}" :
 ${truncated}`;
 
-    const aiCfg = await getUserAiConfig(req.user?.id);
+    const aiCfg = getJsonAiConfig();
     const { text: md, usage } = await aiComplete(prompt, 1200, aiCfg);
 
     if (usage) logTokens(req.user?.id, 'mindmap', usage.provider, usage.input, usage.output);

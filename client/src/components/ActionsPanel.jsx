@@ -16,6 +16,8 @@ export default function ActionsPanel({
   quizLoading,
   examLoading,
   fcLoading,
+  glossaryTerms,
+  glossaryLoading,
   onSummarize,
   onSummaryRegen,
   onExamSheet,
@@ -23,6 +25,7 @@ export default function ActionsPanel({
   onQuiz,
   onFlashcards,
   onOpenChat,
+  onGlossary,
   onPrepareSession,
   prepLoading,
   sessionGoal,
@@ -300,6 +303,23 @@ export default function ActionsPanel({
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
             </div>
             <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
+          </div>
+
+          <div className="act-card act-card-wide" data-color="gold">
+            <div className="act-card-icon gold">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                <line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Glossaire automatique</strong>
+              <span>Extrait les termes clés et leur définition</span>
+            </div>
+            <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
+              {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
+            </button>
           </div>
         </>}
 

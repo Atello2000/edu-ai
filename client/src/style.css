@@ -2916,3 +2916,102 @@ main {
 body:has(.maintenance-banner) { padding-top: 2.8rem; }
 body:has(.maintenance-banner) header { top: 2.8rem; }
 
+/* ── GLOSSAIRE ──────────────────────────────────────────────────────────── */
+.glossary-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.glossary-meta > span {
+  font-size: .8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.glossary-search {
+  flex: 1;
+  min-width: 160px;
+  max-width: 280px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: .85rem;
+  padding: .45rem .75rem;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.glossary-search:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+.glossary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.glossary-group {}
+.glossary-letter {
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border-bottom: 1px solid var(--border-sub);
+  padding-bottom: .3rem;
+  margin-bottom: .6rem;
+}
+.glossary-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  margin-bottom: .5rem;
+  transition: border-color .2s;
+}
+.glossary-item:hover { border-color: var(--border-sub); }
+.glossary-item-header {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  margin-bottom: .35rem;
+  flex-wrap: wrap;
+}
+.glossary-term {
+  font-weight: 600;
+  color: var(--text);
+  font-size: .9rem;
+}
+.glossary-category {
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-dim);
+  border-radius: 99px;
+  padding: .15rem .55rem;
+  white-space: nowrap;
+}
+.glossary-definition {
+  font-size: .83rem;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+.glossary-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: .88rem;
+  padding: 2rem 0;
+}
+.glossary-placeholder {
+  text-align: center;
+  color: var(--muted);
+  font-size: .88rem;
+  padding: 3rem 1rem;
+}
+.glossary-placeholder p { max-width: 380px; margin: 0 auto; line-height: 1.6; }
+
