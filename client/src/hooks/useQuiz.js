@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import toast from '../utils/toast';
+import eventBus from '../utils/eventBus';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
