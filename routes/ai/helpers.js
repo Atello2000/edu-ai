@@ -41,8 +41,10 @@ async function getFileText(file) {
 /** Extrait le premier objet JSON d'une réponse brute du modèle. */
 function parseJsonResponse(raw, fallback) {
   try {
-    const match = raw.trim().match(/\{[\s\S]*\}/);
-    return JSON.parse(match ? match[0] : raw.trim());
+    // Strip markdown code fences (```json ... ``` or ``` ... ```)
+    const stripped = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+    const match = stripped.match(/\{[\s\S]*\}/);
+    return JSON.parse(match ? match[0] : stripped);
   } catch { return fallback; }
 }
 
