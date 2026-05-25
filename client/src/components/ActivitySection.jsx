@@ -25,8 +25,8 @@ export default function ActivitySection({ refreshKey }) {
 
   useEffect(() => {
     fetch('/api/activity/summary', { credentials: 'include' })
-      .then(r => r.json())
-      .then(setSummary)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data && data.totalSessions !== undefined) setSummary(data); })
       .catch(() => {});
   }, [refreshKey]);
 
@@ -38,7 +38,7 @@ export default function ActivitySection({ refreshKey }) {
     </div>
   );
 
-  const { streak, totalSessions, recentActivity, topTopics } = summary;
+  const { streak = 0, totalSessions = 0, recentActivity = [], topTopics = [] } = summary;
 
   return (
     <div className="activity-section">
