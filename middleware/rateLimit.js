@@ -9,10 +9,10 @@ const globalLimiter = rateLimit({
   message: { error: 'Trop de requêtes. Réessayez dans 15 minutes.' }
 });
 
-// Limite stricte sur les endpoints IA coûteux : 30 req/15 min par IP
+// Limite sur les endpoints IA coûteux : 100 req/15 min par IP
 const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Limite de requêtes IA atteinte. Réessayez dans 15 minutes.' }
