@@ -10,7 +10,7 @@ function groupByLetter(terms) {
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'fr'));
 }
 
-export default function GlossarySection({ terms, loading, error, onRegen }) {
+export default function GlossarySection({ terms = [], loading, error, onRegen }) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {

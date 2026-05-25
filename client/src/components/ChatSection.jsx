@@ -70,7 +70,7 @@ function ChatBubble({ msg }) {
 }
 
 /* ── Composant principal ──────────────────────────────────────────────────── */
-export default function ChatSection({ files, messages, loading, onSend, onClear }) {
+export default function ChatSection({ files = [], messages = [], loading, onSend, onClear }) {
   const [input,       setInput]       = useState('');
   const [activeFiles, setActiveFiles] = useState(() => new Set(files.map((_, i) => i)));
 

@@ -208,7 +208,7 @@ function SummaryCard({ result }) {
  *   onCopyAll ()                   bouton "Copier tout"
  *   onRegen   ()                   bouton "Régénérer"
  */
-export default function SummaryResults({ results, streaming, onCopyAll, onRegen }) {
+export default function SummaryResults({ results = [], streaming, onCopyAll, onRegen }) {
   const [activeTab, setActiveTab] = useState(0);
 
   const streamingEntries = Object.entries(streaming || {});
