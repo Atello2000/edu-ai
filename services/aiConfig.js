@@ -100,11 +100,12 @@ async function getJsonAiConfig() {
 // Règle : Claude/DeepSeek ne sont jamais utilisés automatiquement pour les
 // actions standard. Le x50 de surcoût par rapport à Mistral est trop risqué.
 
+// Groq en premier (gratuit, rapide) → Mistral en fallback (payant, illimité)
 const CHEAP_PRIORITY = [
-  { keys: ['MISTRAL_API_KEY'],
-    provider: 'mistral', model: 'mistral-small-latest' },
   { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
     provider: 'groq',    model: 'llama-3.3-70b-versatile' },
+  { keys: ['MISTRAL_API_KEY'],
+    provider: 'mistral', model: 'mistral-small-latest' },
 ];
 
 const CHEAP_ACTIONS = new Set([
