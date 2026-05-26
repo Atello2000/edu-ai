@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { aiCompleteFast, calcMaxTokens } = require('../../services/ai');
 const { getAiConfigForAction }          = require('../../services/aiConfig');
-const { checkQuota, LIMITS }            = require('../../middleware/quota');
+const { LIMITS }                        = require('../../middleware/quota');
+const { checkAndDeduct }               = require('../../services/jetons');
 const { logTokens }                     = require('../../services/tokens');
 const logger                            = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, parseJsonResponse } = require('./helpers');
@@ -22,16 +23,18 @@ router.post('/topic', async (req, res) => {
   );
   const ctx = userContext(req.user);
 
-  // Cache DB : évite de consommer un quota pour un contenu déjà généré
+  // Cache DB : si le contenu existe déjà, on le retourne gratuitement (sans déduire de jetons)
   const cacheKey = topicCacheKey(topic, type, lang, req.user);
   const cached   = await getCachedTopic(cacheKey);
   if (cached) return res.json(cached);
 
-  const quotaKey = type === 'flashcards' ? 'flashcards' : 'quiz';
-  const quota    = await checkQuota(req, quotaKey);
-  if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
+  // Contenu non en cache → déduire les jetons avant l'appel IA
+  const jAction = type === 'flashcards' ? 'flashcards' : 'quiz';
+  const jeton   = await checkAndDeduct(req.user?.id, jAction, req.user?.plan || 'free');
+  if (!jeton.ok)
+    return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
 
-  const aiCfg = await getAiConfigForAction('glossary'); // topic = génération légère
+  const aiCfg = await getAiConfigForAction(jAction); // flashcards ou quiz → provider cheap
 
   try {
     if (type === 'flashcards') {

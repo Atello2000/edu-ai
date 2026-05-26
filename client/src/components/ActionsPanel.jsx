@@ -33,10 +33,10 @@ function TokenHexSvg() {
   );
 }
 
-function JetonBadge({ action }) {
+function JetonBadge({ action, color = 'purple' }) {
   const cost = COSTS[action] ?? 1;
   return (
-    <span className="jeton-badge">
+    <span className={`jeton-badge jeton-badge-${color}`}>
       <TokenHexSvg />
       {cost} jeton{cost > 1 ? 's' : ''}
     </span>
@@ -228,7 +228,7 @@ export default function ActionsPanel({
                 sessionGoal === 'memorize' ? 'Mémoriser' : "S'entraîner"
               }</span></>}
             </span>
-            <JetonBadge action="session" />
+            <JetonBadge action="session" color="blue" />
           </div>
           <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
             {prepLoading ? 'En cours…' : 'Lancer'}
@@ -260,7 +260,7 @@ export default function ActionsPanel({
                 <option value="30">30 min</option>
               </select>
             </label>
-            <JetonBadge action="quiz" />
+            <JetonBadge action="quiz" color="blue" />
           </div>
           <button className="act-btn blue" id="quiz-btn" disabled={!hasFiles} onClick={onQuiz}>
             {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
@@ -277,7 +277,7 @@ export default function ActionsPanel({
             <strong>Flashcards</strong>
             <label><input type="number" id="fc-count" value={fcCount} min="3" max="30"
               onChange={e => setFcCount(parseInt(e.target.value) || 10)} /> cartes</label>
-            <JetonBadge action="flashcards" />
+            <JetonBadge action="flashcards" color="teal" />
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
             {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
@@ -296,7 +296,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Résumer</strong>
               <span>Résumé structuré en 5 sections</span>
-              <JetonBadge action="summarize" />
+              <JetonBadge action="summarize" color="purple" />
             </div>
             <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
               {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
@@ -316,7 +316,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Chat avec le cours</strong>
               <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-              <JetonBadge action="chat" />
+              <JetonBadge action="chat" color="gold" />
             </div>
             <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
@@ -330,7 +330,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Fiche d&apos;examen</strong>
               <span>Définitions, pièges, tableaux et questions probables</span>
-              <JetonBadge action="exam-sheet" />
+              <JetonBadge action="exam-sheet" color="purple" />
             </div>
             <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
               {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
@@ -348,7 +348,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Carte mentale</strong>
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-              <JetonBadge action="mindmap" />
+              <JetonBadge action="mindmap" color="teal" />
             </div>
             <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
           </div>
@@ -364,7 +364,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Glossaire automatique</strong>
               <span>Extrait les termes clés et leur définition</span>
-              <JetonBadge action="glossary" />
+              <JetonBadge action="glossary" color="gold" />
             </div>
             <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}

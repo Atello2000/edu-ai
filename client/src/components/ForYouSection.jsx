@@ -10,6 +10,16 @@ const IconDoc    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="n
 
 const HISTORY_KEY = 'jangalai-sessions';
 
+/** Supprime les marqueurs Markdown courants (gras, italique, code) du texte affiché. */
+function stripMd(text = '') {
+  return String(text)
+    .replace(/\*\*(.*?)\*\*/gs, '$1')
+    .replace(/\*(.*?)\*/gs,     '$1')
+    .replace(/__(.*?)__/gs,     '$1')
+    .replace(/_(.*?)_/gs,       '$1')
+    .replace(/`([^`]+)`/g,      '$1');
+}
+
 function cleanName(fileName) {
   return fileName
     .replace(/\.[^.]+$/, '')       // supprimer extension
@@ -247,11 +257,11 @@ export default function ForYouSection({ onActivity }) {
                 >
                   <div className="fy-fc-front">
                     <span className="fy-fc-hint">Question — cliquez pour retourner</span>
-                    <p>{result.flashcards[fcIdx]?.front}</p>
+                    <p>{stripMd(result.flashcards[fcIdx]?.front)}</p>
                   </div>
                   <div className="fy-fc-back">
                     <span className="fy-fc-hint">Réponse</span>
-                    <p>{result.flashcards[fcIdx]?.back}</p>
+                    <p>{stripMd(result.flashcards[fcIdx]?.back)}</p>
                   </div>
                 </div>
                 <div className="fy-fc-nav">
@@ -277,38 +287,63 @@ export default function ForYouSection({ onActivity }) {
 }
 
 // ── Composants Quiz ───────────────────────────────────────────────────────────
-function QuizArea({ questions, onComplete }) {
-  const [answers, setAnswers] = useState({});
-  const [logged, setLogged]   = useState(false);
 
-  function handleSelect(idx, letter) {
-    if (answers[idx] !== undefined) return;
-    const newAnswers = { ...answers, [idx]: letter };
-    setAnswers(newAnswers);
-    if (!logged && Object.keys(newAnswers).length === questions.length) {
-      setLogged(true);
-      const score = questions.filter((q, i) => q.answer?.charAt(0) === newAnswers[i]).length;
-      onComplete?.(score, questions.length);
+/**
+ * QuizArea — une question à la fois.
+ * L'utilisateur choisit une réponse → feedback immédiat → bouton "Suivant".
+ */
+function QuizArea({ questions, onComplete }) {
+  const [current,  setCurrent]  = useState(0);
+  const [selected, setSelected] = useState(null); // lettre choisie
+  const [history,  setHistory]  = useState([]);   // [{s: choix, c: correct}]
+  const [finished, setFinished] = useState(false);
+
+  const total   = questions.length;
+  const q       = questions[current];
+  const correct = q?.answer?.charAt(0);
+
+  function handleSelect(letter) {
+    if (selected !== null) return;
+    setSelected(letter);
+  }
+
+  function handleNext() {
+    const newHistory = [...history, { s: selected, c: correct }];
+    if (current + 1 < total) {
+      setHistory(newHistory);
+      setCurrent(c => c + 1);
+      setSelected(null);
+    } else {
+      setHistory(newHistory);
+      setFinished(true);
+      const score = newHistory.filter(r => r.s === r.c).length;
+      onComplete?.(score, total);
     }
   }
 
-  const answered = Object.keys(answers).length;
-  const total    = questions.length;
+  if (finished) {
+    const score = history.filter(r => r.s === r.c).length;
+    const pct   = Math.round(score / total * 100);
+    return (
+      <div className="fy-quiz-area">
+        <div className="fy-quiz-score">
+          <span className={pct >= 70 ? 'good' : 'low'}>
+            {score} / {total} — {pct} %
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fy-quiz-area">
-      {answered === total && (
-        <div className="fy-quiz-score">
-          {(() => {
-            const score = questions.filter((q, i) => q.answer?.charAt(0) === answers[i]).length;
-            const pct   = Math.round(score / total * 100);
-            return <span className={pct >= 70 ? 'good' : 'low'}>{score}/{total} — {pct}%</span>;
-          })()}
-        </div>
+      <div className="fy-quiz-progress">{current + 1} / {total}</div>
+      <QuizQuestion q={q} idx={current} selected={selected} onSelect={handleSelect} />
+      {selected && (
+        <button className="fy-quiz-next" onClick={handleNext}>
+          {current + 1 < total ? 'Question suivante →' : 'Voir les résultats'}
+        </button>
       )}
-      {questions.map((q, i) => (
-        <QuizQuestion key={i} q={q} idx={i} selected={answers[i]} onSelect={l => handleSelect(i, l)} />
-      ))}
     </div>
   );
 }
@@ -317,7 +352,9 @@ function QuizQuestion({ q, idx, selected, onSelect }) {
   const correct = q.answer?.charAt(0);
   return (
     <div className="fy-quiz-q">
-      <p className="fy-quiz-question"><strong>{idx + 1}.</strong> {q.question}</p>
+      <p className="fy-quiz-question">
+        <strong>{idx + 1}.</strong> {stripMd(q.question)}
+      </p>
       <div className="fy-quiz-options">
         {q.options?.map((opt, i) => {
           const letter     = String.fromCharCode(65 + i);
@@ -327,12 +364,12 @@ function QuizQuestion({ q, idx, selected, onSelect }) {
           if (selected) cls += isCorrect ? ' correct' : isSelected ? ' wrong' : '';
           return (
             <button key={i} className={cls} onClick={() => !selected && onSelect(letter)}>
-              {opt}
+              {stripMd(opt)}
             </button>
           );
         })}
       </div>
-      {selected && <p className="fy-quiz-expl">{q.explanation}</p>}
+      {selected && <p className="fy-quiz-expl">{stripMd(q.explanation)}</p>}
     </div>
   );
 }

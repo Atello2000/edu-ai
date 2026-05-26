@@ -312,6 +312,29 @@
 /* ── Quiz ────────────────────────────────────────────────────────── */
 .fy-quiz-area { display: flex; flex-direction: column; gap: 1.25rem; }
 
+.fy-quiz-progress {
+  font-family: 'DM Mono', monospace;
+  font-size: .72rem;
+  color: var(--muted);
+  text-align: right;
+  letter-spacing: .05em;
+}
+
+.fy-quiz-next {
+  align-self: flex-end;
+  background: var(--blue-bg);
+  border: 1px solid rgba(61,126,255,.3);
+  border-radius: 8px;
+  padding: .45rem 1.15rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: .83rem;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+}
+.fy-quiz-next:hover { opacity: .82; transform: translateY(-1px); }
+
 .fy-quiz-score {
   text-align: center;
   padding: .6rem 1rem;
