@@ -1,10 +1,8 @@
 /**
- * services/jetons.js — système de crédits (jetons) par action et par plan
+ * services/jetons.js — système de crédits (jetons) par action
  *
- * Coûts :
- *   max  = 0 jetons (illimité)
- *   pro  = tarif réduit
- *   free = tarif plein
+ * Coûts identiques quel que soit le plan.
+ * La différence entre plans = allocation mensuelle (free:30, pro:500, max:200).
  *
  * Rechargement automatique mensuel selon le plan.
  * Toutes les écritures sont atomiques (UPDATE … WHERE jetons >= cost).
@@ -14,22 +12,22 @@ const { prepare } = require('../db');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
-// ── Coûts par action et par plan ──────────────────────────────────────────────
+// ── Coûts par action (mêmes pour tous les plans) ──────────────────────────────
 const JETON_COSTS = {
-  summarize:    { free: 3, pro: 2, max: 0 },
-  quiz:         { free: 4, pro: 3, max: 0 },
-  flashcards:   { free: 3, pro: 2, max: 0 },
-  chat:         { free: 1, pro: 1, max: 0 },
-  'exam-sheet': { free: 3, pro: 2, max: 0 },
-  glossary:     { free: 2, pro: 1, max: 0 },
-  mindmap:      { free: 2, pro: 1, max: 0 },
+  summarize:    3,
+  quiz:         4,
+  flashcards:   3,
+  chat:         1,
+  'exam-sheet': 3,
+  glossary:     2,
+  mindmap:      2,
 };
 
 // ── Allocation mensuelle par plan ─────────────────────────────────────────────
 const MONTHLY_JETONS = {
   free: 30,
   pro:  500,
-  max:  -1,   // -1 = illimité (plan max ne consomme jamais)
+  max:  200,
 };
 
 function getCurrentMonth() {
@@ -43,7 +41,6 @@ function getCurrentMonth() {
 async function refillIfNeeded(userId, plan) {
   const month      = getCurrentMonth();
   const allocation = MONTHLY_JETONS[plan] ?? MONTHLY_JETONS.free;
-  if (allocation === -1) return; // max plan = pas de gestion de solde
 
   await prepare(`
     UPDATE users
@@ -60,11 +57,7 @@ async function refillIfNeeded(userId, plan) {
 async function checkAndDeduct(userId, action, plan) {
   if (!IS_PROD) return { ok: true };
 
-  const costs = JETON_COSTS[action] || {};
-  const cost  = (plan in costs) ? costs[plan] : (costs.free ?? 1);
-
-  // Plan max = gratuit, pas de déduction
-  if (cost === 0) return { ok: true };
+  const cost = JETON_COSTS[action] ?? 1;
 
   // Rechargement mensuel si besoin
   await refillIfNeeded(userId, plan);

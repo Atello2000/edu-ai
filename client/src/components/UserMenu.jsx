@@ -6,7 +6,7 @@ const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
 export default function UserMenu({ user }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
-  const { balance, unlimited } = useJetons();
+  const { balance } = useJetons();
 
   useEffect(() => {
     function handleOutside(e) {
@@ -42,7 +42,7 @@ export default function UserMenu({ user }) {
             </span>
             {balance !== null && (
               <span className="user-jetons" title="Solde de jetons">
-                🪙 {unlimited ? 'Illimité' : `${balance} jeton${balance !== 1 ? 's' : ''}`}
+                🪙 {balance} jeton{balance !== 1 ? 's' : ''}
               </span>
             )}
           </div>

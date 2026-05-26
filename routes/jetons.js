@@ -15,8 +15,7 @@ router.get('/jetons', requireAuth, async (req, res) => {
 
     res.json({
       balance,
-      unlimited:  plan === 'max',
-      monthly_allocation: monthly === -1 ? null : monthly,
+      monthly_allocation: monthly,
       reset_date,
       costs: JETON_COSTS,
       history,
