@@ -113,7 +113,12 @@ router.post('/summarize', async (req, res) => {
 // ── Helpers de prompt ──────────────────────────────────────────────────────────
 
 function promptFull(ctx, inLang, name, text) {
-  return `${ctx}Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}, structuré en Markdown, avec exactement ce plan :
+  return `${ctx}Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}.
+
+RÈGLE ABSOLUE DE FORMATAGE :
+- Utilise EXACTEMENT ces 5 titres de sections avec ## (deux dièses), dans cet ordre
+- Ne crée aucune autre section, ne modifie pas les titres
+- Les sous-sections internes utilisent ### (trois dièses) uniquement à l'intérieur d'une section
 
 ## 🎯 Objectifs du cours
 (2-3 phrases sur ce que l'étudiant va apprendre)
@@ -122,13 +127,13 @@ function promptFull(ctx, inLang, name, text) {
 (liste des 5-8 idées essentielles à retenir, sous forme de bullets)
 
 ## 📖 Résumé détaillé
-(développement structuré avec sous-titres si nécessaire, paragraphes clairs)
+(développement structuré avec paragraphes clairs, sous-titres ### si nécessaire)
 
 ## 🔑 Concepts importants
 (définitions brèves des termes ou notions fondamentales du cours)
 
 ## 💡 À retenir
-(1 encadré blockquote avec la leçon principale en 2-3 phrases)
+(1 encadré blockquote Markdown > avec la leçon principale en 2-3 phrases)
 
 ---
 Contenu du cours "${name}" :
@@ -149,7 +154,12 @@ function promptMerge(ctx, inLang, name, partials) {
     .map((p, i) => `--- Partie ${i + 1}/${partials.length} ---\n${p}`)
     .join('\n\n');
 
-  return `${ctx}Tu es un assistant pédagogique expert. À partir des notes ci-dessous extraites de chaque partie du cours, produis un résumé final complet et cohérent ${inLang}, structuré en Markdown, avec exactement ce plan :
+  return `${ctx}Tu es un assistant pédagogique expert. À partir des notes ci-dessous extraites de chaque partie du cours, produis un résumé final complet et cohérent ${inLang}.
+
+RÈGLE ABSOLUE DE FORMATAGE :
+- Utilise EXACTEMENT ces 5 titres de sections avec ## (deux dièses), dans cet ordre
+- Ne crée aucune autre section, ne modifie pas les titres
+- Les sous-sections internes utilisent ### (trois dièses) uniquement à l'intérieur d'une section
 
 ## 🎯 Objectifs du cours
 (2-3 phrases sur ce que l'étudiant va apprendre)
@@ -158,13 +168,13 @@ function promptMerge(ctx, inLang, name, partials) {
 (liste des 5-8 idées essentielles à retenir, sous forme de bullets)
 
 ## 📖 Résumé détaillé
-(développement structuré avec sous-titres, paragraphes clairs — couvre TOUTES les parties)
+(développement structuré avec paragraphes clairs, sous-titres ### si nécessaire — couvre TOUTES les parties)
 
 ## 🔑 Concepts importants
 (définitions brèves des termes ou notions fondamentales)
 
 ## 💡 À retenir
-(1 encadré blockquote avec la leçon principale en 2-3 phrases)
+(1 encadré blockquote Markdown > avec la leçon principale en 2-3 phrases)
 
 ---
 Notes des ${partials.length} parties du cours "${name}" :

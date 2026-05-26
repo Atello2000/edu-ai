@@ -19,8 +19,8 @@ export function buildSummarySections(md) {
   const sections = [];
   let current = null;
   for (const line of md.split('\n')) {
-    // Accepte ##, ###, # — on prend n'importe quel niveau de titre comme séparateur de section
-    const hx = line.match(/^#{1,3}\s+(.*)/);
+    // Uniquement ## — les sous-titres ### dans le corps restent dans la section courante
+    const hx = line.match(/^##\s+(.*)/);
     if (hx) {
       if (current) sections.push(current);
       const rawTitle = hx[1].trim();
