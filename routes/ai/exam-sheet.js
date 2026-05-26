@@ -6,7 +6,7 @@ const { checkAndDeduct, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
 const logger                     = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText } = require('./helpers');
-const { splitIntoChunks, chunkCost } = require('../../services/chunker');
+const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 const EXAM_MAX_FILES  = 5;
 const EXAM_MAX_TOKENS = 4200;
@@ -32,6 +32,7 @@ router.post('/exam-sheet', async (req, res) => {
     const inLang = langLabel(lang);
     const ctx    = userContext(req.user);
     const aiCfg  = await getAiConfigForAction('exam-sheet');
+    const cSize  = chunkSizeFor(aiCfg.provider); // 30K pour Groq, 80K sinon
 
     // ── 1. Charger textes + calculer coût total ───────────────────────────
     const fileData  = [];
@@ -39,7 +40,7 @@ router.post('/exam-sheet', async (req, res) => {
 
     for (const file of files.slice(0, EXAM_MAX_FILES)) {
       const text   = await getFileText(file);
-      const chunks = splitIntoChunks(text);
+      const chunks = splitIntoChunks(text, cSize);
       totalCost += chunkCost(JETON_COSTS['exam-sheet'], chunks.length);
       fileData.push({ file, chunks });
     }

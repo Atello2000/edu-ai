@@ -10,7 +10,8 @@
  *   flash.  (base=3) : 1 part→3j · 2 parts→5j · 3 parts→7j
  */
 
-const CHUNK_SIZE = 80_000; // ~40 pages de cours (~20 000 tokens)
+const CHUNK_SIZE      = 80_000; // ~40 pages (~20 000 tokens) — Mistral / Claude
+const CHUNK_SIZE_GROQ = 30_000; // ~15 pages (~7 500 tokens) — Groq free tier (TPM 12 000)
 
 /**
  * Découpe un texte en chunks de CHUNK_SIZE caractères.
@@ -67,4 +68,9 @@ function chunkCost(baseCost, numChunks) {
   return baseCost + (numChunks - 1) * 2;
 }
 
-module.exports = { CHUNK_SIZE, splitIntoChunks, chunkCost };
+/** Taille de chunk adaptée au provider (Groq free = 12K TPM). */
+function chunkSizeFor(provider) {
+  return provider === 'groq' ? CHUNK_SIZE_GROQ : CHUNK_SIZE;
+}
+
+module.exports = { CHUNK_SIZE, CHUNK_SIZE_GROQ, splitIntoChunks, chunkCost, chunkSizeFor };

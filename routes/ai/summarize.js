@@ -6,7 +6,7 @@ const { checkAndDeduct, JETON_COSTS }          = require('../../services/jetons'
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText } = require('./helpers');
-const { splitIntoChunks, chunkCost }           = require('../../services/chunker');
+const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 // POST /api/summarize — résumé pédagogique en streaming SSE (avec chunking)
 router.post('/summarize', async (req, res) => {
@@ -32,7 +32,8 @@ router.post('/summarize', async (req, res) => {
     const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang = langLabel(lang);
     const ctx    = userContext(req.user);
-    const aiCfg  = await getAiConfigForAction('summarize');
+    const aiCfg   = await getAiConfigForAction('summarize');
+    const cSize   = chunkSizeFor(aiCfg.provider); // 30K pour Groq, 80K sinon
 
     // ── 1. Charger textes + calculer coût total ───────────────────────────
     const fileData  = [];
@@ -40,7 +41,7 @@ router.post('/summarize', async (req, res) => {
 
     for (const file of files) {
       const text   = await getFileText(file);
-      const chunks = splitIntoChunks(text);
+      const chunks = splitIntoChunks(text, cSize);
       totalCost += chunkCost(JETON_COSTS.summarize, chunks.length);
       fileData.push({ file, chunks });
     }
