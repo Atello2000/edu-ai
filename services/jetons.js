@@ -25,9 +25,9 @@ const JETON_COSTS = {
 
 // ── Allocation mensuelle par plan ─────────────────────────────────────────────
 const MONTHLY_JETONS = {
-  free: 30,
-  pro:  500,
-  max:  200,
+  free: 30,   // ~7 quiz/mois
+  pro:  200,  // ~50 quiz/mois
+  max:  600,  // ~150 quiz/mois
 };
 
 function getCurrentMonth() {

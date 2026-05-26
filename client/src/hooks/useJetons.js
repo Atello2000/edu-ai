@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
 
 export function useJetons() {
-  const [balance, setBalance] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [balance,  setBalance]  = useState(null);
+  const [monthly,  setMonthly]  = useState(null);
+  const [loading,  setLoading]  = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -12,6 +13,7 @@ export function useJetons() {
       if (!res.ok) return;
       const data = await res.json();
       setBalance(data.balance ?? 0);
+      setMonthly(data.monthly_allocation ?? null);
     } catch { /* silencieux */ }
     finally { setLoading(false); }
   }, []);
@@ -22,5 +24,5 @@ export function useJetons() {
     return () => unsub?.();
   }, [refresh]);
 
-  return { balance, loading, refresh };
+  return { balance, monthly_allocation: monthly, loading, refresh };
 }

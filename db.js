@@ -185,7 +185,7 @@ async function initSchema() {
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
     // Allocation initiale pour les utilisateurs existants (si jetons = 0 et pas encore initialisés)
-    `UPDATE users SET jetons = CASE WHEN plan = 'pro' THEN 500 WHEN plan = 'max' THEN 0 ELSE 30 END,
+    `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 600 WHEN plan = 'pro' THEN 200 ELSE 30 END,
        jetons_reset_date = to_char(NOW(), 'YYYY-MM')
      WHERE jetons = 0 AND jetons_reset_date IS NULL`,
   ];

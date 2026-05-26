@@ -2305,6 +2305,64 @@ main {
   border: 1px solid rgba(99,102,241,.25);
 }
 
+/* ── JETON WIDGET (header) ─────────────────────────────────────── */
+.jeton-widget {
+  display: flex; align-items: center; gap: .45rem;
+  padding: .18rem .65rem .18rem .25rem;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: default; user-select: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.jeton-widget:hover { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+
+/* urgence : solde < 20 % → pulse rouge */
+.jeton-widget.jeton-urgent { border-color: var(--rose); animation: jw-pulse 2s ease-in-out infinite; }
+@keyframes jw-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,129,.0); }
+  50%       { box-shadow: 0 0 0 5px rgba(255,107,129,.22); }
+}
+
+/* Arc SVG */
+.jw-gauge { position: relative; width: 32px; height: 32px; flex-shrink: 0; }
+
+.jw-arc { display: block; transform: rotate(-90deg); }
+
+.jw-track {
+  fill: none; stroke: var(--border); stroke-width: 3;
+}
+.jw-fill {
+  fill: none; stroke-width: 3; stroke-linecap: round;
+  transition: stroke-dasharray 1.1s cubic-bezier(.4,0,.2,1), stroke .45s ease;
+}
+
+/* Emoji centré dans l'arc */
+.jw-emoji {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: .78rem; line-height: 1; pointer-events: none;
+}
+
+/* Texte numérique */
+.jw-text {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 0; line-height: 1.1;
+}
+.jw-count {
+  font-size: .88rem; font-weight: 700;
+  color: var(--text); font-family: 'Outfit', sans-serif;
+}
+.jw-label {
+  font-size: .62rem; color: var(--muted); letter-spacing: .02em;
+}
+
+/* Mobile : masquer le texte, garder la jauge */
+@media (max-width: 520px) {
+  .jw-text { display: none; }
+  .jeton-widget { padding: .18rem .25rem; }
+}
+
 /* ── JETON BADGE (action cards) ── */
 .jeton-badge {
   display: inline-flex; align-items: center; gap: .2rem;
