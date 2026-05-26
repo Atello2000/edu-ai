@@ -113,17 +113,19 @@ const CHEAP_ACTIONS = new Set([
 
 /**
  * Retourne la config la moins chère disponible pour une action donnée.
- * Pour toutes les actions standard → Mistral Small > Groq > config globale.
- * L'admin peut toujours forcer un autre provider via le panel (global config),
- * mais ce sera seulement utilisé si aucun provider économique n'est disponible.
+ * Pour toutes les actions standard → Mistral Small > Groq.
+ * Si aucun provider économique n'est configuré → erreur explicite.
+ * Claude/DeepSeek ne sont JAMAIS utilisés en fallback automatique (risque x50 de coût).
  */
 async function getAiConfigForAction(action) {
   if (CHEAP_ACTIONS.has(action)) {
     for (const { keys, provider, model } of CHEAP_PRIORITY) {
       if (keys.some(k => process.env[k])) return { provider, model };
     }
+    // Aucun provider économique disponible → on refuse plutôt que de tomber sur Claude
+    throw new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
   }
-  return getAiConfig(); // dernier recours (config admin)
+  return getAiConfig();
 }
 
 /**
