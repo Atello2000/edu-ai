@@ -57,9 +57,13 @@ router.post('/summarize', async (req, res) => {
 
     for (const { file, chunks } of fileData) {
 
+      // Texte d'amorce injecté dans la réponse (le prompt se termine par ce header)
+      const PRIME = '## 🎯 Objectifs du cours\n';
+
       if (chunks.length === 1) {
-        // ── Fichier court : streaming direct (comportement inchangé) ──────
+        // ── Fichier court : streaming direct ──────────────────────────────
         send({ type: 'start', name: file.name });
+        send({ type: 'delta', name: file.name, text: PRIME }); // header amorcé
         const prompt = promptFull(ctx, inLang, file.name, chunks[0]);
         for await (const c of aiStream(prompt, calcMaxTokens('summary', chunks[0].length), aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
@@ -90,6 +94,7 @@ router.post('/summarize', async (req, res) => {
 
         // Passe 2 : fusionner et streamer le résumé final
         send({ type: 'start', name: file.name });
+        send({ type: 'delta', name: file.name, text: PRIME }); // header amorcé
         const mergeP = promptMerge(ctx, inLang, file.name, partials);
         for await (const c of aiStream(mergeP, 3500, aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
@@ -113,31 +118,23 @@ router.post('/summarize', async (req, res) => {
 // ── Helpers de prompt ──────────────────────────────────────────────────────────
 
 function promptFull(ctx, inLang, name, text) {
-  return `${ctx}Tu es un assistant pédagogique expert. Produis un résumé pédagogique complet ${inLang}.
+  return `${ctx}Tu es un assistant pédagogique expert. Résume le cours ci-dessous ${inLang} en 5 sections Markdown.
 
-RÈGLE ABSOLUE DE FORMATAGE :
-- Utilise EXACTEMENT ces 5 titres de sections avec ## (deux dièses), dans cet ordre
-- Ne crée aucune autre section, ne modifie pas les titres
-- Les sous-sections internes utilisent ### (trois dièses) uniquement à l'intérieur d'une section
+Chaque section commence par une ligne "## " (deux dièses + espace + emoji + titre).
+Les 5 sections obligatoires, dans l'ordre :
+1. "## 🎯 Objectifs du cours" — 2-3 phrases sur ce que l'étudiant va apprendre
+2. "## 📌 Points clés" — 5-8 bullets des idées essentielles
+3. "## 📖 Résumé détaillé" — développement en paragraphes, sous-titres ### si besoin
+4. "## 🔑 Concepts importants" — définitions courtes des notions clés
+5. "## 💡 À retenir" — blockquote (ligne commençant par >) avec la leçon principale
 
-## 🎯 Objectifs du cours
-(2-3 phrases sur ce que l'étudiant va apprendre)
-
-## 📌 Points clés
-(liste des 5-8 idées essentielles à retenir, sous forme de bullets)
-
-## 📖 Résumé détaillé
-(développement structuré avec paragraphes clairs, sous-titres ### si nécessaire)
-
-## 🔑 Concepts importants
-(définitions brèves des termes ou notions fondamentales du cours)
-
-## 💡 À retenir
-(1 encadré blockquote Markdown > avec la leçon principale en 2-3 phrases)
+Cours "${name}" :
+${text}
 
 ---
-Contenu du cours "${name}" :
-${text}`;
+Résumé :
+
+## 🎯 Objectifs du cours`;
 }
 
 function promptPartial(ctx, inLang, name, text, part, total) {
@@ -154,32 +151,24 @@ function promptMerge(ctx, inLang, name, partials) {
     .map((p, i) => `--- Partie ${i + 1}/${partials.length} ---\n${p}`)
     .join('\n\n');
 
-  return `${ctx}Tu es un assistant pédagogique expert. À partir des notes ci-dessous extraites de chaque partie du cours, produis un résumé final complet et cohérent ${inLang}.
+  return `${ctx}Tu es un assistant pédagogique expert. À partir des notes ci-dessous, produis un résumé final complet et cohérent ${inLang} en 5 sections Markdown.
 
-RÈGLE ABSOLUE DE FORMATAGE :
-- Utilise EXACTEMENT ces 5 titres de sections avec ## (deux dièses), dans cet ordre
-- Ne crée aucune autre section, ne modifie pas les titres
-- Les sous-sections internes utilisent ### (trois dièses) uniquement à l'intérieur d'une section
+Chaque section commence par une ligne "## " (deux dièses + espace + emoji + titre).
+Les 5 sections obligatoires, dans l'ordre :
+1. "## 🎯 Objectifs du cours" — 2-3 phrases sur ce que l'étudiant va apprendre
+2. "## 📌 Points clés" — 5-8 bullets des idées essentielles
+3. "## 📖 Résumé détaillé" — développement en paragraphes, couvre TOUTES les parties
+4. "## 🔑 Concepts importants" — définitions courtes des notions clés
+5. "## 💡 À retenir" — blockquote (ligne commençant par >) avec la leçon principale
 
-## 🎯 Objectifs du cours
-(2-3 phrases sur ce que l'étudiant va apprendre)
-
-## 📌 Points clés
-(liste des 5-8 idées essentielles à retenir, sous forme de bullets)
-
-## 📖 Résumé détaillé
-(développement structuré avec paragraphes clairs, sous-titres ### si nécessaire — couvre TOUTES les parties)
-
-## 🔑 Concepts importants
-(définitions brèves des termes ou notions fondamentales)
-
-## 💡 À retenir
-(1 encadré blockquote Markdown > avec la leçon principale en 2-3 phrases)
-
----
 Notes des ${partials.length} parties du cours "${name}" :
 
-${body}`;
+${body}
+
+---
+Résumé :
+
+## 🎯 Objectifs du cours`;
 }
 
 module.exports = router;
