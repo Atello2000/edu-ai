@@ -57,9 +57,18 @@ export default function ForYouSection({ onActivity }) {
   const [fcIdx, setFcIdx]             = useState(0);
   const [flipped, setFlipped]         = useState(false);
   const [activityData, setActivityData] = useState(null);
+  const [historyKey, setHistoryKey]   = useState(0); // incrémenté pour forcer un recalcul
   const cache = useRef(new Map());
 
+  function clearHistory() {
+    localStorage.removeItem(HISTORY_KEY);
+    cache.current.clear();
+    setResult(null);
+    setHistoryKey(k => k + 1);
+  }
+
   // ── Sujets récents depuis l'historique localStorage ───────────────
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const recentTopics = useMemo(() => {
     try {
       const sessions = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
@@ -77,7 +86,7 @@ export default function ForYouSection({ onActivity }) {
       }
       return topics;
     } catch { return []; }
-  }, []);
+  }, [historyKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Charger les scores d'activité ─────────────────────────────────
   useEffect(() => {
@@ -148,6 +157,14 @@ export default function ForYouSection({ onActivity }) {
       {/* Titre */}
       <div className="foryou-header">
         <span className="foryou-title">Révision rapide</span>
+        {recentTopics.length > 0 && (
+          <button className="fy-clear-btn" onClick={clearHistory} title="Effacer l'historique">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            Effacer
+          </button>
+        )}
       </div>
 
       {/* Cartes fichiers récents */}

@@ -6,6 +6,9 @@
 
 /* ── Header ─────────────────────────────────────────────────────── */
 .foryou-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: .9rem;
 }
 
@@ -15,6 +18,25 @@
   font-weight: 400;
   color: var(--text);
 }
+
+/* ── Bouton effacer historique ───────────────────────────────────── */
+.fy-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: .72rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .22rem .55rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+  flex-shrink: 0;
+}
+.fy-clear-btn:hover { color: var(--rose); border-color: var(--rose); }
 
 /* ── Liste de cours récents ──────────────────────────────────────── */
 .fy-courses-list {

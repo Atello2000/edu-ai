@@ -732,6 +732,23 @@ main {
   border-radius:0 8px 8px 0; margin:.8rem 0;
   color:var(--muted); font-style:italic; line-height:1.8; font-size:.9rem;
 }
+/* Section "À retenir" — blockquote distinctif gold */
+.section-retenir .summary-section-body blockquote {
+  border-left:3px solid var(--gold, #d4a94c);
+  background:rgba(212,169,76,.09);
+  color:var(--text);
+  font-style:normal;
+  font-weight:500;
+  border-radius:0 10px 10px 0;
+  padding:1rem 1.25rem;
+  line-height:1.85;
+  font-size:.91rem;
+}
+[data-theme="light"] .section-retenir .summary-section-body blockquote {
+  background:rgba(212,169,76,.08);
+  color:#1c1917;
+  border-color:#c9952a;
+}
 .summary-section-body code {
   background:rgba(255,255,255,.07); border:1px solid var(--border);
   padding:.1rem .46rem; border-radius:5px;
