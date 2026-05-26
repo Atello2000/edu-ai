@@ -15,8 +15,8 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── Coûts par action (mêmes pour tous les plans) ──────────────────────────────
 const JETON_COSTS = {
   summarize:    3,
-  quiz:         4,
-  flashcards:   3,
+  quiz:         2,
+  flashcards:   1,
   chat:         1,
   'exam-sheet': 3,
   glossary:     2,
