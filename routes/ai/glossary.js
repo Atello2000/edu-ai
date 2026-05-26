@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiComplete }        = require('../../services/ai');
-const { getJsonAiConfig }   = require('../../services/aiConfig');
+const { getAiConfigForAction } = require('../../services/aiConfig');
 const { LIMITS }             = require('../../middleware/quota');
 const { checkAndDeduct }     = require('../../services/jetons');
 const { logTokens }         = require('../../services/tokens');
@@ -54,7 +54,7 @@ Consignes :
 ---
 ${context}`;
 
-    const aiCfg = await getJsonAiConfig();
+    const aiCfg = await getAiConfigForAction('glossary');
     const { text: raw, usage } = await aiComplete(prompt, GLOSSARY_MAX_TOKENS, aiCfg);
 
     if (usage) logTokens(req.user?.id, 'summarize', usage.provider, usage.input, usage.output);

@@ -90,6 +90,42 @@ async function getJsonAiConfig() {
   return getAiConfig();
 }
 
+// ── Routing par action — providers économiques en priorité ───────────────────
+//
+// Ordre de préférence pour les actions standard :
+//   1. Mistral Small  (~$0.001/action)   si MISTRAL_API_KEY disponible
+//   2. Groq Llama 70B (~$0.00/action)    si GROQ_API_KEY* disponible
+//   3. Fallback → config globale admin    (peut être Claude — dernier recours)
+//
+// Règle : Claude/DeepSeek ne sont jamais utilisés automatiquement pour les
+// actions standard. Le x50 de surcoût par rapport à Mistral est trop risqué.
+
+const CHEAP_PRIORITY = [
+  { keys: ['MISTRAL_API_KEY'],
+    provider: 'mistral', model: 'mistral-small-latest' },
+  { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
+    provider: 'groq',    model: 'llama-3.3-70b-versatile' },
+];
+
+const CHEAP_ACTIONS = new Set([
+  'chat', 'summarize', 'glossary', 'mindmap', 'flashcards', 'exam-sheet', 'quiz',
+]);
+
+/**
+ * Retourne la config la moins chère disponible pour une action donnée.
+ * Pour toutes les actions standard → Mistral Small > Groq > config globale.
+ * L'admin peut toujours forcer un autre provider via le panel (global config),
+ * mais ce sera seulement utilisé si aucun provider économique n'est disponible.
+ */
+async function getAiConfigForAction(action) {
+  if (CHEAP_ACTIONS.has(action)) {
+    for (const { keys, provider, model } of CHEAP_PRIORITY) {
+      if (keys.some(k => process.env[k])) return { provider, model };
+    }
+  }
+  return getAiConfig(); // dernier recours (config admin)
+}
+
 /**
  * Enregistre la config IA personnelle d'un utilisateur.
  */
@@ -97,4 +133,4 @@ async function setUserAiConfig(userId, provider, model) {
   await prepare('UPDATE users SET ai_provider = ?, ai_model = ? WHERE id = ?').run(provider, model, userId);
 }
 
-module.exports = { PROVIDERS, getAiConfig, setAiConfig, getUserAiConfig, setUserAiConfig, getJsonAiConfig };
+module.exports = { PROVIDERS, getAiConfig, setAiConfig, getUserAiConfig, setUserAiConfig, getJsonAiConfig, getAiConfigForAction };

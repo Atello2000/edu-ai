@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
-const { aiChatStream }         = require('../../services/ai');
-const { getUserAiConfig }      = require('../../services/aiConfig');
+const { aiChatStream }            = require('../../services/ai');
+const { getAiConfigForAction }    = require('../../services/aiConfig');
 const { LIMITS }               = require('../../middleware/quota');
 const { checkAndDeduct }       = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
@@ -19,12 +19,18 @@ router.post('/chat', async (req, res) => {
   const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
 
   try {
-    const jeton = await checkAndDeduct(req.user?.id, 'chat', req.user?.plan || 'free');
+    const { files, messages } = req.body;
+
+    // Coût dynamique : conversation longue (≥ 4 échanges) = 2 jetons
+    // Protège contre les conversations multi-tours très coûteuses en tokens
+    const historyLen = Array.isArray(messages) ? messages.length : 0;
+    const chatCost   = historyLen >= 4 ? 2 : 1;
+
+    const jeton = await checkAndDeduct(req.user?.id, 'chat', req.user?.plan || 'free', chatCost);
     if (!jeton.ok) {
       send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
       return res.end();
     }
-    const { files, messages } = req.body;
 
     // Contexte cours
     let context = '';
@@ -49,7 +55,7 @@ Cours disponibles (${courseNames}) :${context}`;
     let   fullText  = '';
     let   chatModel = '';
 
-    const aiCfg = await getUserAiConfig(req.user?.id);
+    const aiCfg = await getAiConfigForAction('chat');
     for await (const chunk of aiChatStream(systemPrompt, finalMessages, 1024, false, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'chat', chunk.usage.provider, chunk.usage.input, chunk.usage.output);

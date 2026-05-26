@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiStream, MODEL_LABEL }  = require('../../services/ai');
-const { getUserAiConfig }        = require('../../services/aiConfig');
+const { getAiConfigForAction }   = require('../../services/aiConfig');
 const { checkAndDeduct }         = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
 const logger                     = require('../../services/logger');
@@ -69,7 +69,7 @@ Propose un plan sur 3 jours : quoi relire, quoi mémoriser, quoi tester.
 Cours :
 ${context}`;
 
-    const aiCfg     = await getUserAiConfig(req.user?.id);
+    const aiCfg     = await getAiConfigForAction('exam-sheet');
     let streamModel = MODEL_LABEL;
     for await (const chunk of aiStream(prompt, EXAM_MAX_TOKENS, aiCfg)) {
       if (chunk.usage) {

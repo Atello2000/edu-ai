@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiStream, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
-const { getUserAiConfig }                      = require('../../services/aiConfig');
+const { getAiConfigForAction }                 = require('../../services/aiConfig');
 const { LIMITS }                               = require('../../middleware/quota');
 const { checkAndDeduct }                       = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
@@ -23,17 +23,17 @@ router.post('/summarize', async (req, res) => {
     res.flush?.(); // flush compression middleware buffer if present
   };
 
-  const jeton = await checkAndDeduct(req.user?.id, 'summarize', req.user?.plan || 'free');
-  if (!jeton.ok) {
-    send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
-    return res.end();
-  }
-
   try {
+    const jeton = await checkAndDeduct(req.user?.id, 'summarize', req.user?.plan || 'free');
+    if (!jeton.ok) {
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
+    }
+
     const { files } = req.body;
     const lang      = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang    = langLabel(lang);
-    const aiCfg     = await getUserAiConfig(req.user?.id);
+    const aiCfg     = await getAiConfigForAction('summarize');
     let streamModel = MODEL_LABEL;
 
     for (const file of files) {

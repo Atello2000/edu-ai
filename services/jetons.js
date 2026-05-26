@@ -54,10 +54,14 @@ async function refillIfNeeded(userId, plan) {
  * En développement : toujours OK.
  * Retourne { ok: true } ou { ok: false, needed, balance }.
  */
-async function checkAndDeduct(userId, action, plan) {
+/**
+ * costOverride : passe un coût personnalisé (ex. chat long = 2 jetons).
+ * Si null, utilise JETON_COSTS[action].
+ */
+async function checkAndDeduct(userId, action, plan, costOverride = null) {
   if (!IS_PROD) return { ok: true };
 
-  const cost = JETON_COSTS[action] ?? 1;
+  const cost = costOverride !== null ? Number(costOverride) : (JETON_COSTS[action] ?? 1);
 
   // Rechargement mensuel si besoin
   await refillIfNeeded(userId, plan);

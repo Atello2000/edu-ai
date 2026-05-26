@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { aiCompleteFast, calcMaxTokens } = require('../../services/ai');
-const { getJsonAiConfig }               = require('../../services/aiConfig');
+const { getAiConfigForAction }          = require('../../services/aiConfig');
 const { checkQuota, LIMITS }            = require('../../middleware/quota');
 const { logTokens }                     = require('../../services/tokens');
 const logger                            = require('../../services/logger');
@@ -31,7 +31,7 @@ router.post('/topic', async (req, res) => {
   const quota    = await checkQuota(req, quotaKey);
   if (!quota.ok) return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
 
-  const aiCfg = await getJsonAiConfig();
+  const aiCfg = await getAiConfigForAction('glossary'); // topic = génération légère
 
   try {
     if (type === 'flashcards') {
