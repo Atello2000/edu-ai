@@ -1,6 +1,26 @@
 import { useState, useEffect, useRef } from 'react';
 import QuotaBar from './QuotaBar.jsx';
 import toast from '../utils/toast';
+import { useJetons } from '../hooks/useJetons';
+import { useAuth } from '../hooks/useAuth.jsx';
+
+// Coûts par action et par plan (miroir de services/jetons.js)
+const COSTS = {
+  summarize:    { free: 3, pro: 2, max: 0 },
+  quiz:         { free: 4, pro: 3, max: 0 },
+  flashcards:   { free: 3, pro: 2, max: 0 },
+  chat:         { free: 1, pro: 1, max: 0 },
+  'exam-sheet': { free: 3, pro: 2, max: 0 },
+  glossary:     { free: 2, pro: 1, max: 0 },
+  mindmap:      { free: 2, pro: 1, max: 0 },
+  session:      { free: 10, pro: 7, max: 0 }, // résumé + quiz + flashcards
+};
+
+function JetonBadge({ action, plan, unlimited }) {
+  if (unlimited || plan === 'max') return <span className="jeton-badge free">🆓 Illimité</span>;
+  const cost = COSTS[action]?.[plan] ?? COSTS[action]?.free ?? 1;
+  return <span className="jeton-badge">🪙 {cost} jeton{cost > 1 ? 's' : ''}</span>;
+}
 
 const PREFS_KEY = 'jangalai-prefs';
 function getPrefs() { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
@@ -30,6 +50,10 @@ export default function ActionsPanel({
   prepLoading,
   sessionGoal,
 }) {
+  const { unlimited } = useJetons();
+  const { user }      = useAuth();
+  const plan          = user?.plan || 'free';
+
   // ── Sélection de fichiers (React-owned) ───────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(null);
 
@@ -187,6 +211,7 @@ export default function ActionsPanel({
                 sessionGoal === 'memorize' ? 'Mémoriser' : "S'entraîner"
               }</span></>}
             </span>
+            <JetonBadge action="session" plan={plan} unlimited={unlimited} />
           </div>
           <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
             {prepLoading ? 'En cours…' : 'Lancer'}
@@ -218,6 +243,7 @@ export default function ActionsPanel({
                 <option value="30">30 min</option>
               </select>
             </label>
+            <JetonBadge action="quiz" plan={plan} unlimited={unlimited} />
           </div>
           <button className="act-btn blue" id="quiz-btn" disabled={!hasFiles} onClick={onQuiz}>
             {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
@@ -234,6 +260,7 @@ export default function ActionsPanel({
             <strong>Flashcards</strong>
             <label><input type="number" id="fc-count" value={fcCount} min="3" max="30"
               onChange={e => setFcCount(parseInt(e.target.value) || 10)} /> cartes</label>
+            <JetonBadge action="flashcards" plan={plan} unlimited={unlimited} />
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
             {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
@@ -252,6 +279,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Résumer</strong>
               <span>Résumé structuré en 5 sections</span>
+              <JetonBadge action="summarize" plan={plan} unlimited={unlimited} />
             </div>
             <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
               {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
@@ -271,6 +299,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Chat avec le cours</strong>
               <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
+              <JetonBadge action="chat" plan={plan} unlimited={unlimited} />
             </div>
             <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
@@ -284,6 +313,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Fiche d&apos;examen</strong>
               <span>Définitions, pièges, tableaux et questions probables</span>
+              <JetonBadge action="exam-sheet" plan={plan} unlimited={unlimited} />
             </div>
             <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
               {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
@@ -301,6 +331,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Carte mentale</strong>
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
+              <JetonBadge action="mindmap" plan={plan} unlimited={unlimited} />
             </div>
             <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
           </div>
@@ -316,6 +347,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Glossaire automatique</strong>
               <span>Extrait les termes clés et leur définition</span>
+              <JetonBadge action="glossary" plan={plan} unlimited={unlimited} />
             </div>
             <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
