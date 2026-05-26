@@ -2297,6 +2297,14 @@ main {
 .plan-free { background: var(--border); color: var(--muted); }
 .plan-pro  { background: var(--gold-bg); color: var(--gold); border: 1px solid var(--gold-dim); }
 
+.user-jetons {
+  display: inline-flex; align-items: center; gap: .25rem;
+  margin-top: .35rem !important;
+  padding: .15rem .5rem; border-radius: 99px; font-size: .72rem !important;
+  font-weight: 600; background: rgba(99,102,241,.12); color: var(--purple, #6366f1);
+  border: 1px solid rgba(99,102,241,.25);
+}
+
 .dropdown-sep { border: none; border-top: 1px solid var(--border); margin: .4rem 0; }
 
 .dropdown-item {

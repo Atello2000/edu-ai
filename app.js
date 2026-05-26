@@ -66,6 +66,7 @@ app.use('/api',      require('./routes/misc'));
 
 // ── Routes protégées (auth requise) ──────────────────────────────────────────
 app.use('/api',         requireAuth, aiLimiter, require('./routes/ai'));
+app.use('/api',         requireAuth, require('./routes/jetons'));
 app.use('/api/activity', requireAuth, require('./routes/activity'));
 app.use('/api/folders', requireAuth, require('./routes/folders'));
 app.use('/api/admin',    requireAuth, require('./routes/admin'));

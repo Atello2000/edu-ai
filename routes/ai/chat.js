@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { aiChatStream }         = require('../../services/ai');
 const { getUserAiConfig }      = require('../../services/aiConfig');
-const { checkQuota, LIMITS }   = require('../../middleware/quota');
+const { LIMITS }               = require('../../middleware/quota');
+const { checkAndDeduct }       = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { userContext, getFileText } = require('./helpers');
@@ -17,13 +18,12 @@ router.post('/chat', async (req, res) => {
 
   const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
 
-  const quota = await checkQuota(req, 'chat');
-  if (!quota.ok) {
-    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} messages/jour). Revenez demain.` });
-    return res.end();
-  }
-
   try {
+    const jeton = await checkAndDeduct(req.user?.id, 'chat', req.user?.plan || 'free');
+    if (!jeton.ok) {
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
+    }
     const { files, messages } = req.body;
 
     // Contexte cours

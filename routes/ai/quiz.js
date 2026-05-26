@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { aiStream, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
 const { getJsonAiConfig }                      = require('../../services/aiConfig');
-const { checkQuota, LIMITS }                   = require('../../middleware/quota');
+const { LIMITS }                               = require('../../middleware/quota');
+const { checkAndDeduct }                       = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse } = require('./helpers');
@@ -19,13 +20,12 @@ router.post('/quiz', async (req, res) => {
 
   const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
 
-  const quota = await checkQuota(req, 'quiz');
-  if (!quota.ok) {
-    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} quiz/jour). Revenez demain.` });
-    return res.end();
-  }
-
   try {
+    const jeton = await checkAndDeduct(req.user?.id, 'quiz', req.user?.plan || 'free');
+    if (!jeton.ok) {
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
+    }
     const { files }  = req.body;
     const lang       = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang     = langLabel(lang);

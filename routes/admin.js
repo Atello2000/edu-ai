@@ -3,6 +3,7 @@ const router  = express.Router();
 const { prepare } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { PROVIDERS, getAiConfig, setAiConfig, setUserAiConfig, getUserAiConfig } = require('../services/aiConfig');
+const { addJetons, getBalance, JETON_COSTS, MONTHLY_JETONS } = require('../services/jetons');
 
 function requireAdmin(req, res, next) {
   const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
@@ -143,6 +144,37 @@ router.patch('/ai-config', requireAuth, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: 'Modèle invalide pour ce provider.' });
   await setAiConfig(provider, model); // change la config GLOBALE (tous les utilisateurs)
   res.json({ ok: true, provider, model });
+});
+
+// ── GET /api/admin/jetons — config et stats globales ─────────────────────────
+router.get('/jetons', requireAuth, requireAdmin, async (req, res) => {
+  const users = await prepare(`
+    SELECT u.id, u.email, u.name, u.plan, u.jetons, u.jetons_reset_date,
+           COALESCE(SUM(CASE WHEN t.amount < 0 THEN -t.amount ELSE 0 END), 0) AS total_spent
+    FROM users u
+    LEFT JOIN jeton_transactions t ON t.user_id = u.id
+    GROUP BY u.id, u.email, u.name, u.plan, u.jetons, u.jetons_reset_date
+    ORDER BY u.created_at DESC
+  `).all();
+  res.json({ users, costs: JETON_COSTS, monthly: MONTHLY_JETONS });
+});
+
+// ── POST /api/admin/users/:id/jetons — ajouter/retirer des jetons ─────────────
+router.post('/users/:id/jetons', requireAuth, requireAdmin, async (req, res) => {
+  const { amount, note } = req.body;
+  if (!amount || isNaN(amount))
+    return res.status(400).json({ error: 'amount invalide' });
+  const newBalance = await addJetons(Number(req.params.id), Number(amount), note || '');
+  res.json({ ok: true, balance: newBalance });
+});
+
+// ── PATCH /api/admin/users/:id/jetons — définir un solde exact ───────────────
+router.patch('/users/:id/jetons', requireAuth, requireAdmin, async (req, res) => {
+  const { balance } = req.body;
+  if (balance === undefined || isNaN(balance))
+    return res.status(400).json({ error: 'balance invalide' });
+  await prepare('UPDATE users SET jetons = ? WHERE id = ?').run(Number(balance), Number(req.params.id));
+  res.json({ ok: true, balance: Number(balance) });
 });
 
 module.exports = router;

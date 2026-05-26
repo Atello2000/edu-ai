@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { useJetons } from '../hooks/useJetons';
 
 const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
 
 export default function UserMenu({ user }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
+  const { balance, unlimited } = useJetons();
 
   useEffect(() => {
     function handleOutside(e) {
@@ -38,6 +40,11 @@ export default function UserMenu({ user }) {
             <span className={`user-plan plan-${user.plan}`}>
               {PLAN_LABELS[user.plan] || user.plan}
             </span>
+            {balance !== null && (
+              <span className="user-jetons" title="Solde de jetons">
+                🪙 {unlimited ? 'Illimité' : `${balance} jeton${balance !== 1 ? 's' : ''}`}
+              </span>
+            )}
           </div>
           <hr className="dropdown-sep" />
           <a

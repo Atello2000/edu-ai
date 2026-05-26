@@ -172,6 +172,22 @@ async function initSchema() {
     // Migrer le provider global de groq → mistral si jamais touché
     "UPDATE app_config SET value = 'mistral' WHERE key = 'ai_provider' AND value = 'groq'",
     "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'",
+    // ── Système de jetons ─────────────────────────────────────────────────────
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons_reset_date TEXT",
+    `CREATE TABLE IF NOT EXISTS jeton_transactions (
+      id            SERIAL PRIMARY KEY,
+      user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      action        TEXT    NOT NULL,
+      amount        INTEGER NOT NULL,
+      balance_after INTEGER NOT NULL,
+      note          TEXT,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    // Allocation initiale pour les utilisateurs existants (si jetons = 0 et pas encore initialisés)
+    `UPDATE users SET jetons = CASE WHEN plan = 'pro' THEN 500 WHEN plan = 'max' THEN 0 ELSE 30 END,
+       jetons_reset_date = to_char(NOW(), 'YYYY-MM')
+     WHERE jetons = 0 AND jetons_reset_date IS NULL`,
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}

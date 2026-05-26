@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { aiComplete }        = require('../../services/ai');
 const { getJsonAiConfig }   = require('../../services/aiConfig');
-const { checkQuota, LIMITS } = require('../../middleware/quota');
+const { LIMITS }             = require('../../middleware/quota');
+const { checkAndDeduct }     = require('../../services/jetons');
 const { logTokens }         = require('../../services/tokens');
 const logger                = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse } = require('./helpers');
@@ -12,9 +13,9 @@ const GLOSSARY_MAX_TOKENS  = 3000;
 
 // POST /api/glossary
 router.post('/glossary', async (req, res) => {
-  const quota = await checkQuota(req, 'summarize');
-  if (!quota.ok)
-    return res.status(429).json({ error: `Quota journalier atteint (${quota.limit}/jour). Revenez demain.` });
+  const jeton = await checkAndDeduct(req.user?.id, 'glossary', req.user?.plan || 'free');
+  if (!jeton.ok)
+    return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
 
   try {
     const { files } = req.body;

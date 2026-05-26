@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { aiStream, MODEL_LABEL }  = require('../../services/ai');
 const { getUserAiConfig }        = require('../../services/aiConfig');
-const { checkQuota }             = require('../../middleware/quota');
+const { checkAndDeduct }         = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
 const logger                     = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText } = require('./helpers');
@@ -21,13 +21,12 @@ router.post('/exam-sheet', async (req, res) => {
 
   const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
 
-  const quota = await checkQuota(req, 'summarize');
-  if (!quota.ok) {
-    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} fiches/jour). Revenez demain.` });
-    return res.end();
-  }
-
   try {
+    const jeton = await checkAndDeduct(req.user?.id, 'exam-sheet', req.user?.plan || 'free');
+    if (!jeton.ok) {
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
+    }
     const { files } = req.body;
     if (!files?.length) {
       send({ type: 'error', message: 'Aucun fichier sélectionné' });

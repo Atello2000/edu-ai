@@ -2,7 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { aiStream, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
 const { getUserAiConfig }                      = require('../../services/aiConfig');
-const { checkQuota, LIMITS }                   = require('../../middleware/quota');
+const { LIMITS }                               = require('../../middleware/quota');
+const { checkAndDeduct }                       = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText } = require('./helpers');
@@ -22,9 +23,9 @@ router.post('/summarize', async (req, res) => {
     res.flush?.(); // flush compression middleware buffer if present
   };
 
-  const quota = await checkQuota(req, 'summarize');
-  if (!quota.ok) {
-    send({ type: 'error', message: `Quota journalier atteint (${quota.limit} résumés/jour). Revenez demain.` });
+  const jeton = await checkAndDeduct(req.user?.id, 'summarize', req.user?.plan || 'free');
+  if (!jeton.ok) {
+    send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
     return res.end();
   }
 
