@@ -19,10 +19,11 @@ export function buildSummarySections(md) {
   const sections = [];
   let current = null;
   for (const line of md.split('\n')) {
-    const h2 = line.match(/^##\s+(.*)/);
-    if (h2) {
+    // Accepte ##, ###, # — on prend n'importe quel niveau de titre comme séparateur de section
+    const hx = line.match(/^#{1,3}\s+(.*)/);
+    if (hx) {
       if (current) sections.push(current);
-      const rawTitle = h2[1].trim();
+      const rawTitle = hx[1].trim();
       // Strip bold/italic markers then leading non-letter symbols (emojis, etc.)
       const title    = rawTitle
         .replace(/\*\*/g, '')

@@ -108,9 +108,14 @@ const CHEAP_PRIORITY = [
     provider: 'mistral', model: 'mistral-small-latest' },
 ];
 
+// Actions JSON légères → Groq ou Mistral Small (pas besoin de grand modèle)
 const CHEAP_ACTIONS = new Set([
-  'chat', 'summarize', 'glossary', 'mindmap', 'flashcards', 'exam-sheet', 'quiz',
+  'chat', 'glossary', 'mindmap', 'flashcards', 'quiz',
 ]);
+
+// Actions Markdown structurées → Groq (70B, gratuit) si dispo, sinon provider principal (Claude)
+// Mistral Small évité : trop petit pour produire du Markdown sectionné fiable
+const STRUCTURED_ACTIONS = new Set(['summarize', 'exam-sheet']);
 
 /**
  * Retourne la config la moins chère disponible pour une action donnée.
@@ -120,12 +125,23 @@ const CHEAP_ACTIONS = new Set([
  */
 async function getAiConfigForAction(action) {
   if (CHEAP_ACTIONS.has(action)) {
+    // Actions JSON légères : Groq → Mistral → erreur (jamais Claude)
     for (const { keys, provider, model } of CHEAP_PRIORITY) {
       if (keys.some(k => process.env[k])) return { provider, model };
     }
-    // Aucun provider économique disponible → on refuse plutôt que de tomber sur Claude
     throw new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
   }
+
+  if (STRUCTURED_ACTIONS.has(action)) {
+    // Actions Markdown structurées : Groq 70B en priorité (gratuit + capable)
+    // sinon provider principal configuré (Claude) — Mistral Small exclu (trop petit)
+    const groq = CHEAP_PRIORITY.find(p => p.provider === 'groq');
+    if (groq && groq.keys.some(k => process.env[k])) {
+      return { provider: groq.provider, model: groq.model };
+    }
+    return getAiConfig(); // Claude ou provider admin
+  }
+
   return getAiConfig();
 }
 
