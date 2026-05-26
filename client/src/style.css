@@ -2397,11 +2397,12 @@ main {
   background: rgba(99,102,241,.12); color: var(--purple, #a78bfa);
   border: 1px solid rgba(99,102,241,.25);
 }
-/* variantes couleur — correspondent aux data-color des cartes */
-.jeton-badge-blue   { background: rgba(61,126,255,.12); color: var(--blue,   #3d7eff); border-color: rgba(61,126,255,.28); }
+/* variantes couleur — basées sur le coût en jetons :
+   teal = 1 jeton (faible) · gold = 2-3 (modéré) · purple = 4-6 (élevé) · rose = 10 (session) */
 .jeton-badge-teal   { background: rgba(29,209,161,.10); color: var(--teal,   #1dd1a1); border-color: rgba(29,209,161,.25); }
 .jeton-badge-gold   { background: rgba(212,169,76,.12); color: var(--gold,   #d4a94c); border-color: rgba(212,169,76,.28); }
 .jeton-badge-purple { background: rgba(99,102,241,.12); color: var(--purple, #a78bfa); border-color: rgba(99,102,241,.25); }
+.jeton-badge-rose   { background: rgba(255,107,129,.10); color: var(--rose,  #ff6b81); border-color: rgba(255,107,129,.28); }
 
 .dropdown-sep { border: none; border-top: 1px solid var(--border); margin: .3rem 0; }
 
