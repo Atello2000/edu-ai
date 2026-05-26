@@ -152,6 +152,16 @@ async function* aiStream(prompt, maxTokens = 4096, config = null) {
     if (provider === 'mistral')   { yield* streamMistral(model, messages, maxTokens); return; }
     yield* streamGroq(model, messages, maxTokens);
   } catch (err) {
+    // Groq 413 : requête trop grande pour le free tier (limite TPM 12 000)
+    // → fallback vers le provider admin (Claude/Mistral)
+    if (provider === 'groq' && err?.status === 413) {
+      const fallback = await getAiConfig();
+      if (fallback.provider !== 'groq') {
+        logger.warn(`Groq 413 (request too large), fallback → ${fallback.provider}`);
+        yield* aiStream(prompt, maxTokens, fallback);
+        return;
+      }
+    }
     // Fallback Groq si le provider principal échoue (clé invalide, quota, etc.)
     if (provider !== 'groq' && groqClients.length) {
       logger.warn(`Provider ${provider} failed (${err.message}), fallback → Groq`);
@@ -198,6 +208,14 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
     const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
     return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
   } catch (err) {
+    // Groq 413 : requête trop grande → fallback provider admin (Claude/Mistral)
+    if (provider === 'groq' && err?.status === 413) {
+      const fallback = await getAiConfig();
+      if (fallback.provider !== 'groq') {
+        logger.warn(`Groq 413 (request too large), fallback → ${fallback.provider}`);
+        return aiComplete(prompt, maxTokens, fallback);
+      }
+    }
     if (provider !== 'groq' && groqClients.length) {
       logger.warn(`Provider ${provider} failed (${err.message}), fallback → Groq`);
       return tryGroqFallback();
