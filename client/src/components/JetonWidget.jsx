@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useJetons } from '../hooks/useJetons';
 
-/** Icône pièce SVG — double anneau + éclair central, couleur héritée */
-function CoinSvg({ style }) {
+/**
+ * Icône jauge — étoile 4 branches (✦) dans un disque double-anneau.
+ * Symbolise la "valeur / solde" — adapté pour un indicateur de crédit.
+ */
+function GaugeCenterSvg() {
   return (
     <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"
-      width="15" height="15" style={style}>
+      width="14" height="14">
       {/* Disque principal */}
-      <circle cx="11" cy="11" r="10.1" fill="currentColor" fillOpacity="0.18"
-        stroke="currentColor" strokeWidth="1.35" />
-      {/* Anneau intérieur — effet relief */}
-      <circle cx="11" cy="11" r="7.4" stroke="currentColor" strokeWidth="0.65"
-        fill="none" opacity="0.45" />
-      {/* Éclair centré — symbole crédit */}
+      <circle cx="11" cy="11" r="10.1" fill="currentColor" fillOpacity="0.15"
+        stroke="currentColor" strokeWidth="1.3" />
+      {/* Anneau intérieur relief */}
+      <circle cx="11" cy="11" r="7.3" stroke="currentColor" strokeWidth="0.6"
+        fill="none" opacity="0.4" />
+      {/* Étoile 4 branches ✦ — symbole valeur / crédit premium */}
       <path
-        d="M12.1 5.5L8.2 11.6h3.05L9.9 16.5 14.8 10.4H11.7L13.2 5.5H12.1Z"
+        d="M11 5.2 L12.3 9.7 L17 11 L12.3 12.3 L11 16.8 L9.7 12.3 L5 11 L9.7 9.7 Z"
         fill="currentColor" />
     </svg>
   );
@@ -66,9 +69,9 @@ export default function JetonWidget() {
             strokeDasharray={`${fill} ${circ - fill}`}
           />
         </svg>
-        {/* Icône pièce SVG centrée dans l'arc */}
+        {/* Icône centrée dans l'arc */}
         <div className="jw-coin-icon" style={{ color }}>
-          <CoinSvg />
+          <GaugeCenterSvg />
         </div>
       </div>
 

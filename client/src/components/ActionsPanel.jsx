@@ -13,9 +13,34 @@ const COSTS = {
   session:      10, // résumé + quiz + flashcards
 };
 
+/**
+ * Hexagone SVG — forme d'un jeton physique / crédit chip.
+ * Symbolise "ce que coûte l'action" (unité consommée).
+ */
+function TokenHexSvg() {
+  return (
+    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"
+      width="11" height="11" style={{ display: 'block', flexShrink: 0 }}>
+      {/* Hexagone (pointy-top) */}
+      <path
+        d="M7 1.4 L11.6 4 V10 L7 12.6 L2.4 10 V4 Z"
+        fill="currentColor" fillOpacity="0.2"
+        stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"
+      />
+      {/* Point central — marque du jeton */}
+      <circle cx="7" cy="7" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
 function JetonBadge({ action }) {
   const cost = COSTS[action] ?? 1;
-  return <span className="jeton-badge">🪙 {cost} jeton{cost > 1 ? 's' : ''}</span>;
+  return (
+    <span className="jeton-badge">
+      <TokenHexSvg />
+      {cost} jeton{cost > 1 ? 's' : ''}
+    </span>
+  );
 }
 
 const PREFS_KEY = 'jangalai-prefs';
