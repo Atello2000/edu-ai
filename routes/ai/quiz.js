@@ -3,14 +3,15 @@ const router  = express.Router();
 const { aiStream, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
 const { getAiConfigForAction }                 = require('../../services/aiConfig');
 const { LIMITS }                               = require('../../middleware/quota');
-const { checkAndDeduct }                       = require('../../services/jetons');
+const { checkAndDeduct, JETON_COSTS }          = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse } = require('./helpers');
+const { splitIntoChunks, chunkCost }           = require('../../services/chunker');
 
 const VALID_DIFF = ['facile', 'moyen', 'difficile'];
 
-// POST /api/quiz — génération de QCM par streaming SSE (fichier par fichier)
+// POST /api/quiz — génération de QCM par streaming SSE (avec chunking)
 router.post('/quiz', async (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -21,20 +22,15 @@ router.post('/quiz', async (req, res) => {
   const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
 
   try {
-    const jeton = await checkAndDeduct(req.user?.id, 'quiz', req.user?.plan || 'free');
-    if (!jeton.ok) {
-      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
-      return res.end();
-    }
     const { files }  = req.body;
     const lang       = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang     = langLabel(lang);
     const difficulty = VALID_DIFF.includes(req.body.difficulty) ? req.body.difficulty : 'moyen';
     const count      = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
 
-    const allResults  = [];
-    let   streamModel = MODEL_LABEL;
-    const aiCfg       = await getAiConfigForAction('quiz');
+    // ── 1. Charger textes + calculer coût total ───────────────────────────
+    const fileData  = [];
+    let   totalCost = 0;
 
     for (const file of files) {
       const text = await getFileText(file);
@@ -42,16 +38,46 @@ router.post('/quiz', async (req, res) => {
         send({ type: 'file_error', name: file.name, message: `Contenu de "${file.name}" vide ou indisponible.` });
         continue;
       }
-      const truncated = text.slice(0, LIMITS.quizChars);
+      const chunks = splitIntoChunks(text);
+      totalCost += chunkCost(JETON_COSTS.quiz, chunks.length);
+      fileData.push({ file, chunks });
+    }
+
+    if (!fileData.length) { send({ type: 'end' }); return res.end(); }
+
+    // ── 2. Vérifier et déduire les jetons ─────────────────────────────────
+    const jeton = await checkAndDeduct(req.user?.id, 'quiz', req.user?.plan || 'free', totalCost);
+    if (!jeton.ok) {
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
+    }
+
+    // ── 3. Traiter chaque fichier ──────────────────────────────────────────
+    const allResults  = [];
+    let   streamModel = MODEL_LABEL;
+    const aiCfg       = await getAiConfigForAction('quiz');
+
+    const difficultyGuide = {
+      facile:    "Privilégie les questions de définition et de reconnaissance (ex: \"Qu'est-ce que X ?\").",
+      moyen:     "Mélange questions de compréhension, d'application et de comparaison.",
+      difficile: "Privilégie les cas pratiques, nuances, erreurs courantes et raisonnements multi-étapes.",
+    }[difficulty];
+
+    for (const { file, chunks } of fileData) {
       send({ type: 'start', name: file.name });
 
-      const difficultyGuide = {
-        facile:    "Privilégie les questions de définition et de reconnaissance (ex: \"Qu'est-ce que X ?\").",
-        moyen:     "Mélange questions de compréhension, d'application et de comparaison.",
-        difficile: "Privilégie les cas pratiques, nuances, erreurs courantes et raisonnements multi-étapes.",
-      }[difficulty];
+      const allQuestions = [];
+      // Distribuer les questions proportionnellement entre les chunks
+      const perChunk = Math.ceil(count / chunks.length);
 
-      const questionTypes = `
+      for (let i = 0; i < chunks.length; i++) {
+        if (chunks.length > 1) {
+          send({ type: 'progress', name: file.name, step: i + 1, total: chunks.length,
+                 message: `Partie ${i + 1}/${chunks.length}…` });
+        }
+
+        const chunkLabel  = chunks.length > 1 ? ` (partie ${i + 1}/${chunks.length})` : '';
+        const questionTypes = `
 Varie obligatoirement les types de questions parmi :
 - Définition (ex: "Que signifie X ?")
 - Application (ex: "Dans quel cas utilise-t-on X ?")
@@ -61,7 +87,7 @@ Varie obligatoirement les types de questions parmi :
 - Identification d'erreur (ex: "Laquelle de ces affirmations est incorrecte ?")
 N'utilise pas deux fois le même type de question consécutivement.`;
 
-      const prompt = `${userContext(req.user)}Génère ${count} questions QCM de niveau ${difficulty} ${inLang} basées sur ce cours.
+        const prompt = `${userContext(req.user)}Génère ${perChunk} questions QCM de niveau ${difficulty} ${inLang} basées sur ce contenu de cours${chunkLabel}.
 ${difficultyGuide}
 ${questionTypes}
 
@@ -86,30 +112,33 @@ Pour chaque question, donne exactement ce format JSON :
 Règles :
 - Les distracteurs doivent être plausibles mais incorrects si on maîtrise le cours.
 - whyWrong doit contenir une entrée pour chaque mauvaise option (toutes sauf answer).
-- Sois très concis : chaque question complète (question + options + explication) doit tenir en 150 mots max.
+- Sois très concis : chaque question complète doit tenir en 150 mots max.
 - Réponds UNIQUEMENT avec le JSON, sans texte autour.
 
 ---
-Contenu du cours "${file.name}" :
-${truncated}`;
+Contenu du cours "${file.name}"${chunkLabel} :
+${chunks[i]}`;
 
-      let raw = '';
-      for await (const chunk of aiStream(prompt, calcMaxTokens('quiz', truncated.length, count), aiCfg)) {
-        if (chunk.usage) {
-          logTokens(req.user?.id, 'quiz', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
-          continue;
+        let raw = '';
+        for await (const c of aiStream(prompt, calcMaxTokens('quiz', chunks[i].length, perChunk), aiCfg)) {
+          if (c.usage) { logTokens(req.user?.id, 'quiz', c.usage.provider, c.usage.input, c.usage.output); continue; }
+          raw += c.text;
+          streamModel = c.model;
         }
-        raw += chunk.text;
-        streamModel = chunk.model;
+
+        const parsed = parseJsonResponse(raw, { questions: [] });
+        allQuestions.push(...(parsed.questions || []));
       }
 
-      const parsed = parseJsonResponse(raw, { questions: [] });
-      const result  = { name: file.name, quiz: parsed };
+      // Trimmer au nombre demandé
+      const finalQuestions = allQuestions.slice(0, count);
+      const result = { name: file.name, quiz: { questions: finalQuestions } };
       allResults.push(result);
-      send({ type: 'done', name: file.name, questions: parsed.questions || [] });
+      send({ type: 'done', name: file.name, questions: finalQuestions });
     }
 
     send({ type: 'end', model: streamModel, results: allResults });
+
   } catch (err) {
     logger.error('AI quiz error', { userId: req.user?.id, message: err.message });
     send({ type: 'error', message: err.message });

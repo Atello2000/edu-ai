@@ -94,6 +94,13 @@ export function useSummarize() {
         }
         setLoading(false);
 
+      } else if (data.type === 'progress') {
+        // Cours volumineux — mise à jour du message de chargement
+        setStreaming(prev => ({
+          ...prev,
+          [`__progress__${data.name}`]: data.message || `Partie ${data.step}/${data.total}…`,
+        }));
+
       } else if (data.type === 'error') {
         setError(data.message);
         setLoading(false);
