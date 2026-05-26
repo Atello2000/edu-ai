@@ -31,6 +31,14 @@ export default function Admin() {
   const [loading, setLoading]   = useState(true);
   const [accessError, setAccessError] = useState('');
 
+  // ── Gestion des jetons ─────────────────────────────────────────────────────
+  const [jetonUsers,   setJetonUsers]   = useState([]);
+  const [jetonAmounts, setJetonAmounts] = useState({});   // { userId: string }
+  const [jetonNotes,   setJetonNotes]   = useState({});   // { userId: string }
+  const [jetonBusy,    setJetonBusy]    = useState({});   // { userId: bool }
+  const [jetonFeedback,setJetonFeedback]= useState({});   // { userId: msg }
+  const [jetonSearch,  setJetonSearch]  = useState('');
+
   // ── AI config ──────────────────────────────────────────────────────────────
   const [aiConfig,     setAiConfig]     = useState(null);  // { provider, model, providers }
   const [aiSaving,     setAiSaving]     = useState(false);
@@ -54,7 +62,10 @@ export default function Admin() {
           fetch('/api/admin/messages',  { credentials: 'include' }),
           fetch('/api/admin/ai-config', { credentials: 'include' }),
         ]);
-        const [s, u, t, m, a] = await Promise.all([sRes.json(), uRes.json(), tRes.json(), mRes.json(), aRes.json()]);
+        const [s, u, t, m, a, j] = await Promise.all([
+          sRes.json(), uRes.json(), tRes.json(), mRes.json(), aRes.json(),
+          fetch('/api/admin/jetons', { credentials: 'include' }).then(r => r.json()),
+        ]);
         setStats(s);
         setUsers(u.users || []);
         setTokens(t);
@@ -62,6 +73,7 @@ export default function Admin() {
         setUnread(m.unread || 0);
         setAiConfig(a);
         setAiDraft({ provider: a.provider, model: a.model });
+        setJetonUsers(j.users || []);
         setLoading(false);
       } catch (err) {
         setAccessError('Erreur réseau : ' + err.message);
@@ -108,6 +120,52 @@ export default function Admin() {
     setAiSaving(false);
     setAiSaved(true);
     setTimeout(() => setAiSaved(false), 2500);
+  }
+
+  async function refreshJetonUsers() {
+    const r = await fetch('/api/admin/jetons', { credentials: 'include' });
+    const d = await r.json();
+    setJetonUsers(d.users || []);
+  }
+
+  async function adjustJetons(userId, signed) {
+    const raw = jetonAmounts[userId];
+    const n   = parseInt(raw, 10);
+    if (!raw || isNaN(n) || n <= 0) return;
+    const amount = signed * n;
+    const note   = jetonNotes[userId] || '';
+    setJetonBusy(p => ({ ...p, [userId]: true }));
+    try {
+      await fetch(`/api/admin/users/${userId}/jetons`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, note }),
+      });
+      const msg = signed > 0 ? `+${n} distribués ✓` : `-${n} débités ✓`;
+      setJetonFeedback(p => ({ ...p, [userId]: msg }));
+      setJetonAmounts(p => ({ ...p, [userId]: '' }));
+      setTimeout(() => setJetonFeedback(p => ({ ...p, [userId]: '' })), 2500);
+      await refreshJetonUsers();
+    } finally {
+      setJetonBusy(p => ({ ...p, [userId]: false }));
+    }
+  }
+
+  async function setExactJetons(userId, balance) {
+    if (balance === '' || isNaN(Number(balance))) return;
+    setJetonBusy(p => ({ ...p, [userId]: true }));
+    try {
+      await fetch(`/api/admin/users/${userId}/jetons`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: Number(balance) }),
+      });
+      setJetonFeedback(p => ({ ...p, [userId]: `Solde → ${balance} ✓` }));
+      setTimeout(() => setJetonFeedback(p => ({ ...p, [userId]: '' })), 2500);
+      await refreshJetonUsers();
+    } finally {
+      setJetonBusy(p => ({ ...p, [userId]: false }));
+    }
   }
 
   async function markRead(id) {
@@ -316,6 +374,119 @@ export default function Admin() {
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* ── Gestion des jetons ───────────────────────────────────────────── */}
+      <div className="admin-section-title" style={{marginTop:'2rem'}}>
+        Gestion des jetons
+        <span style={{fontSize:'.7rem',fontWeight:400,color:'var(--muted)',marginLeft:'.5rem'}}>
+          — distribuer / débiter / fixer le solde
+        </span>
+      </div>
+
+      <div className="jeton-admin-toolbar">
+        <input
+          className="search-input"
+          type="text"
+          value={jetonSearch}
+          onChange={e => setJetonSearch(e.target.value)}
+          placeholder="Filtrer un utilisateur…"
+          style={{ width: 220 }}
+        />
+        <span className="jeton-admin-legend">
+          <span className="ja-chip ja-chip-add">+ Distribuer</span>
+          <span className="ja-chip ja-chip-sub">− Débiter</span>
+          <span className="ja-chip ja-chip-set">= Fixer</span>
+        </span>
+      </div>
+
+      <div className="jeton-admin-grid">
+        {jetonUsers
+          .filter(u => !jetonSearch ||
+            u.name.toLowerCase().includes(jetonSearch.toLowerCase()) ||
+            u.email.toLowerCase().includes(jetonSearch.toLowerCase()))
+          .map(u => {
+            const planLabel = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' }[u.plan] || u.plan;
+            const amt   = jetonAmounts[u.id] || '';
+            const busy  = !!jetonBusy[u.id];
+            const fb    = jetonFeedback[u.id] || '';
+            const isAdd = fb.startsWith('+');
+            const isSub = fb.startsWith('-');
+            return (
+              <div key={u.id} className="ja-card">
+                {/* Identité */}
+                <div className="ja-user">
+                  <span className="ja-avatar">{u.name.charAt(0).toUpperCase()}</span>
+                  <div className="ja-user-info">
+                    <strong className="ja-name">{u.name}</strong>
+                    <span className="ja-email">{u.email}</span>
+                  </div>
+                  <span className={`plan-badge plan-${u.plan}`} style={{marginLeft:'auto'}}>{planLabel}</span>
+                </div>
+
+                {/* Solde actuel */}
+                <div className="ja-balance-row">
+                  <span className="ja-balance-label">Solde actuel</span>
+                  <span className="ja-balance-val">{u.jetons} jeton{u.jetons !== 1 ? 's' : ''}</span>
+                  <span className="ja-spent">
+                    {Number(u.total_spent) > 0 && `(−${u.total_spent} consommés ce mois)`}
+                  </span>
+                </div>
+
+                {/* Contrôles */}
+                <div className="ja-controls">
+                  <input
+                    className="ja-input"
+                    type="number"
+                    min="1"
+                    value={amt}
+                    placeholder="Quantité"
+                    disabled={busy}
+                    onChange={e => setJetonAmounts(p => ({ ...p, [u.id]: e.target.value }))}
+                  />
+                  <button
+                    className="ja-btn ja-btn-add"
+                    disabled={busy || !amt}
+                    onClick={() => adjustJetons(u.id, +1)}
+                    title="Distribuer des jetons"
+                  >+ Don</button>
+                  <button
+                    className="ja-btn ja-btn-sub"
+                    disabled={busy || !amt}
+                    onClick={() => adjustJetons(u.id, -1)}
+                    title="Débiter des jetons"
+                  >− Débit</button>
+                  <button
+                    className="ja-btn ja-btn-set"
+                    disabled={busy || !amt}
+                    onClick={() => setExactJetons(u.id, amt)}
+                    title="Fixer le solde exact"
+                  >= Fix</button>
+                </div>
+
+                {/* Note optionnelle */}
+                <input
+                  className="ja-note"
+                  type="text"
+                  placeholder="Note (optionnel)…"
+                  value={jetonNotes[u.id] || ''}
+                  disabled={busy}
+                  onChange={e => setJetonNotes(p => ({ ...p, [u.id]: e.target.value }))}
+                />
+
+                {/* Feedback */}
+                {fb && (
+                  <div className={`ja-feedback${isAdd ? ' ja-ok' : isSub ? ' ja-warn' : ' ja-ok'}`}>
+                    {fb}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        }
+        {jetonUsers.length === 0 && (
+          <div className="ja-empty">Aucun utilisateur à gérer.</div>
+        )}
       </div>
 
       {/* ── Messages utilisateurs ─────────────────────────────────────────── */}
