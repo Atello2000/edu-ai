@@ -61,7 +61,7 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
     setQuizCount(next.quizCount || 5);
     setQuizDiff(next.quizDifficulty || 'moyen');
     setFcCount(next.fcCount || 10);
-    window.__applyPrefs?.();
+    eventBus.emit('prefs:changed');
   }
 
   async function clearHistory() {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Logo from '../components/Logo.jsx';
 import Onboarding from './Onboarding.jsx';
@@ -28,6 +28,7 @@ import GoalModal from '../components/GoalModal.jsx';
 import FeedbackButton from '../components/FeedbackButton.jsx';
 import SRSReviewWidget from '../components/SRSReviewWidget.jsx';
 import TopicStatsWidget from '../components/TopicStatsWidget.jsx';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { getDueCards } from '../hooks/useFlashcards.js';
 import { useSummarize } from '../hooks/useSummarize.js';
 import { useExamSheet } from '../hooks/useExamSheet.js';
@@ -51,6 +52,7 @@ import CompareSection from '../components/CompareSection.jsx';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
+// ── CDN scripts requis par certains composants (marked, jspdf, html2canvas) ──
 const CDN_SCRIPTS = [
   { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
   { src: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',                   id: 'cdn-jspdf' },
@@ -68,6 +70,13 @@ function loadScript({ src, id }) {
   });
 }
 
+// ── Préférences utilisateur (localStorage) ───────────────────────────────────
+const PREFS_KEY = 'jangalai-prefs';
+function getPrefs() {
+  try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
+  catch { return {}; }
+}
+
 export default function AppPage() {
   const { user } = useAuth();
   const initialized = useRef(false);
@@ -78,23 +87,56 @@ export default function AppPage() {
   // ── État upload ────────────────────────────────────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
+  // ── Sélection de fichiers (levé depuis ActionsPanel) ──────────────────────
+  // null = tous sélectionnés, Set = sélection partielle
+  const [selectedFileIds, setSelectedFileIds] = useState(null);
+
+  // Fichiers effectivement sélectionnés (mémoïsé)
+  const selectedFiles = useMemo(() => {
+    if (!selectedFileIds || selectedFileIds.size === uploadedFiles.length) return uploadedFiles;
+    if (selectedFileIds.size === 0) return [];
+    return uploadedFiles.filter(f => selectedFileIds.has(f.id));
+  }, [uploadedFiles, selectedFileIds]);
+
+  // Ref stable pour les callbacks (évite de recréer tous les handlers à chaque sélection)
+  const selectedFilesRef = useRef(selectedFiles);
+  useEffect(() => { selectedFilesRef.current = selectedFiles; }, [selectedFiles]);
+
+  // ── Paramètres Quiz / Flashcards (levés depuis ActionsPanel) ──────────────
+  const [quizCount,      setQuizCount]      = useState(() => Number(getPrefs().quizCount)     || 5);
+  const [quizDifficulty, setQuizDifficulty] = useState(() => getPrefs().quizDifficulty        || 'moyen');
+  const [fcCount,        setFcCount]        = useState(() => Number(getPrefs().fcCount)        || 10);
+  const [examMode,       setExamMode]       = useState(false);
+  const [examMins,       setExamMins]       = useState(10);
+
+  // Synchroniser avec les prefs modifiées depuis SettingsDrawer
+  useEffect(() => {
+    return eventBus.on('prefs:changed', () => {
+      const p = getPrefs();
+      if (p.quizCount)      setQuizCount(Number(p.quizCount));
+      if (p.quizDifficulty) setQuizDifficulty(p.quizDifficulty);
+      if (p.fcCount)        setFcCount(Number(p.fcCount));
+      if (p.reduceMotion)   document.documentElement.classList.add('reduce-motion');
+      else                  document.documentElement.classList.remove('reduce-motion');
+    });
+  }, []);
+
   // ── Panel navigation ──────────────────────────────────────────────────────
   const [activePanel, setActivePanel] = useState('dashboard-panel');
 
   // ── Refs pour restore — créées avant useSessions ET avant les hooks AI ────
-  // Permet à useSessions d'appeler les restore functions sans dépendance circulaire.
   const restoreSummaryRef = useRef(null);
   const restoreExamRef    = useRef(null);
   const restoreQuizRef    = useRef(null);
   const restoreFcRef      = useRef(null);
 
-  // ── Session history — en premier pour obtenir saveSession ─────────────────
+  // ── Session history ────────────────────────────────────────────────────────
   const { saveSession, restoreSession } = useSessions({
     uploadedFiles, setUploadedFiles, setActivePanel,
     restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef,
   });
 
-  // ── Hooks AI — reçoivent saveSession directement (plus de window bridge) ──
+  // ── Hooks AI ───────────────────────────────────────────────────────────────
   const { results: summaryResults, streaming: summaryStreaming,
           loading: summarizing, summarize, reset: resetSummary,
           restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
@@ -117,7 +159,7 @@ export default function AppPage() {
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
   } = useFlashcards({ saveSession });
 
-  // Maintient les refs à jour pour useSessions (restoreSession lit via ref)
+  // Maintient les refs à jour pour useSessions
   useEffect(() => {
     restoreSummaryRef.current = restoreSummaryFrom;
     restoreExamRef.current    = restoreExamFrom;
@@ -126,18 +168,16 @@ export default function AppPage() {
   }, [restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom,
       restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef]);
 
-  // ── Glossaire ─────────────────────────────────────────────────────────────
+  // ── Glossaire ──────────────────────────────────────────────────────────────
   const { terms: glossaryTerms, loading: glossaryLoading, error: glossaryError,
           generate: generateGlossary, reset: resetGlossary } = useGlossary();
 
   // ── Chat ───────────────────────────────────────────────────────────────────
   const [chatFiles, setChatFiles] = useState([]);
-  const {
-    messages: chatMessages, loading: chatLoading,
-    send: sendChat, reset: resetChat,
-  } = useChat();
+  const { messages: chatMessages, loading: chatLoading,
+          send: sendChat, reset: resetChat } = useChat();
 
-  // ── Nouvelles features ────────────────────────────────────────────────────
+  // ── Nouvelles features ─────────────────────────────────────────────────────
   const { history: socraticHistory, streaming: socraticStreaming, loading: socraticLoading,
           error: socraticError, started: socraticStarted, send: sendSocratic, reset: resetSocratic } = useSocratic();
 
@@ -154,41 +194,36 @@ export default function AppPage() {
   const { md: compareMd, streaming: compareStreaming, loading: compareLoading,
           error: compareError, generate: generateCompare, reset: resetCompare } = useCompare();
 
-  // Quiz exam-mode settings
-  const [examMode, setExamMode] = useState(false);
-  const [examMins, setExamMins] = useState(10);
-
-  // ── Jetons — solde pour vérif avant session prep ──────────────────────────
+  // ── Jetons ─────────────────────────────────────────────────────────────────
   const { balance } = useJetons();
 
-  // ── Objectif utilisateur + session prep ───────────────────────────────────
+  // ── Session prep ───────────────────────────────────────────────────────────
   const { showGoalModal, sessionGoal, prepLoading, handlePrepareSession, handleGoalSelect } =
-    usePrepareSession({ uploadedFiles, balance, summarize, generateExam, generateQuiz, generateFlashcards,
-                        summarizing, examLoading, quizLoading, fcLoading, setActivePanel });
+    usePrepareSession({
+      uploadedFiles, selectedFilesRef, balance,
+      summarize, generateExam, generateQuiz, generateFlashcards,
+      summarizing, examLoading, quizLoading, fcLoading, setActivePanel,
+    });
 
   const [pendingFolderId, setPendingFolderId] = useState(null);
-
-  // ── Dashboard ─────────────────────────────────────────────────────────────
-  const [lastSession, setLastSession] = useState(null);
+  const [lastSession,     setLastSession]     = useState(null);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
 
-  // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
   const hasFiles = uploadedFiles.some(f => f.text || f.path);
 
+  // ── Handlers dashboard ─────────────────────────────────────────────────────
   const handleDashUpload   = useCallback(() => setActivePanel('upload-section'), []);
   const handleDashContinue = useCallback(() => {
     if (lastSession) restoreSession(lastSession);
   }, [lastSession, restoreSession]);
   const handleDashHistory  = useCallback(() => setActivePanel('history-panel'), []);
-  const handleDashStats    = useCallback(() => {
-    setActivePanel('stats-panel');
-  }, []);
+  const handleDashStats    = useCallback(() => setActivePanel('stats-panel'), []);
   const handleDashFolders  = useCallback(() => setActivePanel('folders-panel'), []);
   const handleDashLibrary  = useCallback(() => setActivePanel('library-panel'), []);
 
-  // ── Révision SRS depuis le dashboard ─────────────────────────────────────
+  // ── Révision SRS depuis le dashboard ──────────────────────────────────────
   const handleSRSReview = useCallback(() => {
     const due = getDueCards();
     if (!due.length) return;
@@ -196,39 +231,35 @@ export default function AppPage() {
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
 
+  // ── Handlers features avancées (utilisent selectedFilesRef — pas de deps stales) ──
   const handleSocratic = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Chargez d\'abord un fichier.'); return; }
     setActivePanel('socratic-section');
     if (!socraticStarted) sendSocratic(files, null);
-  }, [uploadedFiles, socraticStarted, sendSocratic]);
+  }, [socraticStarted, sendSocratic]);
 
   const handlePredict = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Chargez d\'abord un fichier.'); return; }
     setActivePanel('predict-section');
     if (!predictResults.length) generatePredict(files);
-  }, [uploadedFiles, predictResults, generatePredict]);
+  }, [predictResults, generatePredict]);
 
   const handleCompare = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (files.length < 2) { toast.warn('Sélectionnez au moins 2 fichiers pour la comparaison.'); return; }
     setActivePanel('compare-section');
     if (!compareMd) generateCompare(files);
-  }, [uploadedFiles, compareMd, generateCompare]);
+  }, [compareMd, generateCompare]);
 
-  const handleStudyPlan = useCallback(() => {
-    setActivePanel('study-plan-section');
-  }, []);
-
-  const handleErrorAnalysis = useCallback(() => {
-    setActivePanel('error-analysis-section');
-  }, []);
+  const handleStudyPlan    = useCallback(() => setActivePanel('study-plan-section'), []);
+  const handleErrorAnalysis = useCallback(() => setActivePanel('error-analysis-section'), []);
 
   const handleErrorsToFlashcardsFromAnalysis = useCallback((patterns) => {
     const cards = patterns.map(p => ({
       front: p.title,
-      back: `${p.description}\n\n${p.advice}${p.flashcard_hint ? '\n\nExemple: ' + p.flashcard_hint : ''}`,
+      back:  `${p.description}\n\n${p.advice}${p.flashcard_hint ? '\n\nExemple : ' + p.flashcard_hint : ''}`,
     }));
     restoreFcFrom([{ name: 'Erreurs récurrentes', flashcards: cards }]);
     setActivePanel('flashcard-section');
@@ -236,24 +267,25 @@ export default function AppPage() {
 
   const handleCompareRegen = useCallback(() => {
     resetCompare();
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (files.length >= 2) generateCompare(files);
-  }, [uploadedFiles, resetCompare, generateCompare]);
+  }, [resetCompare, generateCompare]);
 
+  // ── Effets secondaires onboarding ─────────────────────────────────────────
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user && !user.onboarding_done) setShowOnboarding(true);
   }, [user]);
 
-  // ── Callback LibraryPanel → charger des cours depuis la bibliothèque ────────
+  // ── Callback LibraryPanel → charger des cours depuis la bibliothèque ──────
   const handleUseFiles = useCallback((files) => {
     setUploadedFiles(files);
+    setSelectedFileIds(null);  // réinitialiser la sélection
     resetSummary();
     setActivePanel('actions-section');
   }, [resetSummary]);
 
-
-  // ── Effets secondaires lors du changement de panneau ─────────────────────
+  // ── Effets secondaires lors du changement de panneau ──────────────────────
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (activePanel === 'folders-panel') eventBus.emit('folders:refresh');
@@ -262,10 +294,10 @@ export default function AppPage() {
   // ── Quand upload réussit ───────────────────────────────────────────────────
   const handleUploaded = useCallback(async (files) => {
     setUploadedFiles(files);
+    setSelectedFileIds(null);  // réinitialiser la sélection
     resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
 
     if (pendingFolderId) {
-      // Chemin "Ajouter à une matière" — on sauvegarde et on retourne au dossier
       try {
         await fetch(`/api/folders/${pendingFolderId}/files`, {
           method: 'POST',
@@ -280,7 +312,6 @@ export default function AppPage() {
       setPendingFolderId(null);
       setActivePanel('folders-panel');
     } else {
-      // Chemin normal — aller aux actions, sans ouvrir la modal d'objectif ici
       setActivePanel('actions-section');
       window.__showSaveFolderModal?.(files);
     }
@@ -292,7 +323,7 @@ export default function AppPage() {
     setActivePanel('upload-section');
   }, []);
 
-  // ── Erreurs quiz → Flashcards ─────────────────────────────────────────────
+  // ── Erreurs quiz → Flashcards ──────────────────────────────────────────────
   const handleErrorsToFlashcards = useCallback((wrongQs) => {
     const cards = wrongQs.map(q => ({
       front: q.question,
@@ -302,120 +333,86 @@ export default function AppPage() {
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
 
-  // ── Lancement du résumé (bouton dans actions-section) ─────────────────────
+  // ── Actions principales (utilisent selectedFilesRef) ──────────────────────
   const handleSummarize = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     setActivePanel('summary-section');
     if (summaryResults.length > 0) return;
     summarize(files);
-  }, [uploadedFiles, summaryResults, summarize]);
+  }, [summaryResults, summarize]);
 
   const handleSummaryRegen = useCallback(() => {
     resetSummary();
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (files.length) {
-      setActivePanel('summary-section');
-      summarize(files);
-    }
-  }, [uploadedFiles, resetSummary, summarize]);
+    const files = selectedFilesRef.current;
+    if (files.length) { setActivePanel('summary-section'); summarize(files); }
+  }, [resetSummary, summarize]);
 
-  // ── Fiche d'examen ─────────────────────────────────────────────────────────
   const handleExamSheet = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     setActivePanel('exam-sheet-section');
     if (examMd) return;
     generateExam(files);
-  }, [uploadedFiles, examMd, generateExam]);
+  }, [examMd, generateExam]);
 
   const handleExamRegen = useCallback(() => {
     resetExam();
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (files.length) {
-      setActivePanel('exam-sheet-section');
-      generateExam(files);
-    }
-  }, [uploadedFiles, resetExam, generateExam]);
+    const files = selectedFilesRef.current;
+    if (files.length) { setActivePanel('exam-sheet-section'); generateExam(files); }
+  }, [resetExam, generateExam]);
 
-  // ── Quiz ───────────────────────────────────────────────────────────────────
+  // handleQuiz : utilise directement l'état React — plus de document.getElementById
   const handleQuiz = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
-    const count      = parseInt(document.getElementById('quiz-count')?.value) || 5;
-    const difficulty = document.getElementById('quiz-difficulty')?.value || 'moyen';
-    const em         = document.getElementById('exam-mode-cb')?.checked || false;
-    const emins      = parseInt(document.getElementById('exam-duration')?.value) || 10;
-    setExamMode(em);
-    setExamMins(emins);
     setActivePanel('quiz-section');
-    generateQuiz(files, { count, difficulty });
-  }, [uploadedFiles, generateQuiz]);
+    generateQuiz(files, { count: quizCount, difficulty: quizDifficulty });
+  }, [quizCount, quizDifficulty, generateQuiz]);
 
-  // ── Flashcards ─────────────────────────────────────────────────────────────
+  // handleFlashcards : idem
   const handleFlashcards = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
-    const count = parseInt(document.getElementById('fc-count')?.value) || 10;
     setActivePanel('flashcard-section');
-    generateFlashcards(files, { count });
-  }, [uploadedFiles, generateFlashcards]);
+    generateFlashcards(files, { count: fcCount });
+  }, [fcCount, generateFlashcards]);
 
-  // ── Glossaire ─────────────────────────────────────────────────────────────
   const handleGlossary = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
     eventBus.emit('nav:section', 'glossary-section');
     setActivePanel('glossary-section');
     if (glossaryTerms.length > 0) return;
     generateGlossary(files);
-  }, [uploadedFiles, glossaryTerms, generateGlossary]);
+  }, [glossaryTerms, generateGlossary]);
 
   const handleGlossaryRegen = useCallback(() => {
     resetGlossary();
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (files.length) {
-      setActivePanel('glossary-section');
-      generateGlossary(files);
-    }
-  }, [uploadedFiles, resetGlossary, generateGlossary]);
+    const files = selectedFilesRef.current;
+    if (files.length) { setActivePanel('glossary-section'); generateGlossary(files); }
+  }, [resetGlossary, generateGlossary]);
 
-  // ── Chat ───────────────────────────────────────────────────────────────────
   const handleOpenChat = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = selectedFilesRef.current;
     if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
     setChatFiles(files);
     eventBus.emit('nav:section', 'chat-section');
     setActivePanel('chat-section');
-  }, [uploadedFiles]);
+  }, []);
 
-
+  // ── Chargement des CDN scripts ─────────────────────────────────────────────
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-
     window.__reactApp  = true;
     window.__reactUser = user;
-
     (async () => {
       for (const s of CDN_SCRIPTS) await loadScript(s);
-
-      if (window.startApp) {
-        window.startApp();
-        return;
-      }
-
-      const appScript = document.getElementById('script-app-logic');
-      if (appScript) { window.startApp?.(); return; }
-
-      const s = document.createElement('script');
-      s.id   = 'script-app-logic';
-      s.src  = '/app.js';
-      s.onload = () => window.startApp?.();
-      document.body.appendChild(s);
     })();
   }, [user]);
 
+  // ── Rendu ──────────────────────────────────────────────────────────────────
   return (
     <>
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
@@ -425,6 +422,7 @@ export default function AppPage() {
         onClose={() => setShowSettings(false)}
         onResetOnboarding={() => setShowOnboarding(true)}
       />
+
       <header>
         <button
           className={`back-home-btn${activePanel === 'dashboard-panel' ? ' hidden' : ''}`}
@@ -434,7 +432,7 @@ export default function AppPage() {
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
-        <div className="header-logo" id="header-logo" onClick={() => setActivePanel('dashboard-panel')} style={{cursor:'pointer'}}>
+        <div className="header-logo" id="header-logo" onClick={() => setActivePanel('dashboard-panel')} style={{ cursor: 'pointer' }}>
           <Logo />
         </div>
         <div className="header-right">
@@ -476,19 +474,15 @@ export default function AppPage() {
             </button>
           </div>
           <div className="dash-stats-row">
-            <div className="panel-header" style={{marginBottom:'.5rem'}}>
+            <div className="panel-header" style={{ marginBottom: '.5rem' }}>
               <div className="panel-label">Progression</div>
               <button className="ghost-btn" onClick={() => eventBus.emit('dashboard:refresh')}>Actualiser</button>
             </div>
             <DashboardStats onLastSession={setLastSession} />
           </div>
           <ForYouSection onActivity={() => setActivityKey(k => k + 1)} />
-          {/* Révisions SRS du jour — apparaît seulement si des cartes sont dues */}
           <SRSReviewWidget onReview={handleSRSReview} />
-
-          {/* Progression par sujet — apparaît dès que 2 sujets ont été testés */}
           <TopicStatsWidget />
-
           <div className="dash-bottom-links">
             <button className="dash-link" onClick={handleDashHistory}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -504,27 +498,33 @@ export default function AppPage() {
 
         {/* STATISTIQUES */}
         <div className={`panel${activePanel !== 'stats-panel' ? ' hidden' : ''}`} id="stats-panel">
-          <StatsPanel />
+          <ErrorBoundary><StatsPanel /></ErrorBoundary>
         </div>
 
         {/* HISTORIQUE */}
         <div className={`panel${activePanel !== 'history-panel' ? ' hidden' : ''}`} id="history-panel">
-          <HistoryPanel />
+          <ErrorBoundary>
+            <HistoryPanel onRestore={restoreSession} />
+          </ErrorBoundary>
         </div>
 
         {/* MES MATIÈRES */}
         <div className={`panel${activePanel !== 'folders-panel' ? ' hidden' : ''}`} id="folders-panel">
-          <FoldersPanel onGoUpload={handleGoUploadForFolder} />
+          <ErrorBoundary>
+            <FoldersPanel onGoUpload={handleGoUploadForFolder} onUseFiles={handleUseFiles} />
+          </ErrorBoundary>
         </div>
 
         {/* BIBLIOTHÈQUE */}
         <div className={`panel${activePanel !== 'library-panel' ? ' hidden' : ''}`} id="library-panel">
-          <LibraryPanel onUseFiles={handleUseFiles} />
+          <ErrorBoundary>
+            <LibraryPanel onUseFiles={handleUseFiles} />
+          </ErrorBoundary>
         </div>
 
-        {/* UPLOAD — composant React */}
+        {/* UPLOAD */}
         <div className={`panel${activePanel !== 'upload-section' ? ' hidden' : ''}`} id="upload-section">
-          <UploadZone onUploaded={handleUploaded} />
+          <ErrorBoundary><UploadZone onUploaded={handleUploaded} /></ErrorBoundary>
         </div>
 
         {/* ACTIONS */}
@@ -562,47 +562,62 @@ export default function AppPage() {
             compareLoading={compareLoading}
             predictResults={predictResults}
             compareMd={compareMd}
+            selectedFileIds={selectedFileIds}
+            onSelectionChange={setSelectedFileIds}
+            quizCount={quizCount}
+            onQuizCountChange={setQuizCount}
+            quizDifficulty={quizDifficulty}
+            onQuizDiffChange={setQuizDifficulty}
+            fcCount={fcCount}
+            onFcCountChange={setFcCount}
+            examMode={examMode}
+            onExamModeChange={setExamMode}
+            examMins={examMins}
+            onExamMinsChange={setExamMins}
           />
         </div>
 
-        {/* RÉSUMÉS — composant React */}
+        {/* RÉSUMÉS */}
         <div className={`panel${activePanel !== 'summary-section' ? ' hidden' : ''}`} id="summary-section">
           {summarizing && (
             <div className="loader-inline">
-              <div className="spinner" style={{width:20,height:20}}></div>
+              <div className="spinner" style={{ width: 20, height: 20 }}></div>
               <span>Génération en cours…</span>
             </div>
           )}
-          <SummaryResults
-            results={summaryResults}
-            streaming={summaryStreaming}
-            onCopyAll={() => {
-              const all = summaryResults.map(r => `## ${r.name}\n\n${r.summary}`).join('\n\n---\n\n');
-              navigator.clipboard.writeText(all);
-            }}
-            onRegen={handleSummaryRegen}
-          />
-          {/* TTS bar — composant React */}
-          <TTSBar />
+          <ErrorBoundary>
+            <SummaryResults
+              results={summaryResults}
+              streaming={summaryStreaming}
+              onCopyAll={() => {
+                const all = summaryResults.map(r => `## ${r.name}\n\n${r.summary}`).join('\n\n---\n\n');
+                navigator.clipboard.writeText(all);
+              }}
+              onRegen={handleSummaryRegen}
+            />
+            <TTSBar />
+          </ErrorBoundary>
         </div>
 
-        {/* FICHE D'EXAMEN — composant React */}
+        {/* FICHE D'EXAMEN */}
         <div className={`panel${activePanel !== 'exam-sheet-section' ? ' hidden' : ''}`} id="exam-sheet-section">
           {examLoading && (
             <div className="loader-inline">
-              <div className="spinner" style={{width:20,height:20}}></div>
+              <div className="spinner" style={{ width: 20, height: 20 }}></div>
               <span>Création de la fiche…</span>
             </div>
           )}
-          <ExamSheetSection
-            md={examMd}
-            streaming={examStreaming}
-            fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
-            onRegen={examMd ? handleExamRegen : undefined}
-          />
+          <ErrorBoundary>
+            <ExamSheetSection
+              md={examMd}
+              streaming={examStreaming}
+              fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
+              onRegen={examMd ? handleExamRegen : undefined}
+            />
+          </ErrorBoundary>
         </div>
 
-        {/* QUIZ — composant React */}
+        {/* QUIZ */}
         <div className={`panel${activePanel !== 'quiz-section' ? ' hidden' : ''}`} id="quiz-section">
           <div className="panel-header">
             <div>
@@ -615,27 +630,29 @@ export default function AppPage() {
           </div>
           {quizLoading && (
             <div className="loader-inline">
-              <div className="spinner" style={{width:20,height:20}}></div>
+              <div className="spinner" style={{ width: 20, height: 20 }}></div>
               <span>{questions.length > 0 ? `${questions.length} question${questions.length > 1 ? 's' : ''} générée${questions.length > 1 ? 's' : ''}…` : 'Génération du quiz…'}</span>
             </div>
           )}
-          <QuizSection
-            questions={questions}
-            answers={quizAnswers}
-            idx={quizIdx}
-            submitted={quizSubmitted}
-            score={quizScore}
-            examMode={examMode}
-            examMins={examMins}
-            onSelect={selectAnswer}
-            onGoTo={quizGoTo}
-            onSubmit={submitQuiz}
-            onRetryWrong={retryWrong}
-            onErrorsToFlashcards={handleErrorsToFlashcards}
-          />
+          <ErrorBoundary>
+            <QuizSection
+              questions={questions}
+              answers={quizAnswers}
+              idx={quizIdx}
+              submitted={quizSubmitted}
+              score={quizScore}
+              examMode={examMode}
+              examMins={examMins}
+              onSelect={selectAnswer}
+              onGoTo={quizGoTo}
+              onSubmit={submitQuiz}
+              onRetryWrong={retryWrong}
+              onErrorsToFlashcards={handleErrorsToFlashcards}
+            />
+          </ErrorBoundary>
         </div>
 
-        {/* FLASHCARDS — composant React */}
+        {/* FLASHCARDS */}
         <div className={`panel${activePanel !== 'flashcard-section' ? ' hidden' : ''}`} id="flashcard-section">
           <div className="panel-header">
             <div>
@@ -645,120 +662,133 @@ export default function AppPage() {
           </div>
           {fcLoading && (
             <div className="loader-inline">
-              <div className="spinner" style={{width:20,height:20}}></div>
+              <div className="spinner" style={{ width: 20, height: 20 }}></div>
               <span>Génération des flashcards…</span>
             </div>
           )}
-          <FlashcardSection
-            decks={decks}
-            deckIdx={deckIdx}
-            cards={cards}
-            cardStates={cardStates}
-            srsOnlyDue={srsOnlyDue}
-            onMark={markCard}
-            onShuffle={shuffle}
-            onRestart={restart}
-            onRedoWrong={redoWrong}
-            onSwitchDeck={switchDeck}
-            onToggleSrs={toggleSrs}
-          />
+          <ErrorBoundary>
+            <FlashcardSection
+              decks={decks}
+              deckIdx={deckIdx}
+              cards={cards}
+              cardStates={cardStates}
+              srsOnlyDue={srsOnlyDue}
+              onMark={markCard}
+              onShuffle={shuffle}
+              onRestart={restart}
+              onRedoWrong={redoWrong}
+              onSwitchDeck={switchDeck}
+              onToggleSrs={toggleSrs}
+            />
+          </ErrorBoundary>
         </div>
 
-        {/* GLOSSAIRE — composant React */}
+        {/* GLOSSAIRE */}
         <div className={`panel${activePanel !== 'glossary-section' ? ' hidden' : ''}`} id="glossary-section">
-          <GlossarySection
-            terms={glossaryTerms}
-            loading={glossaryLoading}
-            error={glossaryError}
-            onRegen={glossaryTerms.length > 0 ? handleGlossaryRegen : undefined}
-          />
+          <ErrorBoundary>
+            <GlossarySection
+              terms={glossaryTerms}
+              loading={glossaryLoading}
+              error={glossaryError}
+              onRegen={glossaryTerms.length > 0 ? handleGlossaryRegen : undefined}
+            />
+          </ErrorBoundary>
         </div>
 
-        {/* CHAT — composant React */}
+        {/* CHAT */}
         <div className={`panel${activePanel !== 'chat-section' ? ' hidden' : ''}`} id="chat-section">
           {chatLoading && (
-            <div className="loader-inline" style={{position:'absolute',top:'1rem',right:'1rem'}}>
-              <div className="spinner" style={{width:14,height:14}}></div>
+            <div className="loader-inline" style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
+              <div className="spinner" style={{ width: 14, height: 14 }}></div>
             </div>
           )}
-          <ChatSection
-            files={chatFiles}
-            messages={chatMessages}
-            loading={chatLoading}
-            onSend={sendChat}
-            onClear={resetChat}
-          />
+          <ErrorBoundary>
+            <ChatSection
+              files={chatFiles}
+              messages={chatMessages}
+              loading={chatLoading}
+              onSend={sendChat}
+              onClear={resetChat}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* MODE SOCRATIQUE */}
         <div className={`panel${activePanel !== 'socratic-section' ? ' hidden' : ''}`} id="socratic-section">
-          <SocraticSection
-            files={uploadedFiles}
-            history={socraticHistory}
-            streaming={socraticStreaming}
-            loading={socraticLoading}
-            error={socraticError}
-            started={socraticStarted}
-            onSend={sendSocratic}
-            onReset={resetSocratic}
-          />
+          <ErrorBoundary>
+            <SocraticSection
+              files={selectedFiles}
+              history={socraticHistory}
+              streaming={socraticStreaming}
+              loading={socraticLoading}
+              error={socraticError}
+              started={socraticStarted}
+              onSend={sendSocratic}
+              onReset={resetSocratic}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* PLAN DE RÉVISION */}
         <div className={`panel${activePanel !== 'study-plan-section' ? ' hidden' : ''}`} id="study-plan-section">
-          <StudyPlanSection
-            plan={studyPlan}
-            loading={studyPlanLoading}
-            error={studyPlanError}
-            onGenerate={generateStudyPlan}
-            onReset={resetStudyPlan}
-          />
+          <ErrorBoundary>
+            <StudyPlanSection
+              plan={studyPlan}
+              loading={studyPlanLoading}
+              error={studyPlanError}
+              onGenerate={generateStudyPlan}
+              onReset={resetStudyPlan}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* PRÉDICTEUR */}
         <div className={`panel${activePanel !== 'predict-section' ? ' hidden' : ''}`} id="predict-section">
-          <PredictSection
-            results={predictResults}
-            loading={predictLoading}
-            error={predictError}
-          />
+          <ErrorBoundary>
+            <PredictSection
+              results={predictResults}
+              loading={predictLoading}
+              error={predictError}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* ERREURS RÉCURRENTES */}
         <div className={`panel${activePanel !== 'error-analysis-section' ? ' hidden' : ''}`} id="error-analysis-section">
-          <ErrorAnalysisSection
-            patterns={errorPatterns}
-            message={errorMessage}
-            loading={errorLoading}
-            error={errorAnalysisError}
-            wrongCount={getWrongAnswers().length}
-            onAnalyze={analyzeErrors}
-            onCreateFlashcards={handleErrorsToFlashcardsFromAnalysis}
-          />
+          <ErrorBoundary>
+            <ErrorAnalysisSection
+              patterns={errorPatterns}
+              message={errorMessage}
+              loading={errorLoading}
+              error={errorAnalysisError}
+              wrongCount={getWrongAnswers().length}
+              onAnalyze={analyzeErrors}
+              onCreateFlashcards={handleErrorsToFlashcardsFromAnalysis}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* COMPARAISON MULTI-SOURCES */}
         <div className={`panel${activePanel !== 'compare-section' ? ' hidden' : ''}`} id="compare-section">
-          <CompareSection
-            md={compareMd}
-            streaming={compareStreaming}
-            loading={compareLoading}
-            error={compareError}
-            fileNames={(window.__getSelectedFiles?.() || uploadedFiles).map(f => f.name)}
-            onRegen={compareMd ? handleCompareRegen : undefined}
-          />
+          <ErrorBoundary>
+            <CompareSection
+              md={compareMd}
+              streaming={compareStreaming}
+              loading={compareLoading}
+              error={compareError}
+              fileNames={selectedFiles.map(f => f.name)}
+              onRegen={compareMd ? handleCompareRegen : undefined}
+            />
+          </ErrorBoundary>
         </div>
 
       </main>
 
-      {/* Float Nav */}
       <FloatNav hasFiles={uploadedFiles.length > 0} activePanel={activePanel} onNavigate={setActivePanel} />
 
-
-      {/* Mindmap Modal */}
       <MindmapModal />
 
-      {/* Loader */}
+      {/* Loader global (utilisé par handleMindmap dans ActionsPanel) */}
       <div className="loader hidden" id="loader">
         <div className="loader-box">
           <div className="spinner"></div>
@@ -767,12 +797,8 @@ export default function AppPage() {
         </div>
       </div>
 
-      {/* Save to Folder Modal */}
       <SaveFolderModal />
-
-      {/* Feedback floating button */}
       <FeedbackButton />
-
     </>
   );
 }

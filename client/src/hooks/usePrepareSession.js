@@ -13,6 +13,7 @@ import toast from '../utils/toast';
  */
 export function usePrepareSession({
   uploadedFiles,
+  selectedFilesRef,  // ref vers les fichiers sélectionnés (évite dépendances stales)
   balance,           // solde jetons courant (null = inconnu)
   summarize,
   generateExam,
@@ -29,17 +30,25 @@ export function usePrepareSession({
 
   const prepLoading = summarizing || examLoading || quizLoading || fcLoading;
 
+  /** Retourne les fichiers effectivement sélectionnés. */
+  function getFiles() {
+    return selectedFilesRef?.current?.length
+      ? selectedFilesRef.current
+      : uploadedFiles;
+  }
+
   const handlePrepareSession = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = getFiles();
     if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
     setShowGoalModal(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedFiles]);
 
   const handleGoalSelect = useCallback((goal) => {
     setSessionGoal(goal);
     setShowGoalModal(false);
 
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    const files = getFiles();
     if (!files.length) return;
 
     // Utiliser `goal` directement (pas sessionGoal qui est async)
@@ -53,14 +62,15 @@ export function usePrepareSession({
     }
 
     // Navigation vers le premier panneau qui sera généré
-    if (genSummary)       setActivePanel('summary-section');
-    else if (genQuiz)     setActivePanel('quiz-section');
+    if (genSummary)         setActivePanel('summary-section');
+    else if (genQuiz)       setActivePanel('quiz-section');
     else if (genFlashcards) setActivePanel('flashcard-section');
 
     if (genSummary)    summarize(files);
     if (genExam)       generateExam(files);
     if (genQuiz)       generateQuiz(files, { count: quizCount, difficulty: quizDiff });
     if (genFlashcards) generateFlashcards(files, { count: fcCount });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedFiles, balance, summarize, generateExam, generateQuiz, generateFlashcards, setActivePanel]);
 
   return {

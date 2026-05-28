@@ -89,11 +89,5 @@ export function useSessions({
     setActivePanel(firstPanel);
   }, [setUploadedFiles, setActivePanel, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef]);
 
-  // Bridge pour HistoryPanel (composant qui n'a pas accès direct à restoreSession)
-  useEffect(() => {
-    window.__restoreSession = restoreSession;
-    return () => { delete window.__restoreSession; };
-  }, [restoreSession]);
-
   return { saveSession, restoreSession };
 }

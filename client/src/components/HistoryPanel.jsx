@@ -10,7 +10,7 @@ const TAG_LABELS = [
   { key: 'examSheet',  label: 'Fiche',       cls: 'he' },
 ];
 
-export default function HistoryPanel() {
+export default function HistoryPanel({ onRestore }) {
   const [sessions, setSessions] = useState(() =>
     JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
   );
@@ -58,7 +58,7 @@ export default function HistoryPanel() {
               <div
                 key={s.id}
                 className="history-item"
-                onClick={() => window.__restoreSession?.(s)}
+                onClick={() => onRestore?.(s)}
               >
                 <div className="history-left">
                   <div className="history-files">{s.files.join(' · ')}</div>

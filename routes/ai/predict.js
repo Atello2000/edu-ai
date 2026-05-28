@@ -10,6 +10,7 @@ const { langLabel, getFileText, parseJsonResponse } = require('./helpers');
 
 // POST /api/predict — prédicteur de questions d'examen (SSE streaming)
 router.post('/predict', async (req, res) => {
+  req.socket?.setNoDelay(true);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');

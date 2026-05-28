@@ -1,38 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import QuotaBar from './QuotaBar.jsx';
 import toast from '../utils/toast';
+
 // Coûts par action — identiques pour tous les plans (miroir de services/jetons.js)
 const COSTS = {
-  summarize:    3,
-  quiz:         4,
-  flashcards:   3,
-  chat:         1,
-  'exam-sheet': 3,
-  glossary:     2,
-  mindmap:      2,
-  session:      10, // résumé + quiz + flashcards
-  socratic:     1,
-  predict:      3,
-  compare:      4,
-  'study-plan': 1,
-  'error-analysis': 1,
+  summarize:       3,
+  quiz:            2,   // ← corrigé (était 4)
+  flashcards:      1,   // ← corrigé (était 3)
+  chat:            1,
+  'exam-sheet':    3,
+  glossary:        2,
+  mindmap:         2,
+  session:         10,  // résumé + quiz + flashcards selon objectif
+  socratic:        1,
+  predict:         3,
+  compare:         4,
+  'study-plan':    1,
+  'error-analysis':1,
 };
 
 /**
  * Hexagone SVG — forme d'un jeton physique / crédit chip.
- * Symbolise "ce que coûte l'action" (unité consommée).
  */
 function TokenHexSvg() {
   return (
     <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"
       width="11" height="11" style={{ display: 'block', flexShrink: 0 }}>
-      {/* Hexagone (pointy-top) */}
       <path
         d="M7 1.4 L11.6 4 V10 L7 12.6 L2.4 10 V4 Z"
         fill="currentColor" fillOpacity="0.2"
         stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"
       />
-      {/* Point central — marque du jeton */}
       <circle cx="7" cy="7" r="1.4" fill="currentColor" />
     </svg>
   );
@@ -42,7 +40,7 @@ function jetonColor(cost) {
   if (cost <= 1) return 'teal';
   if (cost <= 3) return 'gold';
   if (cost <= 6) return 'purple';
-  return 'rose'; // session (10 jetons) ou compare (4 jetons via rose override)
+  return 'rose';
 }
 
 function JetonBadge({ action }) {
@@ -55,9 +53,6 @@ function JetonBadge({ action }) {
     </span>
   );
 }
-
-const PREFS_KEY = 'jangalai-prefs';
-function getPrefs() { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
 
 export default function ActionsPanel({
   hasFiles,
@@ -92,37 +87,46 @@ export default function ActionsPanel({
   compareLoading,
   predictResults,
   compareMd,
+  // ── Sélection de fichiers (levé dans AppPage) ─────────────────────────────
+  selectedFileIds,         // Set | null (null = tous sélectionnés)
+  onSelectionChange,       // (Set | null) => void
+  // ── Paramètres quiz / flashcards (levés dans AppPage) ─────────────────────
+  quizCount,
+  onQuizCountChange,
+  quizDifficulty,
+  onQuizDiffChange,
+  fcCount,
+  onFcCountChange,
+  examMode,
+  onExamModeChange,
+  examMins,
+  onExamMinsChange,
 }) {
-  // ── Sélection de fichiers (React-owned) ───────────────────────────────────
-  const [selectedIds, setSelectedIds] = useState(null);
+  const [showMore, setShowMore] = useState(false);
 
-  // Refs stables pour le bridge (évite une re-registration à chaque rendu)
-  const uploadedFilesRef = useRef(uploadedFiles);
-  const selectedIdsRef   = useRef(selectedIds);
+  // ── Sélection de fichiers ─────────────────────────────────────────────────
+  const allSelected = uploadedFiles.length > 0 && (
+    selectedFileIds === null || selectedFileIds.size === uploadedFiles.length
+  );
 
-  // Quand les fichiers changent (nouvel upload ou restore), tout sélectionner
-  useEffect(() => {
-    uploadedFilesRef.current = uploadedFiles;
-  }, [uploadedFiles]);
+  function toggleAll(checked) {
+    onSelectionChange?.(checked ? null : new Set());
+  }
 
-  useEffect(() => {
-    selectedIdsRef.current = selectedIds;
-  }, [selectedIds]);
+  function toggleOne(id, checked) {
+    const current = selectedFileIds === null
+      ? new Set(uploadedFiles.map(f => f.id))
+      : new Set(selectedFileIds);
+    if (checked) current.add(id); else current.delete(id);
+    onSelectionChange?.(current);
+  }
 
-  // Bridge pour les hooks AI (résumé, quiz…) qui ont besoin des fichiers sélectionnés
-  useEffect(() => {
-    window.__getSelectedFiles = () => {
-      const files = uploadedFilesRef.current;
-      const ids   = selectedIdsRef.current;
-      if (ids === null || ids.size === files.length) return files;
-      if (!ids.size) return [];
-      return files.filter(f => ids.has(f.id));
-    };
-    return () => { delete window.__getSelectedFiles; };
-  }, []);
-
+  // ── Mindmap (inline, sans bridge window) ─────────────────────────────────
   async function handleMindmap() {
-    const files = window.__getSelectedFiles?.() || uploadedFilesRef.current;
+    const files = !selectedFileIds || selectedFileIds.size === uploadedFiles.length
+      ? uploadedFiles
+      : uploadedFiles.filter(f => selectedFileIds?.has(f.id));
+
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
 
     const loader     = document.getElementById('loader');
@@ -131,7 +135,6 @@ export default function ActionsPanel({
     loader?.classList.remove('hidden');
 
     try {
-      // Un mindmap par fichier — on prend le premier fichier sélectionné
       const file = files[0];
       const res  = await fetch('/api/mindmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -142,37 +145,6 @@ export default function ActionsPanel({
       window.__openMindmap?.(file.name, data.markdown);
     } catch (err) { toast.error(err.message); }
     finally { loader?.classList.add('hidden'); }
-  }
-
-  const [examModeOn,    setExamModeOn]    = useState(false);
-  const [quizCount,     setQuizCount]     = useState(() => getPrefs().quizCount     || 5);
-  const [quizDifficulty,setQuizDifficulty]= useState(() => getPrefs().quizDifficulty|| 'moyen');
-  const [fcCount,       setFcCount]       = useState(() => getPrefs().fcCount       || 10);
-  const [showMore,      setShowMore]      = useState(false);
-
-  // Bridge : SettingsDrawer appelle window.__applyPrefs() après un changement de prefs
-  useEffect(() => {
-    window.__applyPrefs = () => {
-      const p = getPrefs();
-      if (p.quizCount)      setQuizCount(p.quizCount);
-      if (p.quizDifficulty) setQuizDifficulty(p.quizDifficulty);
-      if (p.fcCount)        setFcCount(p.fcCount);
-      if (p.reduceMotion)   document.documentElement.classList.add('reduce-motion');
-      else                  document.documentElement.classList.remove('reduce-motion');
-    };
-    return () => { delete window.__applyPrefs; };
-  }, []);
-
-  const allSelected = uploadedFiles.length > 0 && (
-    selectedIds === null || selectedIds.size === uploadedFiles.length
-  );
-
-  function toggleOne(id, checked) {
-    setSelectedIds(prev => {
-      const next = new Set(prev ?? uploadedFiles.map(f => f.id));
-      if (checked) next.add(id); else next.delete(id);
-      return next;
-    });
   }
 
   return (
@@ -198,7 +170,7 @@ export default function ActionsPanel({
         </button>
       </div>
 
-      {/* Liste des fichiers chargés — React-owned */}
+      {/* Liste des fichiers chargés */}
       <div className={`file-select-area${!hasFiles ? ' hidden' : ''}`}>
         <div className="fsa-header">
           <span>Fichiers chargés</span>
@@ -207,9 +179,7 @@ export default function ActionsPanel({
               type="checkbox"
               id="select-all"
               checked={allSelected}
-              onChange={e => setSelectedIds(
-                e.target.checked ? null : new Set()
-              )}
+              onChange={e => toggleAll(e.target.checked)}
             />
             Tout sélectionner
           </label>
@@ -220,7 +190,7 @@ export default function ActionsPanel({
               <input
                 type="checkbox"
                 value={f.id}
-                checked={selectedIds === null || selectedIds.has(f.id)}
+                checked={selectedFileIds === null || selectedFileIds.has(f.id)}
                 onChange={e => toggleOne(f.id, e.target.checked)}
               />
               <span className="file-ext">{f.name.split('.').pop().toUpperCase()}</span>
@@ -245,9 +215,9 @@ export default function ActionsPanel({
             <span>
               Résumé + quiz + flashcards en une fois
               {sessionGoal && <> · <span className="prep-goal-tag">{
-                sessionGoal === 'exam' ? 'Examen demain' :
+                sessionGoal === 'exam'       ? 'Examen demain' :
                 sessionGoal === 'understand' ? 'Comprendre' :
-                sessionGoal === 'memorize' ? 'Mémoriser' : "S'entraîner"
+                sessionGoal === 'memorize'   ? 'Mémoriser' : "S'entraîner"
               }</span></>}
             </span>
             <JetonBadge action="session" />
@@ -266,19 +236,40 @@ export default function ActionsPanel({
           <div className="act-card-body">
             <strong>Quiz QCM</strong>
             <label>
-              <input type="number" id="quiz-count" value={quizCount} min="1" max="20"
-                onChange={e => setQuizCount(parseInt(e.target.value) || 5)} /> questions ·{' '}
-              <select id="quiz-difficulty" value={quizDifficulty} onChange={e => setQuizDifficulty(e.target.value)}>
+              <input
+                type="number"
+                id="quiz-count"
+                value={quizCount}
+                min="1" max="20"
+                onChange={e => onQuizCountChange?.(parseInt(e.target.value) || 5)}
+              /> questions ·{' '}
+              <select
+                id="quiz-difficulty"
+                value={quizDifficulty}
+                onChange={e => onQuizDiffChange?.(e.target.value)}
+              >
                 <option value="moyen">Moyen</option>
                 <option value="facile">Facile</option>
                 <option value="difficile">Difficile</option>
               </select>
             </label>
             <label className="exam-toggle-label">
-              <input type="checkbox" id="exam-mode-cb" onChange={e => setExamModeOn(e.target.checked)} /> ⏱ Mode examen{' '}
-              <select id="exam-duration" className={examModeOn ? '' : 'hidden'}>
-                <option value="5">5 min</option><option value="10">10 min</option>
-                <option value="15">15 min</option><option value="20">20 min</option>
+              <input
+                type="checkbox"
+                id="exam-mode-cb"
+                checked={examMode}
+                onChange={e => onExamModeChange?.(e.target.checked)}
+              /> ⏱ Mode examen{' '}
+              <select
+                id="exam-duration"
+                className={examMode ? '' : 'hidden'}
+                value={examMins}
+                onChange={e => onExamMinsChange?.(parseInt(e.target.value) || 10)}
+              >
+                <option value="5">5 min</option>
+                <option value="10">10 min</option>
+                <option value="15">15 min</option>
+                <option value="20">20 min</option>
                 <option value="30">30 min</option>
               </select>
             </label>
@@ -297,8 +288,15 @@ export default function ActionsPanel({
           </div>
           <div className="act-card-body">
             <strong>Flashcards</strong>
-            <label><input type="number" id="fc-count" value={fcCount} min="3" max="30"
-              onChange={e => setFcCount(parseInt(e.target.value) || 10)} /> cartes</label>
+            <label>
+              <input
+                type="number"
+                id="fc-count"
+                value={fcCount}
+                min="3" max="30"
+                onChange={e => onFcCountChange?.(parseInt(e.target.value) || 10)}
+              /> cartes
+            </label>
             <JetonBadge action="flashcards" />
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>

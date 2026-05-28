@@ -9,6 +9,7 @@ const { userContext, getFileText } = require('./helpers');
 
 // POST /api/socratic — mode socratique (SSE streaming, chat-like)
 router.post('/socratic', async (req, res) => {
+  req.socket?.setNoDelay(true);
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');

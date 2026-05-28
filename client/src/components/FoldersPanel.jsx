@@ -67,7 +67,7 @@ function FolderIconBadge({ icon, size = 44 }) {
   );
 }
 
-export default function FoldersPanel({ onGoUpload }) {
+export default function FoldersPanel({ onGoUpload, onUseFiles }) {
   const confirm = useConfirm();
   const [folders, setFolders] = useState([]);
   const [view, setView] = useState('list');
@@ -232,7 +232,7 @@ export default function FoldersPanel({ onGoUpload }) {
     const files = src.map(f => ({
       id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size,
     }));
-    window.__setFolderFiles?.(files);
+    onUseFiles?.(files);
   }
 
   return (
