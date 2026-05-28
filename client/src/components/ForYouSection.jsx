@@ -56,6 +56,7 @@ export default function ForYouSection({ onActivity }) {
   const [resultTopic, setResultTopic] = useState('');
   const [fcIdx, setFcIdx]             = useState(0);
   const [flipped, setFlipped]         = useState(false);
+  const touchStartX = useRef(null);
   const [activityData, setActivityData] = useState(null);
   const [historyKey, setHistoryKey]   = useState(0); // incrémenté pour forcer un recalcul
   const cache = useRef(new Map());
@@ -271,6 +272,18 @@ export default function ForYouSection({ onActivity }) {
                 <div
                   className={`fy-fc-card ${flipped ? 'flipped' : ''}`}
                   onClick={() => setFlipped(f => !f)}
+                  onTouchStart={e => { touchStartX.current = e.touches[0].clientX; }}
+                  onTouchEnd={e => {
+                    if (touchStartX.current === null) return;
+                    const dx = e.changedTouches[0].clientX - touchStartX.current;
+                    touchStartX.current = null;
+                    if (Math.abs(dx) < 40) return; // tap → retourner la carte
+                    if (dx < 0 && fcIdx < result.flashcards.length - 1) {
+                      setFcIdx(i => i + 1); setFlipped(false); // swipe gauche → suivante
+                    } else if (dx > 0 && fcIdx > 0) {
+                      setFcIdx(i => i - 1); setFlipped(false); // swipe droite → précédente
+                    }
+                  }}
                 >
                   <div className="fy-fc-front">
                     <span className="fy-fc-hint">Question — cliquez pour retourner</span>

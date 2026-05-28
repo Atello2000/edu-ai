@@ -1,61 +1,35 @@
 /**
- * Toast léger sans dépendance externe.
- * Usage : toast.error('msg') | toast.success('msg') | toast.info('msg')
+ * Toast utility — compatible avec ToastContainer.jsx
+ * ToastContainer appelle _registerToast(setToasts) au montage.
+ * toast.error/success/info/warn() pousse une notification dans le state React.
  */
 
+let _setToasts = null;
+
+export function _registerToast(setter) {
+  _setToasts = setter;
+}
+
 function show(message, type = 'info', duration = 4000) {
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    Object.assign(container.style, {
-      position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-      zIndex: '9999', display: 'flex', flexDirection: 'column', gap: '.5rem',
-      pointerEvents: 'none',
-    });
-    document.body.appendChild(container);
+  if (!_setToasts) {
+    // Fallback si ToastContainer pas encore monté
+    console.warn(`[toast:${type}]`, message);
+    return;
   }
-
-  const colors = {
-    error:   { bg: '#fef2f2', border: '#fca5a5', text: '#991b1b' },
-    success: { bg: '#f0fdf4', border: '#86efac', text: '#166534' },
-    info:    { bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' },
-  };
-  const c = colors[type] || colors.info;
-
-  const el = document.createElement('div');
-  Object.assign(el.style, {
-    background: c.bg, border: `1px solid ${c.border}`, color: c.text,
-    padding: '.65rem 1rem', borderRadius: '10px',
-    fontFamily: "'Outfit', sans-serif", fontSize: '.875rem', fontWeight: '500',
-    boxShadow: '0 4px 16px rgba(0,0,0,.1)',
-    pointerEvents: 'auto', cursor: 'pointer',
-    opacity: '0', transform: 'translateY(8px)',
-    transition: 'opacity .2s, transform .2s',
-    maxWidth: '320px', lineHeight: '1.4',
-  });
-  el.textContent = message;
-  container.appendChild(el);
-
-  requestAnimationFrame(() => {
-    el.style.opacity = '1';
-    el.style.transform = 'translateY(0)';
-  });
-
-  function dismiss() {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(8px)';
-    setTimeout(() => el.remove(), 220);
+  const id = Date.now() + Math.random();
+  _setToasts(prev => [...prev, { id, message, type }]);
+  if (duration > 0) {
+    setTimeout(() => {
+      _setToasts(prev => prev.filter(t => t.id !== id));
+    }, duration);
   }
-
-  const timer = setTimeout(dismiss, duration);
-  el.onclick = () => { clearTimeout(timer); dismiss(); };
 }
 
 const toast = {
   error:   (msg, d) => show(msg, 'error',   d),
   success: (msg, d) => show(msg, 'success', d),
   info:    (msg, d) => show(msg, 'info',    d),
+  warn:    (msg, d) => show(msg, 'warn',    d),
 };
 
 export default toast;
