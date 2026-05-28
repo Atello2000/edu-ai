@@ -8,15 +8,18 @@ import toast from '../utils/toast';
  * showGoalModal        : bool
  * sessionGoal          : string | null
  * prepLoading          : bool
- * handlePrepareSession : ouvre la modal (vérifie que des fichiers sont chargés)
- * handleGoalSelect     : reçoit l'objectif choisi, lance summarize + quiz + flashcards
+ * handlePrepareSession : ouvre la modal (vérifie fichiers + solde minimum)
+ * handleGoalSelect     : reçoit l'objectif choisi, lance les générations selon les flags
  */
 export function usePrepareSession({
   uploadedFiles,
+  balance,           // solde jetons courant (null = inconnu)
   summarize,
+  generateExam,
   generateQuiz,
   generateFlashcards,
   summarizing,
+  examLoading,
   quizLoading,
   fcLoading,
   setActivePanel,
@@ -24,7 +27,7 @@ export function usePrepareSession({
   const [showGoalModal, setShowGoalModal] = useState(false);
   const [sessionGoal,   setSessionGoal]   = useState(null);
 
-  const prepLoading = summarizing || quizLoading || fcLoading;
+  const prepLoading = summarizing || examLoading || quizLoading || fcLoading;
 
   const handlePrepareSession = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
@@ -35,15 +38,30 @@ export function usePrepareSession({
   const handleGoalSelect = useCallback((goal) => {
     setSessionGoal(goal);
     setShowGoalModal(false);
-    // Lancer immédiatement avec `goal` direct (pas sessionGoal qui est async)
+
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) return;
-    const { quizCount, quizDiff, fcCount } = getGoalParams(goal);
-    setActivePanel('summary-section');
-    summarize(files);
-    generateQuiz(files, { count: quizCount, difficulty: quizDiff });
-    generateFlashcards(files, { count: fcCount });
-  }, [uploadedFiles, summarize, generateQuiz, generateFlashcards, setActivePanel]);
+
+    // Utiliser `goal` directement (pas sessionGoal qui est async)
+    const { genSummary, genExam, genQuiz, genFlashcards,
+            quizCount, quizDiff, fcCount, cost } = getGoalParams(goal);
+
+    // Vérification du solde (balance null = dev/inconnu → on laisse passer)
+    if (balance !== null && balance < cost) {
+      toast.error(`Solde insuffisant (${balance} ⚡). Cette session coûte ${cost} ⚡.`);
+      return;
+    }
+
+    // Navigation vers le premier panneau qui sera généré
+    if (genSummary)       setActivePanel('summary-section');
+    else if (genQuiz)     setActivePanel('quiz-section');
+    else if (genFlashcards) setActivePanel('flashcard-section');
+
+    if (genSummary)    summarize(files);
+    if (genExam)       generateExam(files);
+    if (genQuiz)       generateQuiz(files, { count: quizCount, difficulty: quizDiff });
+    if (genFlashcards) generateFlashcards(files, { count: fcCount });
+  }, [uploadedFiles, balance, summarize, generateExam, generateQuiz, generateFlashcards, setActivePanel]);
 
   return {
     showGoalModal,

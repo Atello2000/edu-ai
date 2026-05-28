@@ -1,3 +1,5 @@
+import { getGoalParams } from '../utils/goalParams.js';
+
 const GOALS = [
   {
     id: 'exam',
@@ -7,7 +9,7 @@ const GOALS = [
       </svg>
     ),
     label: 'Examen demain',
-    desc: 'Résumé rapide + quiz difficile',
+    desc: 'Résumé + fiche + quiz difficile',
   },
   {
     id: 'understand',
@@ -18,7 +20,7 @@ const GOALS = [
       </svg>
     ),
     label: 'Comprendre',
-    desc: 'Analyse approfondie + flashcards',
+    desc: 'Résumé + quiz + flashcards',
   },
   {
     id: 'memorize',
@@ -29,7 +31,7 @@ const GOALS = [
       </svg>
     ),
     label: 'Mémoriser',
-    desc: 'Flashcards SRS + répétition',
+    desc: 'Résumé + flashcards uniquement',
   },
   {
     id: 'practice',
@@ -41,25 +43,52 @@ const GOALS = [
       </svg>
     ),
     label: "S'entraîner",
-    desc: 'Beaucoup de questions variées',
+    desc: 'Résumé + beaucoup de questions',
   },
 ];
 
-export default function GoalModal({ onSelect }) {
+/**
+ * GoalModal — modal de choix d'objectif avant "Préparer ma session".
+ *
+ * @param {Function} onSelect   — appelé avec l'id de l'objectif (ou null pour passer)
+ * @param {number|null} balance — solde jetons de l'utilisateur (null = inconnu)
+ */
+export default function GoalModal({ onSelect, balance = null }) {
   return (
     <div className="goal-overlay">
       <div className="goal-modal">
         <h2>Quel est votre <em>objectif</em> ?</h2>
         <p>Jangalai adaptera les générations à votre besoin.</p>
+
+        {balance !== null && (
+          <p className="goal-balance">
+            Votre solde : <strong>{balance} ⚡</strong>
+          </p>
+        )}
+
         <div className="goal-grid">
-          {GOALS.map(g => (
-            <button key={g.id} className="goal-card" onClick={() => onSelect(g.id)}>
-              <span className="goal-icon">{g.icon}</span>
-              <strong>{g.label}</strong>
-              <span>{g.desc}</span>
-            </button>
-          ))}
+          {GOALS.map(g => {
+            const { cost } = getGoalParams(g.id);
+            const canAfford = balance === null || balance >= cost;
+            return (
+              <button
+                key={g.id}
+                className={`goal-card${!canAfford ? ' goal-card--disabled' : ''}`}
+                onClick={() => canAfford && onSelect(g.id)}
+                title={!canAfford ? `Solde insuffisant (${balance} ⚡ disponibles)` : ''}
+              >
+                <span className="goal-icon">{g.icon}</span>
+                <strong>{g.label}</strong>
+                <span>{g.desc}</span>
+                <span className={`goal-cost${!canAfford ? ' goal-cost--over' : ''}`}>
+                  {cost} ⚡
+                  {!canAfford && <span className="goal-cost-hint"> — solde insuffisant</span>}
+                </span>
+              </button>
+            );
+          })}
         </div>
+
         <button className="goal-skip" onClick={() => onSelect(null)}>Passer cette étape</button>
       </div>
     </div>

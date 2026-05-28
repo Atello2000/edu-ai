@@ -34,6 +34,7 @@ import { useChat } from '../hooks/useChat.js';
 import { useGlossary } from '../hooks/useGlossary.js';
 import { useSessions } from '../hooks/useSessions.js';
 import { usePrepareSession } from '../hooks/usePrepareSession.js';
+import { useJetons } from '../hooks/useJetons.js';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -127,10 +128,13 @@ export default function AppPage() {
   const [examMode, setExamMode] = useState(false);
   const [examMins, setExamMins] = useState(10);
 
+  // ── Jetons — solde pour vérif avant session prep ──────────────────────────
+  const { balance } = useJetons();
+
   // ── Objectif utilisateur + session prep ───────────────────────────────────
   const { showGoalModal, sessionGoal, prepLoading, handlePrepareSession, handleGoalSelect } =
-    usePrepareSession({ uploadedFiles, summarize, generateQuiz, generateFlashcards,
-                        summarizing, quizLoading, fcLoading, setActivePanel });
+    usePrepareSession({ uploadedFiles, balance, summarize, generateExam, generateQuiz, generateFlashcards,
+                        summarizing, examLoading, quizLoading, fcLoading, setActivePanel });
 
   const [pendingFolderId, setPendingFolderId] = useState(null);
 
@@ -333,7 +337,7 @@ export default function AppPage() {
   return (
     <>
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
-      {showGoalModal  && <GoalModal onSelect={handleGoalSelect} />}
+      {showGoalModal  && <GoalModal onSelect={handleGoalSelect} balance={balance} />}
       <SettingsDrawer
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}

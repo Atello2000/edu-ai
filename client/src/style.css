@@ -2792,7 +2792,41 @@ main {
 
 .goal-icon { display:flex; align-items:center; justify-content:center; width:3rem; height:3rem; margin:0 auto .35rem; }
 .goal-card strong { font-size: .9rem; color: var(--text); }
-.goal-card span:last-child { font-size: .78rem; color: var(--muted); line-height: 1.35; }
+.goal-card > span { font-size: .78rem; color: var(--muted); line-height: 1.35; }
+
+/* Badge coût jetons */
+.goal-cost {
+  display: inline-flex;
+  align-items: center;
+  gap: .25rem;
+  font-size: .74rem;
+  font-weight: 600;
+  color: var(--blue);
+  background: rgba(var(--blue-rgb, 90,152,246), .1);
+  border-radius: 20px;
+  padding: .15rem .55rem;
+  margin-top: .1rem;
+}
+.goal-cost--over {
+  color: var(--muted);
+  background: var(--border);
+}
+.goal-cost-hint { font-weight: 400; font-size: .7rem; }
+
+/* Carte désactivée (solde insuffisant) */
+.goal-card--disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Solde affiché dans la modal */
+.goal-balance {
+  font-size: .82rem;
+  color: var(--muted);
+  margin: -.75rem 0 1.1rem;
+}
+.goal-balance strong { color: var(--text); }
 
 .goal-skip {
   background: none;
