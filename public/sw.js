@@ -6,8 +6,6 @@ const CACHE = 'jangalai-596e87c-1779993610945';
 const ASSETS = [
   '/manifest.json', '/icon.svg',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap',
-  'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
 ];
 
 self.addEventListener('install', e => {
@@ -58,7 +56,7 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(clients.openWindow(e.notification.data?.url || '/app'));
 });
 
-const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net', 'cdnjs.cloudflare.com'];
+const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;

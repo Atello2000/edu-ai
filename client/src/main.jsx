@@ -6,7 +6,12 @@ import { ThemeProvider } from './hooks/useTheme.jsx';
 import { ConfirmProvider } from './components/ConfirmModal.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 import App from './App.jsx';
+import { marked } from 'marked';
 import './style.css';
+
+// marked est désormais bundlé via npm (plus de CDN). On l'expose globalement pour
+// les composants qui appellent window.marked.parse(...) lors du rendu markdown.
+window.marked = marked;
 
 // ── PWA Service Worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {

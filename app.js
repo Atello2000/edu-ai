@@ -12,7 +12,26 @@ const logger = require('./services/logger');
 
 const app = express();
 app.set('trust proxy', 1); // Railway reverse proxy
-app.use(helmet({ contentSecurityPolicy: false }));
+// CSP réactivée. Le bundle React est servi depuis 'self'. Seules exceptions :
+//  - script-src cdn.jsdelivr.net  → d3 + markmap chargés à la volée (MindmapModal)
+//  - style-src 'unsafe-inline'    → styles inline React + Google Fonts CSS
+//  - font-src fonts.gstatic.com   → polices Google
+// marked/jspdf sont désormais bundlés (npm), plus aucun CDN cdnjs.
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'default-src': ["'self'"],
+      'script-src':  ["'self'", 'https://cdn.jsdelivr.net'],
+      'style-src':   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'font-src':    ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      'img-src':     ["'self'", 'data:', 'blob:'],
+      'connect-src': ["'self'", 'https://cdn.jsdelivr.net'],
+      'worker-src':  ["'self'", 'blob:'],
+      'object-src':  ["'none'"],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',') : 'http://localhost:3001',
   credentials: true

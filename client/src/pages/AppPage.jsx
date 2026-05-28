@@ -52,24 +52,6 @@ import CompareSection from '../components/CompareSection.jsx';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
-// ── CDN scripts requis par certains composants (marked, jspdf, html2canvas) ──
-const CDN_SCRIPTS = [
-  { src: 'https://cdn.jsdelivr.net/npm/marked/marked.min.js',                                     id: 'cdn-marked' },
-  { src: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',                   id: 'cdn-jspdf' },
-  { src: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',            id: 'cdn-html2canvas' },
-];
-
-function loadScript({ src, id }) {
-  return new Promise((resolve) => {
-    if (document.getElementById(id)) { resolve(); return; }
-    const s = document.createElement('script');
-    s.id = id; s.src = src;
-    s.onload = resolve;
-    s.onerror = resolve;
-    document.head.appendChild(s);
-  });
-}
-
 // ── Préférences utilisateur (localStorage) ───────────────────────────────────
 const PREFS_KEY = 'jangalai-prefs';
 function getPrefs() {
@@ -79,7 +61,6 @@ function getPrefs() {
 
 export default function AppPage() {
   const { user } = useAuth();
-  const initialized = useRef(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
   const [activityKey,    setActivityKey]    = useState(0);
@@ -401,17 +382,6 @@ export default function AppPage() {
     eventBus.emit('nav:section', 'chat-section');
     setActivePanel('chat-section');
   }, []);
-
-  // ── Chargement des CDN scripts ─────────────────────────────────────────────
-  useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-    window.__reactApp  = true;
-    window.__reactUser = user;
-    (async () => {
-      for (const s of CDN_SCRIPTS) await loadScript(s);
-    })();
-  }, [user]);
 
   // ── Rendu ──────────────────────────────────────────────────────────────────
   return (

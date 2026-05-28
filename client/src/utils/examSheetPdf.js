@@ -1,3 +1,4 @@
+import { jsPDF } from 'jspdf';
 import { stripMd } from './summaryUtils.js';
 
 /**
@@ -6,9 +7,6 @@ import { stripMd } from './summaryUtils.js';
  * @param {string} md        — contenu markdown de la fiche
  */
 export async function exportExamSheetToPDF(fileName, md) {
-  const { jsPDF } = window.jspdf;
-  if (!jsPDF) throw new Error('jsPDF non chargé');
-
   const pdf = new jsPDF('p', 'mm', 'a4');
   const PW  = pdf.internal.pageSize.getWidth();
   const PH  = pdf.internal.pageSize.getHeight();

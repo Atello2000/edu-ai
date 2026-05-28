@@ -1,7 +1,7 @@
 /**
- * summaryPdf.js — export PDF d'un résumé via jsPDF (CDN)
- * Requiert window.jspdf chargé avant l'appel.
+ * summaryPdf.js — export PDF d'un résumé via jsPDF (bundlé npm).
  */
+import { jsPDF } from 'jspdf';
 import { buildSummarySections, stripMd } from './summaryUtils';
 
 /**
@@ -10,7 +10,6 @@ import { buildSummarySections, stripMd } from './summaryUtils';
  * @returns {Promise<void>}
  */
 export async function exportSummaryToPDF(fileName, summaryMd) {
-  const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
 
   const PW = pdf.internal.pageSize.getWidth();
