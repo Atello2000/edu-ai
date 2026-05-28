@@ -75,18 +75,7 @@
 .alert.success { background: var(--teal-bg); color: var(--teal); border: 1px solid rgba(29,209,161,.3); }
 .alert.error   { background: var(--rose-bg); color: var(--rose); border: 1px solid rgba(255,107,129,.3); }
 
-.quota-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
-
 @media (max-width: 500px) {
   .profile-page { padding: 1rem; }
   .profile-card { padding: 1.5rem 1.1rem; }
-  .quota-grid { grid-template-columns: 1fr; }
 }
-.quota-item {
-  background: var(--surface); border: 1px solid var(--border-sub);
-  border-radius: var(--radius-xs); padding: .65rem .8rem;
-}
-.q-action { font-size: .75rem; color: var(--muted); }
-.q-bar { height: 4px; background: var(--border); border-radius: 2px; margin: .4rem 0; overflow: hidden; }
-.q-fill { height: 100%; border-radius: 2px; background: var(--blue); transition: width .4s; }
-.q-nums { font-size: .72rem; color: var(--muted); }

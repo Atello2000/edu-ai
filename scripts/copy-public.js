@@ -1,7 +1,7 @@
 /**
  * copy-public.js
  * Copies files from root public/ into client/dist/ after the Vite build.
- * This ensures that /app.js, /sw.js, /manifest.json, /icon.svg and /style.css
+ * This ensures that /sw.js, /manifest.json and /icon.svg
  * are served as static CDN assets by Vercel (not through the serverless function).
  */
 
@@ -11,7 +11,7 @@ const path = require('path');
 const src  = path.join(__dirname, '..', 'public');
 const dest = path.join(__dirname, '..', 'client', 'dist');
 
-const FILES = ['app.js', 'icon.svg', 'manifest.json', 'style.css', 'sw.js'];
+const FILES = ['icon.svg', 'manifest.json', 'sw.js'];
 
 if (!fs.existsSync(dest)) {
   console.error(`[copy-public] ERROR: output directory not found: ${dest}`);

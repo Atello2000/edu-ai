@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import QuotaBar from './QuotaBar.jsx';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -151,8 +150,6 @@ export default function ActionsPanel({
   return (
     <>
       <h2 className="panel-title">Choisir une <em>action</em></h2>
-
-      <QuotaBar />
 
       {/* Avertissement si aucun fichier en mémoire */}
       <div className={`no-files-notice${hasFiles ? ' hidden' : ''}`} id="no-files-notice">

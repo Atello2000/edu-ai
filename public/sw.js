@@ -1,10 +1,10 @@
-const CACHE = 'jangalai-__CACHE_VERSION__';
+const CACHE = 'jangalai-596e87c-1779993610945';
 
 // IMPORTANT: never cache HTML entry points (/ or index.html) —
 // their hashed asset references change on every deploy and a stale
 // cached HTML causes a blank page (old JS hash → 404 → React never mounts).
 const ASSETS = [
-  '/app.js', '/style.css', '/manifest.json', '/icon.svg',
+  '/manifest.json', '/icon.svg',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap',
   'https://cdn.jsdelivr.net/npm/marked/marked.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
@@ -79,7 +79,7 @@ self.addEventListener('fetch', e => {
       }))
     );
   } else {
-    // Network-first pour les assets locaux (app.js, style.css, /assets/…)
+    // Network-first pour les assets locaux (/assets/… du build Vite)
     // IMPORTANT: never cache HTML responses — they are SPA entry points whose
     // hashed asset references change on every deploy. Caching them causes a
     // blank page when the old HTML references asset filenames that no longer exist.

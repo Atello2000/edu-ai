@@ -4,11 +4,9 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import './Profile.css';
 
 const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
-const QUOTA_LABELS = { summarize: 'Résumés', quiz: 'Quiz', flashcards: 'Flashcards', chat: 'Chat' };
 
 export default function Profile() {
   const { user, setUser } = useAuth();
-  const [quota, setQuota]       = useState(null);
   const [nameVal, setNameVal]   = useState('');
   const [nameAlert, setNameAlert] = useState(null);
   const [nameBusy, setNameBusy] = useState(false);
@@ -20,9 +18,6 @@ export default function Profile() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user) setNameVal(user.name);
-    fetch('/api/quota').then(r => r.json()).then(d => {
-      if (!d.unlimited) setQuota(d);
-    });
   }, [user]);
 
   function flash(setter, msg, type) {
@@ -74,27 +69,6 @@ export default function Profile() {
           <h2>{user.name}</h2>
           <div className={`plan-badge plan-${user.plan}`}>{PLAN_LABELS[user.plan] || user.plan}</div>
         </div>
-
-        {quota && (
-          <div className="profile-section">
-            <h3>Quota aujourd&apos;hui</h3>
-            <div className="quota-grid">
-              {Object.entries(QUOTA_LABELS).map(([key, label]) => {
-                const used  = quota[key]?.used  ?? 0;
-                const limit = quota[key]?.limit ?? 1;
-                const pct   = Math.min(100, Math.round(used / limit * 100));
-                const color = pct >= 90 ? 'var(--rose)' : pct >= 60 ? 'var(--gold)' : 'var(--blue)';
-                return (
-                  <div className="quota-item" key={key}>
-                    <div className="q-action">{label}</div>
-                    <div className="q-bar"><div className="q-fill" style={{ width: `${pct}%`, background: color }}></div></div>
-                    <div className="q-nums">{used} / {limit} aujourd&apos;hui</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         <div className="profile-section">
           <h3>Informations</h3>

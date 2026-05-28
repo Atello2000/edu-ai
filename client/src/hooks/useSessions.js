@@ -11,10 +11,10 @@ export function getSessions() {
  * Gère l'historique de sessions (localStorage).
  *
  * Reçoit des refs pour les fonctions restore (créées dans AppPage avant les hooks AI),
- * ce qui évite la dépendance circulaire et le bridge window.__saveSession.
+ * ce qui évite la dépendance circulaire.
  *
- * Expose window.__restoreSession pour HistoryPanel.
- * saveSession est retourné directement et passé aux hooks AI (useSummarize, etc.).
+ * Retourne { saveSession, restoreSession } : saveSession est passé aux hooks AI
+ * (useSummarize, etc.), restoreSession est passé en prop onRestore à HistoryPanel.
  */
 export function useSessions({
   uploadedFiles,

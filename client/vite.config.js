@@ -8,7 +8,6 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:3001', changeOrigin: true },
       '/sw.js':  { target: 'http://localhost:3001', changeOrigin: true },
-      '/app.js': { target: 'http://localhost:3001', changeOrigin: true },
     }
   },
   build: {

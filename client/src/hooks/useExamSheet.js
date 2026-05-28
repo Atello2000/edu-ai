@@ -53,7 +53,6 @@ export function useExamSheet({ saveSession } = {}) {
           } else if (data.type === 'end') {
             setMd(text);
             setStreaming('');
-            // Notify app.js bridges
             saveSession?.({ examSheet: { sheet: text } });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'exam-sheet-section');

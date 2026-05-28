@@ -1,4 +1,12 @@
-const { prepare } = require('../db');
+/**
+ * middleware/quota.js — limites techniques de traitement (taille fichiers,
+ * troncature de texte, nombre max de quiz/flashcards).
+ *
+ * NB : le rationnement par usage est géré par le système de jetons
+ * (services/jetons.js), PAS ici. L'ancien quota journalier par action
+ * (checkQuota / QUOTA_DAILY) a été retiré — il faisait doublon avec les
+ * jetons et n'était plus appelé.
+ */
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -22,74 +30,4 @@ const LIMITS = IS_PROD ? {
   chatChars:     8000,
 };
 
-// Quotas journaliers par plan
-const QUOTA_DAILY = {
-  free: { summarize: 5,   quiz: 8,   flashcards: 8,   chat: 3  },
-  pro:  { summarize: 20,  quiz: 40,  flashcards: 40,  chat: 20 },
-  max:  { summarize: 999, quiz: 999, flashcards: 999, chat: 60 },
-};
-
-const SAFE_FIELDS = { summarize: 'summarize', quiz: 'quiz', flashcards: 'flashcards', chat: 'chat' };
-
-function getTodayStr() { return new Date().toISOString().slice(0, 10); }
-
-async function checkQuota(req, action) {
-  if (!IS_PROD) return { ok: true };
-  const user = req.user;
-  if (!user) return { ok: true };
-
-  const safeField = SAFE_FIELDS[action];
-  if (!safeField) throw new Error('Action invalide');
-
-  const today  = getTodayStr();
-  const limits = QUOTA_DAILY[user.plan] || QUOTA_DAILY.free;
-  const limit  = limits[action];
-
-  // Atomic: insert row for today or increment only if still under limit.
-  // ON CONFLICT DO UPDATE ... WHERE ensures the read-check-write is a single
-  // operation — no race condition between concurrent requests.
-  const row = await prepare(`
-    INSERT INTO user_quota (user_id, date, ${safeField})
-    VALUES (?, ?, 1)
-    ON CONFLICT (user_id, date) DO UPDATE
-      SET ${safeField} = user_quota.${safeField} + 1
-      WHERE user_quota.${safeField} < ?
-    RETURNING ${safeField} AS used
-  `).get(user.id, today, limit);
-
-  if (!row) {
-    // WHERE blocked the update — quota reached
-    const cur = await prepare(
-      `SELECT ${safeField} AS used FROM user_quota WHERE user_id = ? AND date = ?`
-    ).get(user.id, today);
-    return { ok: false, used: cur?.used ?? limit, limit, action };
-  }
-
-  return { ok: true, used: row.used, limit };
-}
-
-async function getQuotaStatus(req) {
-  if (!IS_PROD || !req.user) return null;
-  const today  = getTodayStr();
-  const limits = QUOTA_DAILY[req.user.plan] || QUOTA_DAILY.free;
-
-  // .get() instead of .run() — user_quota has no "id" column so run()'s
-  // auto-appended "RETURNING id" would crash; .get() sends the SQL as-is.
-  await prepare(`
-    INSERT INTO user_quota (user_id, date) VALUES (?, ?)
-    ON CONFLICT (user_id, date) DO NOTHING
-  `).get(req.user.id, today);
-
-  const row = await prepare(
-    'SELECT * FROM user_quota WHERE user_id = ? AND date = ?'
-  ).get(req.user.id, today);
-
-  return {
-    summarize:  { used: row.summarize,  limit: limits.summarize },
-    quiz:       { used: row.quiz,       limit: limits.quiz },
-    flashcards: { used: row.flashcards, limit: limits.flashcards },
-    chat:       { used: row.chat,       limit: limits.chat },
-  };
-}
-
-module.exports = { IS_PROD, LIMITS, QUOTA_DAILY, checkQuota, getQuotaStatus };
+module.exports = { IS_PROD, LIMITS };

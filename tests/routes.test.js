@@ -76,15 +76,6 @@ describe('GET /api/users/count', () => {
   });
 });
 
-// ── /api/quota ────────────────────────────────────────────────────────────────
-describe('GET /api/quota', () => {
-  it('retourne unlimited=true en local', async () => {
-    const res = await request(app).get('/api/quota');
-    expect(res.status).toBe(200);
-    expect(res.body.unlimited).toBe(true);
-  });
-});
-
 // ── Sécurité : path traversal ─────────────────────────────────────────────────
 describe('Sécurité path traversal', () => {
   it('refuse un chemin hors uploads/', async () => {
