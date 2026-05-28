@@ -5,7 +5,7 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct }       = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { langLabel }            = require('./helpers');
+const { langLabel, parseJsonResponse } = require('./helpers');
 
 // POST /api/study-plan — plan de révision intelligent (JSON response, non-streaming)
 router.post('/study-plan', async (req, res) => {
@@ -18,7 +18,11 @@ router.post('/study-plan', async (req, res) => {
     }
 
     // Calculer le nombre de jours disponibles (cap à 14)
-    const days_available = Math.min(14, Math.max(1, Math.ceil((new Date(exam_date) - Date.now()) / 86400000)));
+    // Guarde contre NaN si exam_date est absent/invalide (fallback : 7 jours)
+    const examDateObj    = new Date(exam_date);
+    const days_available = !isNaN(examDateObj)
+      ? Math.min(14, Math.max(1, Math.ceil((examDateObj - Date.now()) / 86400000)))
+      : 7;
 
     const inLang      = langLabel(lang || 'fr');
     const topicsText  = Array.isArray(topics)
@@ -61,15 +65,7 @@ Règles:
     const { text: raw, usage } = await aiComplete(prompt, 2000, aiCfg);
     if (usage) logTokens(req.user?.id, 'study-plan', usage.provider, usage.input, usage.output);
 
-    // Extraire le JSON de la réponse
-    let plan;
-    try {
-      const stripped = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-      const match = stripped.match(/\{[\s\S]*\}/);
-      plan = JSON.parse(match ? match[0] : stripped);
-    } catch {
-      plan = { days: [], advice: raw };
-    }
+    const plan = parseJsonResponse(raw, { days: [], advice: raw });
 
     res.json({ plan });
   } catch (err) {

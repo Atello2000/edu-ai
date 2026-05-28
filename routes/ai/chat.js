@@ -6,20 +6,18 @@ const { LIMITS }               = require('../../middleware/quota');
 const { checkAndDeduct }       = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { userContext, getFileText } = require('./helpers');
+const { userContext, getFileText, sseSetup } = require('./helpers');
 
 // POST /api/chat — chat contextuel avec le cours, réponse en streaming SSE
 router.post('/chat', async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
+  const send = sseSetup(req, res);
 
   try {
     const { files, messages } = req.body;
+    if (!files?.length) {
+      send({ type: 'error', message: 'Aucun fichier sélectionné' });
+      return res.end();
+    }
 
     // Coût dynamique : conversation longue (≥ 4 échanges) = 2 jetons
     // Protège contre les conversations multi-tours très coûteuses en tokens

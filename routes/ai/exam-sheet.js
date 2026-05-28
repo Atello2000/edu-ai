@@ -5,7 +5,7 @@ const { getAiConfigForAction }   = require('../../services/aiConfig');
 const { checkAndDeduct, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
 const logger                     = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 const EXAM_MAX_FILES  = 5;
@@ -13,13 +13,7 @@ const EXAM_MAX_TOKENS = 4200;
 
 // POST /api/exam-sheet — fiche de révision dense en streaming SSE (avec chunking)
 router.post('/exam-sheet', async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
+  const send = sseSetup(req, res);
 
   try {
     const { files } = req.body;

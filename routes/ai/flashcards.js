@@ -6,18 +6,12 @@ const { LIMITS }                               = require('../../middleware/quota
 const { checkAndDeduct, JETON_COSTS }          = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
 const { splitIntoChunks, chunkCost }           = require('../../services/chunker');
 
 // POST /api/flashcards — génération de flashcards par streaming SSE (avec chunking)
 router.post('/flashcards', async (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
+  const send = sseSetup(req, res);
 
   try {
     const { files } = req.body;

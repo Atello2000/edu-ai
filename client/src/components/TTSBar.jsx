@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from '../utils/toast';
+import eventBus from '../utils/eventBus';
 
 /**
  * Barre de synthèse vocale (Text-to-Speech).
  *
- * Bridge :
- *   window.__ttsToggle(markdown [, speakBtn, stopBtn])
- *     — démarre / pause / reprend la lecture du texte markdown fourni.
- *     speakBtn et stopBtn sont optionnels (null quand appelé depuis React).
+ * Écoute l'événement eventBus 'tts:speak' avec payload = markdown string.
+ * Démarre / pause / reprend la lecture selon l'état courant.
  */
 
 const TTS_KEY = 'jangalai-tts';
@@ -128,9 +127,9 @@ export default function TTSBar() {
     }
   }
 
-  // Expose stable bridge (reads from refs → no stale closure issue)
+  // Écoute l'événement eventBus — stable (lit via refs, pas de stale closure)
   useEffect(() => {
-    window.__ttsToggle = (markdown) => {
+    return eventBus.on('tts:speak', (markdown) => {
       if (typeof speechSynthesis === 'undefined') {
         toast.error("La synthèse vocale n'est pas supportée par ce navigateur.");
         return;
@@ -165,8 +164,7 @@ export default function TTSBar() {
       currentMdRef.current = markdown;
       setVisible(true);
       setTimeout(() => applySpeak(markdown), 50);
-    };
-    return () => { delete window.__ttsToggle; };
+    });
   }, []); // stable — reads via refs only
 
   if (!visible) return null;

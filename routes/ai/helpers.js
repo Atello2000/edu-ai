@@ -48,4 +48,20 @@ function parseJsonResponse(raw, fallback) {
   } catch { return fallback; }
 }
 
-module.exports = { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse };
+/**
+ * Configure les headers SSE, active le nodelay TCP et retourne une fonction `send`.
+ * Remplace les 7 lignes de boilerplate répétées dans chaque route SSE.
+ *
+ * Usage : const send = sseSetup(req, res);
+ */
+function sseSetup(req, res) {
+  req.socket?.setNoDelay(true);
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  return (data) => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
+}
+
+module.exports = { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup };

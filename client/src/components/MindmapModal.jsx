@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import eventBus from '../utils/eventBus';
 
 /**
  * Modal de carte mentale (markmap).
  *
- * Bridges :
- *   window.__openMindmap(courseName, markdown)  — ouvre et rend la carte
- *   window.__closeMindmap()                     — ferme la modale
+ * Écoute l'événement eventBus 'mindmap:open' avec payload { name, markdown }.
  */
 
 function loadScript(src) {
@@ -84,19 +83,14 @@ export default function MindmapModal() {
     return () => { cancelled = true; };
   }, [visible, pendingMd, courseName]);
 
-  // Bridges
+  // Écoute l'événement eventBus au lieu des bridges window.__
   useEffect(() => {
-    window.__openMindmap = (name, markdown) => {
+    return eventBus.on('mindmap:open', ({ name, markdown }) => {
       setCourseName(name);
       setPendingMd(markdown);
       setVisible(true);
-    };
-    window.__closeMindmap = close;
-    return () => {
-      delete window.__openMindmap;
-      delete window.__closeMindmap;
-    };
-  }, [close]);
+    });
+  }, []);
 
   if (!visible) return null;
 

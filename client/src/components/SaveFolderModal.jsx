@@ -4,17 +4,19 @@ import toast from '../utils/toast';
 /**
  * Modal « Enregistrer dans une matière » affiché après chaque upload.
  *
- * Bridge :
- *   window.__showSaveFolderModal(files)  — ouvre la modale avec les fichiers fournis
+ * Props :
+ *   filesToSave  {Array|null}  fichiers à classer (null = modal fermée)
+ *   onClose      {Function}    callback pour fermer (remet filesToSave à null)
  */
-export default function SaveFolderModal() {
-  const [visible,  setVisible]  = useState(false);
+export default function SaveFolderModal({ filesToSave, onClose }) {
   const [folders,  setFolders]  = useState([]);
-  const [files,    setFiles]    = useState([]);
   const [newName,  setNewName]  = useState('');
   const [saving,   setSaving]   = useState(false);
 
-  const close = useCallback(() => setVisible(false), []);
+  const visible = Boolean(filesToSave);
+  const files   = filesToSave || [];
+
+  const close = useCallback(() => onClose?.(), [onClose]);
 
   const fetchFolders = useCallback(async () => {
     try {
@@ -26,16 +28,12 @@ export default function SaveFolderModal() {
     }
   }, []);
 
-  // Expose le bridge
+  // Charger les matières dès que la modal s'ouvre
   useEffect(() => {
-    window.__showSaveFolderModal = async (latestFiles) => {
-      if (latestFiles) setFiles(latestFiles);
-      await fetchFolders();
-      setNewName('');
-      setVisible(true);
-    };
-    return () => { delete window.__showSaveFolderModal; };
-  }, [fetchFolders]);
+    if (!visible) return;
+    setNewName('');
+    fetchFolders();
+  }, [visible, fetchFolders]);
 
   const saveToFolder = useCallback(async (folderId) => {
     setSaving(true);

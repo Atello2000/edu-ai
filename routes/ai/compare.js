@@ -5,18 +5,11 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct }       = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { langLabel, getFileText } = require('./helpers');
+const { langLabel, getFileText, sseSetup } = require('./helpers');
 
 // POST /api/compare — confrontation multi-sources (SSE streaming)
 router.post('/compare', async (req, res) => {
-  req.socket?.setNoDelay(true);
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.flushHeaders();
-
-  const send = data => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
+  const send = sseSetup(req, res);
 
   try {
     const { files, lang } = req.body;

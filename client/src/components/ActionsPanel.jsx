@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import QuotaBar from './QuotaBar.jsx';
 import toast from '../utils/toast';
+import eventBus from '../utils/eventBus';
 
 // Coûts par action — identiques pour tous les plans (miroir de services/jetons.js)
 const COSTS = {
@@ -142,7 +143,7 @@ export default function ActionsPanel({
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');
-      window.__openMindmap?.(file.name, data.markdown);
+      eventBus.emit('mindmap:open', { name: file.name, markdown: data.markdown });
     } catch (err) { toast.error(err.message); }
     finally { loader?.classList.add('hidden'); }
   }

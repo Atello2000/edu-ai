@@ -207,6 +207,7 @@ export default function AppPage() {
 
   const [pendingFolderId, setPendingFolderId] = useState(null);
   const [lastSession,     setLastSession]     = useState(null);
+  const [filesToSave,     setFilesToSave]     = useState(null);
 
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
@@ -313,7 +314,7 @@ export default function AppPage() {
       setActivePanel('folders-panel');
     } else {
       setActivePanel('actions-section');
-      window.__showSaveFolderModal?.(files);
+      setFilesToSave(files);
     }
   }, [pendingFolderId, resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
 
@@ -797,7 +798,7 @@ export default function AppPage() {
         </div>
       </div>
 
-      <SaveFolderModal />
+      <SaveFolderModal filesToSave={filesToSave} onClose={() => setFilesToSave(null)} />
       <FeedbackButton />
     </>
   );

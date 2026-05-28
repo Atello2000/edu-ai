@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import toast from '../utils/toast';
 import { buildSummarySections } from '../utils/summaryUtils';
 import { exportSummaryToPDF }   from '../utils/summaryPdf';
+import eventBus from '../utils/eventBus';
 
 /* ── Icônes inline ─────────────────────────────────────────────────────────── */
 const CopyIcon     = () => <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3a1 1 0 011-1h8"/></svg>;
@@ -119,8 +120,7 @@ function SummaryCard({ result }) {
   }
 
   function handleSpeak() {
-    // Délégation à l'implémentation TTS de app.js via bridge window
-    window.__ttsToggle?.(summary);
+    eventBus.emit('tts:speak', summary);
   }
 
   return (
