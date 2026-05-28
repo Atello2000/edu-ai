@@ -115,10 +115,31 @@ export function useQuiz({ saveSession } = {}) {
     setScore({ correct, total: questions.length, pct, timeTaken });
     setSubmitted(true);
 
+    const now = Date.now();
+
+    // Stats globales
     const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
     const stats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
-    stats.unshift({ date: Date.now(), pct, correct, total: questions.length });
+    stats.unshift({ date: now, pct, correct, total: questions.length });
     localStorage.setItem(QUIZ_STATS_KEY, JSON.stringify(stats.slice(0, 50)));
+
+    // Stats par sujet (sourceName = nom du fichier source)
+    const TOPIC_KEY = 'jangalai-topic-stats';
+    const topicData = JSON.parse(localStorage.getItem(TOPIC_KEY) || '{}');
+    const byTopic   = {};
+    questions.forEach((q, i) => {
+      const src = q.sourceName || 'Inconnu';
+      if (!byTopic[src]) byTopic[src] = { correct: 0, total: 0 };
+      byTopic[src].total++;
+      if (answers[i] === q.answer) byTopic[src].correct++;
+    });
+    Object.entries(byTopic).forEach(([name, { correct: c, total: t }]) => {
+      if (!topicData[name]) topicData[name] = { sessions: [] };
+      topicData[name].sessions.unshift({ date: now, pct: Math.round(c / t * 100), correct: c, total: t });
+      topicData[name].sessions = topicData[name].sessions.slice(0, 20);
+    });
+    localStorage.setItem(TOPIC_KEY, JSON.stringify(topicData));
+
     eventBus.emit('stats:refresh');
     eventBus.emit('dashboard:refresh');
   }

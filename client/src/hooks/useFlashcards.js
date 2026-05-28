@@ -18,7 +18,7 @@ function cardHash(front) {
 function getSRSData()  { return JSON.parse(localStorage.getItem(SRS_KEY) || '{}'); }
 function setSRSData(d) { localStorage.setItem(SRS_KEY, JSON.stringify(d)); }
 
-export function sm2Update(key, quality) {
+export function sm2Update(key, quality, card = null) {
   const data = getSRSData();
   const c = data[key] || { interval: 1, easeFactor: 2.5, repetitions: 0 };
   if (quality >= 3) {
@@ -27,7 +27,25 @@ export function sm2Update(key, quality) {
   } else { c.interval = 1; c.repetitions = 0; }
   c.easeFactor = Math.max(1.3, c.easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
   c.nextReview = Date.now() + c.interval * 86400000;
+  // Stocker le contenu de la carte pour pouvoir reconstruire les sessions de révision SRS
+  if (card) { c.front = card.front; c.back = card.back; }
   data[key] = c; setSRSData(data); return c;
+}
+
+/** Retourne toutes les cartes dont la révision est due (front+back connus). */
+export function getDueCards() {
+  const data = getSRSData();
+  const now  = Date.now();
+  return Object.values(data)
+    .filter(c => c.nextReview <= now && c.front)
+    .map(c => ({ front: c.front, back: c.back || '' }));
+}
+
+/** Nombre de cartes dues (sans charger le contenu). */
+export function getDueCount() {
+  const data = getSRSData();
+  const now  = Date.now();
+  return Object.values(data).filter(c => c.nextReview <= now).length;
 }
 
 export function getSRSStatus(front) {
@@ -146,8 +164,8 @@ export function useFlashcards({ saveSession } = {}) {
 
   function markCard(cardIdx, state) {
     setCardStates(prev => ({ ...prev, [cardIdx]: state }));
-    const front = cards[cardIdx]?.front;
-    if (front) sm2Update(cardHash(front), state === 'known' ? 4 : 1);
+    const card = cards[cardIdx];
+    if (card?.front) sm2Update(cardHash(card.front), state === 'known' ? 4 : 1, card);
   }
 
   function shuffle() {

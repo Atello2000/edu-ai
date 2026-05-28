@@ -26,6 +26,9 @@ import JetonWidget from '../components/JetonWidget.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
 import GoalModal from '../components/GoalModal.jsx';
 import FeedbackButton from '../components/FeedbackButton.jsx';
+import SRSReviewWidget from '../components/SRSReviewWidget.jsx';
+import TopicStatsWidget from '../components/TopicStatsWidget.jsx';
+import { getDueCards } from '../hooks/useFlashcards.js';
 import { useSummarize } from '../hooks/useSummarize.js';
 import { useExamSheet } from '../hooks/useExamSheet.js';
 import { useQuiz } from '../hooks/useQuiz.js';
@@ -157,6 +160,14 @@ export default function AppPage() {
   }, []);
   const handleDashFolders  = useCallback(() => setActivePanel('folders-panel'), []);
   const handleDashLibrary  = useCallback(() => setActivePanel('library-panel'), []);
+
+  // ── Révision SRS depuis le dashboard ─────────────────────────────────────
+  const handleSRSReview = useCallback(() => {
+    const due = getDueCards();
+    if (!due.length) return;
+    restoreFcFrom([{ name: 'Révision du jour', flashcards: due }]);
+    setActivePanel('flashcard-section');
+  }, [restoreFcFrom]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -401,6 +412,12 @@ export default function AppPage() {
             <DashboardStats onLastSession={setLastSession} />
           </div>
           <ForYouSection onActivity={() => setActivityKey(k => k + 1)} />
+          {/* Révisions SRS du jour — apparaît seulement si des cartes sont dues */}
+          <SRSReviewWidget onReview={handleSRSReview} />
+
+          {/* Progression par sujet — apparaît dès que 2 sujets ont été testés */}
+          <TopicStatsWidget />
+
           <div className="dash-bottom-links">
             <button className="dash-link" onClick={handleDashHistory}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
