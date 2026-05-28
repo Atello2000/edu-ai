@@ -84,7 +84,12 @@ export function useSummarize({ saveSession } = {}) {
         const entry = { name: data.name, summary: full };
         accumulated.current = [...accumulated.current, entry];
         setResults(r => [...r, entry]);
-        setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
+        setStreaming(prev => {
+          const n = { ...prev };
+          delete n[data.name];
+          delete n[`__progress__${data.name}`]; // purge le message de progression
+          return n;
+        });
 
       } else if (data.type === 'end') {
         if (accumulated.current.length) {
@@ -92,6 +97,12 @@ export function useSummarize({ saveSession } = {}) {
           eventBus.emit('quota:refresh');
           eventBus.emit('dashboard:refresh');
         }
+        // Filet de sécurité : supprime tout résidu de progression
+        setStreaming(prev => {
+          const n = {};
+          for (const k of Object.keys(prev)) if (!k.startsWith('__progress__')) n[k] = prev[k];
+          return n;
+        });
         setLoading(false);
 
       } else if (data.type === 'progress') {

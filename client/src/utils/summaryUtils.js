@@ -37,7 +37,25 @@ export function buildSummarySections(md) {
     }
   }
   if (current) sections.push(current);
-  return sections;
+
+  // Dédoublonnage : un header répété (ancien priming serveur) produit une section
+  // vide suivie d'une section de même titre. On fusionne les titres adjacents
+  // identiques en conservant le contenu.
+  const norm = t => (t || '').toLowerCase().trim();
+  const deduped = [];
+  for (const sec of sections) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && norm(prev.title) === norm(sec.title)) {
+      const prevEmpty = prev.lines.join('').trim() === '';
+      const curEmpty  = sec.lines.join('').trim() === '';
+      if (prevEmpty) { deduped[deduped.length - 1] = sec; continue; } // la vide cède la place
+      if (curEmpty)  continue;                                        // ignore la vide qui suit
+      prev.lines.push('', ...sec.lines);                              // les deux pleines : fusion
+      continue;
+    }
+    deduped.push(sec);
+  }
+  return deduped;
 }
 
 /**

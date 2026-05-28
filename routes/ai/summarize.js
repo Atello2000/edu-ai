@@ -50,13 +50,9 @@ router.post('/summarize', async (req, res) => {
 
     for (const { file, chunks } of fileData) {
 
-      // Texte d'amorce injecté dans la réponse (le prompt se termine par ce header)
-      const PRIME = '## 🎯 Objectifs du cours\n';
-
       if (chunks.length === 1) {
         // ── Fichier court : streaming direct ──────────────────────────────
         send({ type: 'start', name: file.name });
-        send({ type: 'delta', name: file.name, text: PRIME }); // header amorcé
         const prompt = promptFull(ctx, inLang, file.name, chunks[0]);
         for await (const c of aiStream(prompt, calcMaxTokens('summary', chunks[0].length), aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
@@ -87,7 +83,6 @@ router.post('/summarize', async (req, res) => {
 
         // Passe 2 : fusionner et streamer le résumé final
         send({ type: 'start', name: file.name });
-        send({ type: 'delta', name: file.name, text: PRIME }); // header amorcé
         const mergeP = promptMerge(ctx, inLang, file.name, partials);
         for await (const c of aiStream(mergeP, 3500, aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
@@ -126,9 +121,7 @@ Cours "${name}" :
 ${text}
 
 ---
-Résumé :
-
-## 🎯 Objectifs du cours`;
+Résumé :`;
 }
 
 function promptPartial(ctx, inLang, name, text, part, total) {
@@ -160,9 +153,7 @@ Notes des ${partials.length} parties du cours "${name}" :
 ${body}
 
 ---
-Résumé :
-
-## 🎯 Objectifs du cours`;
+Résumé :`;
 }
 
 module.exports = router;
