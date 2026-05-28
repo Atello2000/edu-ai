@@ -3,7 +3,7 @@ const router  = express.Router();
 const { aiChatStream }            = require('../../services/ai');
 const { getAiConfigForAction }    = require('../../services/aiConfig');
 const { LIMITS }               = require('../../middleware/quota');
-const { checkAndDeduct }       = require('../../services/jetons');
+const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { userContext, getFileText, sseSetup } = require('./helpers');
@@ -11,6 +11,7 @@ const { userContext, getFileText, sseSetup } = require('./helpers');
 // POST /api/chat — chat contextuel avec le cours, réponse en streaming SSE
 router.post('/chat', async (req, res) => {
   const send = sseSetup(req, res);
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
 
   try {
     const { files, messages } = req.body;
@@ -29,6 +30,7 @@ router.post('/chat', async (req, res) => {
       send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
       return res.end();
     }
+    deducted = jeton.cost || 0;
 
     // Contexte cours
     let context = '';
@@ -67,6 +69,7 @@ Cours disponibles (${courseNames}) :${context}`;
     send({ type: 'end', model: chatModel });
   } catch (err) {
     logger.error('AI chat error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'chat', deducted);
     send({ type: 'error', message: err.message });
   }
   res.end();

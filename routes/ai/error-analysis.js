@@ -2,13 +2,14 @@ const express = require('express');
 const router  = express.Router();
 const { aiComplete }           = require('../../services/ai');
 const { getAiConfigForAction } = require('../../services/aiConfig');
-const { checkAndDeduct }       = require('../../services/jetons');
+const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { langLabel, parseJsonResponse } = require('./helpers');
 
 // POST /api/error-analysis — analyse des erreurs récurrentes (JSON response)
 router.post('/error-analysis', async (req, res) => {
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
   try {
     const { wrong_answers, lang } = req.body;
 
@@ -20,6 +21,7 @@ router.post('/error-analysis', async (req, res) => {
     if (!jeton.ok) {
       return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
     }
+    deducted = jeton.cost || 0;
 
     // Limiter à 30 réponses incorrectes maximum
     const answers = wrong_answers.slice(0, 30);
@@ -59,6 +61,7 @@ Retourne UNIQUEMENT ce JSON:
     res.json({ patterns: parsed.patterns ?? [] });
   } catch (err) {
     logger.error('AI error-analysis error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'error-analysis', deducted);
     res.status(500).json({ error: err.message });
   }
 });

@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { aiStream, aiComplete, MODEL_LABEL } = require('../../services/ai');
 const { getAiConfigForAction }   = require('../../services/aiConfig');
-const { checkAndDeduct, JETON_COSTS } = require('../../services/jetons');
+const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
 const logger                     = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup } = require('./helpers');
@@ -14,6 +14,7 @@ const EXAM_MAX_TOKENS = 4200;
 // POST /api/exam-sheet — fiche de révision dense en streaming SSE (avec chunking)
 router.post('/exam-sheet', async (req, res) => {
   const send = sseSetup(req, res);
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
 
   try {
     const { files } = req.body;
@@ -45,6 +46,7 @@ router.post('/exam-sheet', async (req, res) => {
       send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
       return res.end();
     }
+    deducted = jeton.cost || 0;
 
     // ── 3. Construire le contexte (avec chunking si nécessaire) ───────────
     // Pour la fiche d'examen, on collecte les extraits de TOUS les fichiers
@@ -125,6 +127,7 @@ ${context}`;
 
   } catch (err) {
     logger.error('AI exam-sheet error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'exam-sheet', deducted);
     send({ type: 'error', message: err.message });
   }
   res.end();

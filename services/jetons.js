@@ -90,7 +90,8 @@ async function checkAndDeduct(userId, action, plan, costOverride = null) {
     VALUES (?, ?, ?, ?)
   `).run(userId, action, -cost, row.balance).catch(() => {});
 
-  return { ok: true, balance: row.balance };
+  // `cost` est renvoyé pour permettre un remboursement exact si l'IA échoue.
+  return { ok: true, balance: row.balance, cost };
 }
 
 /**
@@ -108,6 +109,27 @@ async function addJetons(userId, amount, note = '') {
     `).run(userId, 'admin_credit', amount, row.balance, note).catch(() => {});
   }
   return row?.balance ?? 0;
+}
+
+/**
+ * Rembourse des jetons après l'échec d'une action (erreur IA / serveur).
+ * No-op en dev (rien n'a été déduit) ou si amount <= 0 / userId absent.
+ * Tolérant aux erreurs : un échec de remboursement ne doit jamais casser la
+ * réponse d'erreur déjà en cours d'envoi au client.
+ */
+async function refundJetons(userId, action, amount) {
+  if (!IS_PROD || !userId || !(amount > 0)) return;
+  try {
+    const row = await prepare(`
+      UPDATE users SET jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance
+    `).get(amount, userId);
+    if (row) {
+      prepare(`
+        INSERT INTO jeton_transactions (user_id, action, amount, balance_after, note)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(userId, `refund:${action}`, amount, row.balance, 'remboursement échec IA').catch(() => {});
+    }
+  } catch (_) { /* best-effort : ne jamais propager */ }
 }
 
 /**
@@ -131,4 +153,4 @@ async function getBalance(userId) {
   };
 }
 
-module.exports = { JETON_COSTS, MONTHLY_JETONS, checkAndDeduct, addJetons, getBalance, refillIfNeeded };
+module.exports = { JETON_COSTS, MONTHLY_JETONS, checkAndDeduct, addJetons, refundJetons, getBalance, refillIfNeeded };

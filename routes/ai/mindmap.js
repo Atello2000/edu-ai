@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { aiComplete } = require('../../services/ai');
 const { getAiConfigForAction }  = require('../../services/aiConfig');
-const { checkAndDeduct, JETON_COSTS } = require('../../services/jetons');
+const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }             = require('../../services/tokens');
 const logger                    = require('../../services/logger');
 const { userContext, getFileText } = require('./helpers');
@@ -10,6 +10,7 @@ const { splitIntoChunks, chunkCost } = require('../../services/chunker');
 
 // POST /api/mindmap — génère un markdown hiérarchique pour markmap (avec chunking)
 router.post('/mindmap', async (req, res) => {
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
   try {
     const { file } = req.body;
     if (!file) return res.status(400).json({ error: 'Fichier manquant' });
@@ -21,6 +22,7 @@ router.post('/mindmap', async (req, res) => {
     const jeton = await checkAndDeduct(req.user?.id, 'mindmap', req.user?.plan || 'free', cost);
     if (!jeton.ok)
       return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+    deducted = jeton.cost || 0;
 
     const aiCfg = await getAiConfigForAction('mindmap');
     const ctx   = userContext(req.user);
@@ -61,6 +63,7 @@ router.post('/mindmap', async (req, res) => {
 
   } catch (err) {
     logger.error('AI mindmap error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'mindmap', deducted);
     res.status(500).json({ error: err.message });
   }
 });

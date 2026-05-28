@@ -3,7 +3,7 @@ const router  = express.Router();
 const { aiComplete }                    = require('../../services/ai');
 const { getAiConfigForAction }          = require('../../services/aiConfig');
 const { LIMITS }                        = require('../../middleware/quota');
-const { checkAndDeduct }                = require('../../services/jetons');
+const { checkAndDeduct, refundJetons }  = require('../../services/jetons');
 const { logTokens }                     = require('../../services/tokens');
 const logger                            = require('../../services/logger');
 const { langLabel, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
@@ -11,6 +11,7 @@ const { langLabel, getFileText, parseJsonResponse, sseSetup } = require('./helpe
 // POST /api/predict — prédicteur de questions d'examen (SSE streaming)
 router.post('/predict', async (req, res) => {
   const send = sseSetup(req, res);
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
 
   try {
     const { files, lang } = req.body;
@@ -27,6 +28,7 @@ router.post('/predict', async (req, res) => {
       send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
       return res.end();
     }
+    deducted = jeton.cost || 0;
 
     const inLang = langLabel(lang || 'fr');
     const aiCfg  = await getAiConfigForAction('predict');
@@ -69,6 +71,7 @@ ${trimmed}`;
     send({ type: 'end', model: lastModel });
   } catch (err) {
     logger.error('AI predict error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'predict', deducted);
     send({ type: 'error', message: err.message });
   }
   res.end();

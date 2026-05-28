@@ -3,7 +3,7 @@ const router  = express.Router();
 const { aiCompleteFast, calcMaxTokens } = require('../../services/ai');
 const { getAiConfigForAction }          = require('../../services/aiConfig');
 const { LIMITS }                        = require('../../middleware/quota');
-const { checkAndDeduct }               = require('../../services/jetons');
+const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }                     = require('../../services/tokens');
 const logger                            = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, parseJsonResponse } = require('./helpers');
@@ -96,6 +96,7 @@ Format JSON strict, sans texte autour :
     return res.json(result);
   } catch (err) {
     logger.error('AI topic error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, jAction, jeton.cost || 0);
     res.status(500).json({ error: err.message });
   }
 });

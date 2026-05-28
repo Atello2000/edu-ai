@@ -2,13 +2,14 @@ const express = require('express');
 const router  = express.Router();
 const { aiComplete }           = require('../../services/ai');
 const { getAiConfigForAction } = require('../../services/aiConfig');
-const { checkAndDeduct }       = require('../../services/jetons');
+const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { langLabel, parseJsonResponse } = require('./helpers');
 
 // POST /api/study-plan — plan de révision intelligent (JSON response, non-streaming)
 router.post('/study-plan', async (req, res) => {
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
   try {
     const { exam_date, topics, srs_count, lang } = req.body;
 
@@ -16,6 +17,7 @@ router.post('/study-plan', async (req, res) => {
     if (!jeton.ok) {
       return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
     }
+    deducted = jeton.cost || 0;
 
     // Calculer le nombre de jours disponibles (cap à 14)
     // Guarde contre NaN si exam_date est absent/invalide (fallback : 7 jours)
@@ -70,6 +72,7 @@ Règles:
     res.json({ plan });
   } catch (err) {
     logger.error('AI study-plan error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'study-plan', deducted);
     res.status(500).json({ error: err.message });
   }
 });

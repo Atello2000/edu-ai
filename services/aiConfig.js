@@ -108,14 +108,16 @@ const CHEAP_PRIORITY = [
     provider: 'mistral', model: 'mistral-small-latest' },
 ];
 
-// Actions JSON légères → Groq ou Mistral Small (pas besoin de grand modèle)
+// Actions JSON légères + conversationnelles → Groq ou Mistral Small (pas besoin de grand modèle).
+// Inclut les sorties JSON analytiques (predict/study-plan/error-analysis) : Groq 70B les gère bien.
 const CHEAP_ACTIONS = new Set([
   'chat', 'glossary', 'mindmap', 'flashcards', 'quiz',
+  'socratic', 'predict', 'study-plan', 'error-analysis',
 ]);
 
 // Actions Markdown structurées → Groq (70B, gratuit) si dispo, sinon provider principal (Claude)
 // Mistral Small évité : trop petit pour produire du Markdown sectionné fiable
-const STRUCTURED_ACTIONS = new Set(['summarize', 'exam-sheet']);
+const STRUCTURED_ACTIONS = new Set(['summarize', 'exam-sheet', 'compare']);
 
 /**
  * Retourne la config la moins chère disponible pour une action donnée.

@@ -2,7 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { aiComplete }           = require('../../services/ai');
 const { getAiConfigForAction } = require('../../services/aiConfig');
-const { checkAndDeduct, JETON_COSTS } = require('../../services/jetons');
+const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse } = require('./helpers');
@@ -12,6 +12,7 @@ const GLOSSARY_MAX_TOKENS = 3000;
 
 // POST /api/glossary — extraction de termes avec chunking
 router.post('/glossary', async (req, res) => {
+  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
   try {
     const { files } = req.body;
     if (!files?.length)
@@ -36,6 +37,7 @@ router.post('/glossary', async (req, res) => {
     const jeton = await checkAndDeduct(req.user?.id, 'glossary', req.user?.plan || 'free', totalCost);
     if (!jeton.ok)
       return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+    deducted = jeton.cost || 0;
 
     // ── 3. Extraire les termes de chaque chunk ────────────────────────────
     const aiCfg    = await getAiConfigForAction('glossary');
@@ -92,6 +94,7 @@ ${chunks[i]}`;
 
   } catch (err) {
     logger.error('AI glossary error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'glossary', deducted);
     res.status(500).json({ error: err.message });
   }
 });
