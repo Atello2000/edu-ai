@@ -9,7 +9,7 @@ import { buildSummarySections, stripMd } from './summaryUtils';
  * @param {string} summaryMd Markdown complet du résumé
  * @returns {Promise<void>}
  */
-export async function exportSummaryToPDF(fileName, summaryMd) {
+export function buildSummaryDoc(fileName, summaryMd) {
   const pdf = new jsPDF('p', 'mm', 'a4');
 
   const PW = pdf.internal.pageSize.getWidth();
@@ -43,14 +43,6 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
   const fillRect = (x, yy, w, h, c) => { setFill(c); pdf.rect(x, yy, w, h, 'F'); };
   const hline    = (x1, yy, x2, c, lw = 0.3) => { setDraw(c); pdf.setLineWidth(lw); pdf.line(x1, yy, x2, yy); };
   const wrap     = (text, maxW) => pdf.splitTextToSize(String(text), maxW);
-
-  function tint(col) {
-    return [
-      Math.round(col[0] * 0.1 + C.bg[0] * 0.9),
-      Math.round(col[1] * 0.1 + C.bg[1] * 0.9),
-      Math.round(col[2] * 0.1 + C.bg[2] * 0.9),
-    ];
-  }
 
   function drawHeader(isFirst) {
     const bandH = isFirst ? 40 : 13;
@@ -95,21 +87,21 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
     const PL   = ML + 5;
     const bodW = CW - 5;
 
-    need(12);
-    fillRect(ML, y, CW, 11, tint(col));
-    fillRect(ML, y,  3, 11, col);
+    need(16);
     const cleanTitle = section.title
       .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
       .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/gu, '')
       .trim();
-    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5);
-    setRgb(col);
-    pdf.text(wrap(cleanTitle, CW - 10), ML + 6, y + 7.5);
-    hline(ML, y + 11, ML + CW, C.border);
-    y += 11 + 5;
+    // Style épuré : onglet d'accent coloré + titre foncé + filet coloré dessous
+    fillRect(ML, y, 2.6, 6.5, col);
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11.5);
+    setRgb(C.dark);
+    pdf.text(cleanTitle, ML + 6, y + 5.3);
+    hline(ML, y + 9, ML + CW, col, 0.5);
+    y += 9 + 6;
 
     function renderLine(rawLine, indentX, maxW) {
-      const leadBold = rawLine.match(/^\*\*([^*]+)\*\*[:\s]\s*(.*)/s);
+      const leadBold = rawLine.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)/s);
       if (leadBold) {
         const term = leadBold[1].trim();
         const def  = leadBold[2].trim();
@@ -153,14 +145,13 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
 
       if (line.startsWith('> ')) {
         const text  = stripMd(line.slice(2));
-        const lines = wrap(text, bodW - 8);
-        const bH    = lines.length * LH + 6;
+        const lines = wrap(text, bodW - 10);
+        const bH    = lines.length * LH + 3;
         need(bH + 4);
-        fillRect(PL, y, bodW, bH, [235, 252, 248]);
-        fillRect(PL, y, 2.5,  bH, C.teal);
-        pdf.setFont('helvetica', 'italic'); pdf.setFontSize(9);
-        setRgb(C.text);
-        pdf.text(lines, PL + 5, y + LH);
+        fillRect(PL, y, 2, bH, col);
+        pdf.setFont('helvetica', 'italic'); pdf.setFontSize(9.5);
+        setRgb(C.muted);
+        pdf.text(lines, PL + 6, y + LH);
         y += bH + 5;
         continue;
       }
@@ -168,11 +159,10 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
       if (/^#{1,6}\s/.test(line)) {
         const text = stripMd(line);
         need(13); y += 3;
-        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5);
-        setRgb(col);
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10);
+        setRgb(C.text);
         pdf.text(text, PL, y + LH);
-        hline(PL, y + LH + 2, PL + bodW, tint(col));
-        y += 12;
+        y += 11;
         continue;
       }
 
@@ -198,7 +188,7 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
         need(lines.length * LH + 2);
         setFill(col); pdf.circle(PL + 1.5, y + LH - 1.2, 1, 'F');
         if (/^\*\*[^*]+\*\*/.test(inner)) {
-          const m = inner.match(/^\*\*([^*]+)\*\*[:\s]?\s*(.*)/s);
+          const m = inner.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)/s);
           if (m) {
             pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5); setRgb(C.text);
             const tw = pdf.getTextWidth(m[1] + ': ');
@@ -226,5 +216,9 @@ export async function exportSummaryToPDF(fileName, summaryMd) {
   drawHeader(true);
   buildSummarySections(summaryMd).forEach(renderSection);
   drawFooter();
-  pdf.save(fileName + '_résumé.pdf');
+  return pdf;
+}
+
+export async function exportSummaryToPDF(fileName, summaryMd) {
+  buildSummaryDoc(fileName, summaryMd).save(fileName + '_résumé.pdf');
 }
