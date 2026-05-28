@@ -12,7 +12,7 @@ function getLang() {
  * md        : string  — texte final (vide tant que streaming)
  * streaming : string  — texte partiel en cours de génération
  */
-export function useExamSheet() {
+export function useExamSheet({ saveSession } = {}) {
   const [md,        setMd]        = useState('');
   const [streaming, setStreaming] = useState('');
   const [loading,   setLoading]   = useState(false);
@@ -54,7 +54,7 @@ export function useExamSheet() {
             setMd(text);
             setStreaming('');
             // Notify app.js bridges
-            window.__saveSession?.({ examSheet: { sheet: text } });
+            saveSession?.({ examSheet: { sheet: text } });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'exam-sheet-section');
             eventBus.emit('dashboard:refresh');
@@ -68,7 +68,7 @@ export function useExamSheet() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [saveSession]);
 
   return { md, streaming, loading, error, generate, reset, restoreFrom };
 }

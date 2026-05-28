@@ -33,7 +33,7 @@ import { useFlashcards } from '../hooks/useFlashcards.js';
 import { useChat } from '../hooks/useChat.js';
 import { useGlossary } from '../hooks/useGlossary.js';
 import { useSessions } from '../hooks/useSessions.js';
-import { getGoalParams } from '../utils/goalParams.js';
+import { usePrepareSession } from '../hooks/usePrepareSession.js';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -61,32 +61,56 @@ export default function AppPage() {
   const [showSettings,   setShowSettings]   = useState(false);
   const [activityKey,    setActivityKey]    = useState(0);
 
-  // ── État partagé Upload + Summary (React-owned) ────────────────────────────
+  // ── État upload ────────────────────────────────────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
+
+  // ── Panel navigation ──────────────────────────────────────────────────────
+  const [activePanel, setActivePanel] = useState('dashboard-panel');
+
+  // ── Refs pour restore — créées avant useSessions ET avant les hooks AI ────
+  // Permet à useSessions d'appeler les restore functions sans dépendance circulaire.
+  const restoreSummaryRef = useRef(null);
+  const restoreExamRef    = useRef(null);
+  const restoreQuizRef    = useRef(null);
+  const restoreFcRef      = useRef(null);
+
+  // ── Session history — en premier pour obtenir saveSession ─────────────────
+  const { saveSession, restoreSession } = useSessions({
+    uploadedFiles, setUploadedFiles, setActivePanel,
+    restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef,
+  });
+
+  // ── Hooks AI — reçoivent saveSession directement (plus de window bridge) ──
   const { results: summaryResults, streaming: summaryStreaming,
           loading: summarizing, summarize, reset: resetSummary,
-          restoreFrom: restoreSummaryFrom } = useSummarize();
+          restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
 
-  // ── Fiche d'examen ─────────────────────────────────────────────────────────
   const { md: examMd, streaming: examStreaming, loading: examLoading,
           generate: generateExam, reset: resetExam,
-          restoreFrom: restoreExamFrom } = useExamSheet();
+          restoreFrom: restoreExamFrom } = useExamSheet({ saveSession });
 
-  // ── Quiz ───────────────────────────────────────────────────────────────────
   const {
     questions, answers: quizAnswers, idx: quizIdx, submitted: quizSubmitted,
     score: quizScore, loading: quizLoading,
     generate: generateQuiz, reset: resetQuiz, restoreFrom: restoreQuizFrom,
     selectAnswer, goTo: quizGoTo, submit: submitQuiz, retryWrong,
-  } = useQuiz();
+  } = useQuiz({ saveSession });
 
-  // ── Flashcards ─────────────────────────────────────────────────────────────
   const {
     decks, deckIdx, cards, cardStates, srsOnlyDue,
     loading: fcLoading,
     generate: generateFlashcards, reset: resetFlashcards, restoreFrom: restoreFcFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
-  } = useFlashcards();
+  } = useFlashcards({ saveSession });
+
+  // Maintient les refs à jour pour useSessions (restoreSession lit via ref)
+  useEffect(() => {
+    restoreSummaryRef.current = restoreSummaryFrom;
+    restoreExamRef.current    = restoreExamFrom;
+    restoreQuizRef.current    = restoreQuizFrom;
+    restoreFcRef.current      = restoreFcFrom;
+  }, [restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom,
+      restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef]);
 
   // ── Glossaire ─────────────────────────────────────────────────────────────
   const { terms: glossaryTerms, loading: glossaryLoading, error: glossaryError,
@@ -99,18 +123,16 @@ export default function AppPage() {
     send: sendChat, reset: resetChat,
   } = useChat();
 
-  // Quiz exam-mode settings (managed via DOM refs from JSX)
+  // Quiz exam-mode settings
   const [examMode, setExamMode] = useState(false);
   const [examMins, setExamMins] = useState(10);
 
-  // ── Panel navigation (React-owned) ────────────────────────────────────────
-  const [activePanel, setActivePanel] = useState('dashboard-panel');
-
   // ── Objectif utilisateur + session prep ───────────────────────────────────
-  const [showGoalModal,   setShowGoalModal]   = useState(false);
-  const [sessionGoal,     setSessionGoal]     = useState(null);
+  const { showGoalModal, sessionGoal, prepLoading, handlePrepareSession, handleGoalSelect } =
+    usePrepareSession({ uploadedFiles, summarize, generateQuiz, generateFlashcards,
+                        summarizing, quizLoading, fcLoading, setActivePanel });
+
   const [pendingFolderId, setPendingFolderId] = useState(null);
-  const prepLoading = summarizing || quizLoading || fcLoading;
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
   const [lastSession, setLastSession] = useState(null);
@@ -120,13 +142,6 @@ export default function AppPage() {
 
   // Un fichier est "utilisable" s'il a du texte extrait OU un chemin serveur valide
   const hasFiles = uploadedFiles.some(f => f.text || f.path);
-
-  // ── Session history ───────────────────────────────────────────────────────
-  const { restoreSession } = useSessions({
-    uploadedFiles, setUploadedFiles,
-    setActivePanel,
-    restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom,
-  });
 
   const handleDashUpload   = useCallback(() => setActivePanel('upload-section'), []);
   const handleDashContinue = useCallback(() => {
@@ -144,15 +159,11 @@ export default function AppPage() {
     if (user && !user.onboarding_done) setShowOnboarding(true);
   }, [user]);
 
-  // ── Bridges pour les parties de app.js non encore migrées ─────────────────
-  useEffect(() => {
-    // FoldersPanel charge des fichiers existants → sync vers React + app.js
-    window.__setFolderFiles = (files) => {
-      setUploadedFiles(files);
-      resetSummary();
-      setActivePanel('actions-section');
-    };
-    return () => { delete window.__setFolderFiles; };
+  // ── Callback LibraryPanel → charger des cours depuis la bibliothèque ────────
+  const handleUseFiles = useCallback((files) => {
+    setUploadedFiles(files);
+    resetSummary();
+    setActivePanel('actions-section');
   }, [resetSummary]);
 
 
@@ -194,26 +205,6 @@ export default function AppPage() {
     setPendingFolderId(folderId);
     setActivePanel('upload-section');
   }, []);
-
-  // ── Préparer ma session — ouvre la modal d'objectif, puis lance immédiatement ──
-  const handlePrepareSession = useCallback(() => {
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
-    setShowGoalModal(true);
-  }, [uploadedFiles]);
-
-  const handleGoalSelect = useCallback((goal) => {
-    setSessionGoal(goal);
-    setShowGoalModal(false);
-    // Lancer la session immédiatement avec l'objectif choisi
-    const files = window.__getSelectedFiles?.() || uploadedFiles;
-    if (!files.length) return;
-    const { quizCount, quizDiff, fcCount } = getGoalParams(goal); // goal direct, pas sessionGoal (async)
-    setActivePanel('summary-section');
-    summarize(files);
-    generateQuiz(files, { count: quizCount, difficulty: quizDiff });
-    generateFlashcards(files, { count: fcCount });
-  }, [uploadedFiles, summarize, generateQuiz, generateFlashcards]);
 
   // ── Erreurs quiz → Flashcards ─────────────────────────────────────────────
   const handleErrorsToFlashcards = useCallback((wrongQs) => {
@@ -436,7 +427,7 @@ export default function AppPage() {
 
         {/* BIBLIOTHÈQUE */}
         <div className={`panel${activePanel !== 'library-panel' ? ' hidden' : ''}`} id="library-panel">
-          <LibraryPanel />
+          <LibraryPanel onUseFiles={handleUseFiles} />
         </div>
 
         {/* UPLOAD — composant React */}

@@ -120,7 +120,7 @@ function SummaryCard({ result }) {
 
   function handleSpeak() {
     // Délégation à l'implémentation TTS de app.js via bridge window
-    window.__ttsToggle?.(summary, null, null);
+    window.__ttsToggle?.(summary);
   }
 
   return (

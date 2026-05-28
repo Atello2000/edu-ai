@@ -58,7 +58,7 @@ export { cardHash };
  * cardStates   : { [cardIdx]: 'known'|'review' }
  * srsOnlyDue   : bool
  */
-export function useFlashcards() {
+export function useFlashcards({ saveSession } = {}) {
   const [decks,      setDecks]      = useState([]);
   const [deckIdx,    setDeckIdx]    = useState(0);
   const [cards,      setCards]      = useState([]);
@@ -129,7 +129,7 @@ export function useFlashcards() {
           } else if (data.type === 'end') {
             if (data.model) setModel(data.model);
             if (!allDecks.length) throw new Error('Aucune flashcard générée');
-            window.__saveSession?.({ flashcards: allResults });
+            saveSession?.({ flashcards: allResults });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'flashcard-section');
           } else if (data.type === 'error') {
@@ -142,7 +142,7 @@ export function useFlashcards() {
     } finally {
       setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [saveSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function markCard(cardIdx, state) {
     setCardStates(prev => ({ ...prev, [cardIdx]: state }));

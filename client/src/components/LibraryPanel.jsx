@@ -3,7 +3,7 @@ import { useConfirm } from './ConfirmModal';
 import eventBus from '../utils/eventBus';
 import toast from '../utils/toast';
 
-export default function LibraryPanel() {
+export default function LibraryPanel({ onUseFiles }) {
   const confirm = useConfirm();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -83,7 +83,7 @@ export default function LibraryPanel() {
     const mapped = src.map(f => ({
       id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size,
     }));
-    window.__setFolderFiles?.(mapped);
+    onUseFiles?.(mapped);
   }
 
   const allSelected = filtered.length > 0 && selectedIds.size === filtered.length;

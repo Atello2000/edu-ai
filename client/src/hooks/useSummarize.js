@@ -30,7 +30,7 @@ function parseSseBuffer(buffer, onEvent) {
   return remaining;
 }
 
-export function useSummarize() {
+export function useSummarize({ saveSession } = {}) {
   const [results,   setResults]   = useState([]);
   const [streaming, setStreaming] = useState({});
   const [loading,   setLoading]   = useState(false);
@@ -88,7 +88,7 @@ export function useSummarize() {
 
       } else if (data.type === 'end') {
         if (accumulated.current.length) {
-          window.__saveSession?.({ summaries: accumulated.current });
+          saveSession?.({ summaries: accumulated.current });
           eventBus.emit('quota:refresh');
           eventBus.emit('dashboard:refresh');
         }
@@ -137,7 +137,7 @@ export function useSummarize() {
 
     xhr.withCredentials = true;
     xhr.send(JSON.stringify({ files, lang: getLang() }));
-  }, []);
+  }, [saveSession]);
 
   return { results, streaming, loading, error, summarize, reset, restoreFrom };
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import toast from '../utils/toast';
 
 /**
  * Barre de synthèse vocale (Text-to-Speech).
@@ -131,7 +132,7 @@ export default function TTSBar() {
   useEffect(() => {
     window.__ttsToggle = (markdown) => {
       if (typeof speechSynthesis === 'undefined') {
-        alert("La synthèse vocale n'est pas supportée par ce navigateur.");
+        toast.error("La synthèse vocale n'est pas supportée par ce navigateur.");
         return;
       }
 

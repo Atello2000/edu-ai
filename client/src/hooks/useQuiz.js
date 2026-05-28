@@ -16,7 +16,7 @@ function getLang() {
  * submitted : bool — correction affichée ?
  * score     : { correct, total, pct, timeTaken } | null
  */
-export function useQuiz() {
+export function useQuiz({ saveSession } = {}) {
   const [questions, setQuestions] = useState([]);
   const [answers,   setAnswers]   = useState({});
   const [idx,       setIdx]       = useState(0);
@@ -75,7 +75,7 @@ export function useQuiz() {
           } else if (data.type === 'end') {
             if (data.model) setModel(data.model);
             if (!allResults.length) throw new Error('Aucune question générée');
-            window.__saveSession?.({ quiz: allResults });
+            saveSession?.({ quiz: allResults });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'quiz-section');
           } else if (data.type === 'error') {
@@ -88,7 +88,7 @@ export function useQuiz() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [saveSession]);
 
   function retryWrong() {
     const wrong = questions.filter((q, i) => answers[i] !== q.answer);
