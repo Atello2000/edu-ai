@@ -140,6 +140,23 @@ export function useQuiz({ saveSession } = {}) {
     });
     localStorage.setItem(TOPIC_KEY, JSON.stringify(topicData));
 
+    // Stocker les mauvaises réponses pour l'analyse d'erreurs
+    const WRONG_KEY = 'jangalai-wrong-answers';
+    const wrongAnswers = questions
+      .filter((q, i) => answers[i] !== q.answer)
+      .map((q, i) => ({
+        date: now,
+        question: q.question,
+        correct: q.answer,
+        given: answers[i],
+        sourceName: q.sourceName || 'Inconnu',
+        explanation: q.explanation || '',
+      }));
+    if (wrongAnswers.length) {
+      const existing = JSON.parse(localStorage.getItem(WRONG_KEY) || '[]');
+      localStorage.setItem(WRONG_KEY, JSON.stringify([...wrongAnswers, ...existing].slice(0, 200)));
+    }
+
     eventBus.emit('stats:refresh');
     eventBus.emit('dashboard:refresh');
   }

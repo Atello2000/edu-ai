@@ -14,13 +14,18 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 
 // ── Coûts par action (mêmes pour tous les plans) ──────────────────────────────
 const JETON_COSTS = {
-  summarize:    3,
-  quiz:         2,
-  flashcards:   1,
-  chat:         1,
-  'exam-sheet': 3,
-  glossary:     2,
-  mindmap:      2,
+  summarize:       3,
+  quiz:            2,
+  flashcards:      1,
+  chat:            1,
+  'exam-sheet':    3,
+  glossary:        2,
+  mindmap:         2,
+  socratic:        1,   // per exchange (dynamic: 2 if history >= 6)
+  'study-plan':    1,   // light structured generation
+  predict:         3,   // per file, like summarize
+  'error-analysis':1,   // light pattern detection
+  compare:         4,   // heavy multi-file analysis
 };
 
 // ── Allocation mensuelle par plan ─────────────────────────────────────────────

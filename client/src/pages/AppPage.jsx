@@ -38,6 +38,16 @@ import { useGlossary } from '../hooks/useGlossary.js';
 import { useSessions } from '../hooks/useSessions.js';
 import { usePrepareSession } from '../hooks/usePrepareSession.js';
 import { useJetons } from '../hooks/useJetons.js';
+import { useSocratic } from '../hooks/useSocratic.js';
+import { useStudyPlan } from '../hooks/useStudyPlan.js';
+import { usePredict } from '../hooks/usePredict.js';
+import { useErrorAnalysis } from '../hooks/useErrorAnalysis.js';
+import { useCompare } from '../hooks/useCompare.js';
+import SocraticSection from '../components/SocraticSection.jsx';
+import StudyPlanSection from '../components/StudyPlanSection.jsx';
+import PredictSection from '../components/PredictSection.jsx';
+import ErrorAnalysisSection from '../components/ErrorAnalysisSection.jsx';
+import CompareSection from '../components/CompareSection.jsx';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -127,6 +137,23 @@ export default function AppPage() {
     send: sendChat, reset: resetChat,
   } = useChat();
 
+  // ── Nouvelles features ────────────────────────────────────────────────────
+  const { history: socraticHistory, streaming: socraticStreaming, loading: socraticLoading,
+          error: socraticError, started: socraticStarted, send: sendSocratic, reset: resetSocratic } = useSocratic();
+
+  const { plan: studyPlan, loading: studyPlanLoading, error: studyPlanError,
+          generate: generateStudyPlan, reset: resetStudyPlan } = useStudyPlan();
+
+  const { results: predictResults, loading: predictLoading, error: predictError,
+          generate: generatePredict, reset: resetPredict } = usePredict();
+
+  const { patterns: errorPatterns, message: errorMessage, loading: errorLoading,
+          error: errorAnalysisError, analyze: analyzeErrors, reset: resetErrorAnalysis,
+          getWrongAnswers } = useErrorAnalysis();
+
+  const { md: compareMd, streaming: compareStreaming, loading: compareLoading,
+          error: compareError, generate: generateCompare, reset: resetCompare } = useCompare();
+
   // Quiz exam-mode settings
   const [examMode, setExamMode] = useState(false);
   const [examMins, setExamMins] = useState(10);
@@ -168,6 +195,50 @@ export default function AppPage() {
     restoreFcFrom([{ name: 'Révision du jour', flashcards: due }]);
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
+
+  const handleSocratic = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { toast.warn('Chargez d\'abord un fichier.'); return; }
+    setActivePanel('socratic-section');
+    if (!socraticStarted) sendSocratic(files, null);
+  }, [uploadedFiles, socraticStarted, sendSocratic]);
+
+  const handlePredict = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) { toast.warn('Chargez d\'abord un fichier.'); return; }
+    setActivePanel('predict-section');
+    if (!predictResults.length) generatePredict(files);
+  }, [uploadedFiles, predictResults, generatePredict]);
+
+  const handleCompare = useCallback(() => {
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (files.length < 2) { toast.warn('Sélectionnez au moins 2 fichiers pour la comparaison.'); return; }
+    setActivePanel('compare-section');
+    if (!compareMd) generateCompare(files);
+  }, [uploadedFiles, compareMd, generateCompare]);
+
+  const handleStudyPlan = useCallback(() => {
+    setActivePanel('study-plan-section');
+  }, []);
+
+  const handleErrorAnalysis = useCallback(() => {
+    setActivePanel('error-analysis-section');
+  }, []);
+
+  const handleErrorsToFlashcardsFromAnalysis = useCallback((patterns) => {
+    const cards = patterns.map(p => ({
+      front: p.title,
+      back: `${p.description}\n\n${p.advice}${p.flashcard_hint ? '\n\nExemple: ' + p.flashcard_hint : ''}`,
+    }));
+    restoreFcFrom([{ name: 'Erreurs récurrentes', flashcards: cards }]);
+    setActivePanel('flashcard-section');
+  }, [restoreFcFrom]);
+
+  const handleCompareRegen = useCallback(() => {
+    resetCompare();
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (files.length >= 2) generateCompare(files);
+  }, [uploadedFiles, resetCompare, generateCompare]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -482,6 +553,15 @@ export default function AppPage() {
             onPrepareSession={handlePrepareSession}
             prepLoading={prepLoading}
             sessionGoal={sessionGoal}
+            onSocratic={handleSocratic}
+            onPredict={handlePredict}
+            onCompare={handleCompare}
+            onStudyPlan={handleStudyPlan}
+            onErrorAnalysis={handleErrorAnalysis}
+            predictLoading={predictLoading}
+            compareLoading={compareLoading}
+            predictResults={predictResults}
+            compareMd={compareMd}
           />
         </div>
 
@@ -607,6 +687,65 @@ export default function AppPage() {
             loading={chatLoading}
             onSend={sendChat}
             onClear={resetChat}
+          />
+        </div>
+
+        {/* MODE SOCRATIQUE */}
+        <div className={`panel${activePanel !== 'socratic-section' ? ' hidden' : ''}`} id="socratic-section">
+          <SocraticSection
+            files={uploadedFiles}
+            history={socraticHistory}
+            streaming={socraticStreaming}
+            loading={socraticLoading}
+            error={socraticError}
+            started={socraticStarted}
+            onSend={sendSocratic}
+            onReset={resetSocratic}
+          />
+        </div>
+
+        {/* PLAN DE RÉVISION */}
+        <div className={`panel${activePanel !== 'study-plan-section' ? ' hidden' : ''}`} id="study-plan-section">
+          <StudyPlanSection
+            plan={studyPlan}
+            loading={studyPlanLoading}
+            error={studyPlanError}
+            onGenerate={generateStudyPlan}
+            onReset={resetStudyPlan}
+          />
+        </div>
+
+        {/* PRÉDICTEUR */}
+        <div className={`panel${activePanel !== 'predict-section' ? ' hidden' : ''}`} id="predict-section">
+          <PredictSection
+            results={predictResults}
+            loading={predictLoading}
+            error={predictError}
+          />
+        </div>
+
+        {/* ERREURS RÉCURRENTES */}
+        <div className={`panel${activePanel !== 'error-analysis-section' ? ' hidden' : ''}`} id="error-analysis-section">
+          <ErrorAnalysisSection
+            patterns={errorPatterns}
+            message={errorMessage}
+            loading={errorLoading}
+            error={errorAnalysisError}
+            wrongCount={getWrongAnswers().length}
+            onAnalyze={analyzeErrors}
+            onCreateFlashcards={handleErrorsToFlashcardsFromAnalysis}
+          />
+        </div>
+
+        {/* COMPARAISON MULTI-SOURCES */}
+        <div className={`panel${activePanel !== 'compare-section' ? ' hidden' : ''}`} id="compare-section">
+          <CompareSection
+            md={compareMd}
+            streaming={compareStreaming}
+            loading={compareLoading}
+            error={compareError}
+            fileNames={(window.__getSelectedFiles?.() || uploadedFiles).map(f => f.name)}
+            onRegen={compareMd ? handleCompareRegen : undefined}
           />
         </div>
 

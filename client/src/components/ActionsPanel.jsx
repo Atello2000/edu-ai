@@ -11,6 +11,11 @@ const COSTS = {
   glossary:     2,
   mindmap:      2,
   session:      10, // résumé + quiz + flashcards
+  socratic:     1,
+  predict:      3,
+  compare:      4,
+  'study-plan': 1,
+  'error-analysis': 1,
 };
 
 /**
@@ -37,7 +42,7 @@ function jetonColor(cost) {
   if (cost <= 1) return 'teal';
   if (cost <= 3) return 'gold';
   if (cost <= 6) return 'purple';
-  return 'rose'; // session (10 jetons)
+  return 'rose'; // session (10 jetons) ou compare (4 jetons via rose override)
 }
 
 function JetonBadge({ action }) {
@@ -78,6 +83,15 @@ export default function ActionsPanel({
   onPrepareSession,
   prepLoading,
   sessionGoal,
+  onSocratic,
+  onPredict,
+  onCompare,
+  onStudyPlan,
+  onErrorAnalysis,
+  predictLoading,
+  compareLoading,
+  predictResults,
+  compareMd,
 }) {
   // ── Sélection de fichiers (React-owned) ───────────────────────────────────
   const [selectedIds, setSelectedIds] = useState(null);
@@ -377,6 +391,83 @@ export default function ActionsPanel({
             <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
             </button>
+          </div>
+
+          {/* Séparateur */}
+          <div className="act-section-label">Outils avancés</div>
+
+          <div className="act-card act-card-wide" data-color="blue">
+            <div className="act-card-icon blue">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Mode Socratique</strong>
+              <span>L&apos;IA vous interroge sur votre cours comme un examinateur</span>
+              <JetonBadge action="socratic" />
+            </div>
+            <button className="act-btn blue" disabled={!hasFiles} onClick={onSocratic}>Démarrer</button>
+          </div>
+
+          <div className="act-card act-card-wide" data-color="purple">
+            <div className="act-card-icon purple">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Questions probables</strong>
+              <span>Prédit les questions susceptibles de tomber à l&apos;examen</span>
+              <JetonBadge action="predict" />
+            </div>
+            <button className="act-btn purple" disabled={!hasFiles} onClick={onPredict}>
+              {predictLoading ? 'Analyse…' : predictResults?.length > 0 ? 'Voir les prédictions' : 'Analyser'}
+            </button>
+          </div>
+
+          <div className="act-card act-card-wide" data-color="rose">
+            <div className="act-card-icon rose">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Confrontation de sources</strong>
+              <span>Compare 2 cours sur le même sujet, identifie contradictions et compléments</span>
+              <JetonBadge action="compare" />
+            </div>
+            <button className="act-btn rose" disabled={!hasFiles} onClick={onCompare}>
+              {compareLoading ? 'Analyse…' : compareMd ? 'Voir la comparaison' : 'Comparer'}
+            </button>
+          </div>
+
+          <div className="act-card act-card-wide" data-color="gold">
+            <div className="act-card-icon gold">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Plan de révision</strong>
+              <span>Planning jour par jour jusqu&apos;à votre examen, basé sur vos points faibles</span>
+              <JetonBadge action="study-plan" />
+            </div>
+            <button className="act-btn gold" onClick={onStudyPlan}>Planifier</button>
+          </div>
+
+          <div className="act-card act-card-wide" data-color="rose">
+            <div className="act-card-icon rose">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="3"/>
+              </svg>
+            </div>
+            <div className="act-card-body">
+              <strong>Erreurs récurrentes</strong>
+              <span>Analyse vos confusions et lacunes à partir de l&apos;historique de quiz</span>
+              <JetonBadge action="error-analysis" />
+            </div>
+            <button className="act-btn rose" onClick={onErrorAnalysis}>Analyser</button>
           </div>
         </>}
 

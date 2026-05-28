@@ -13,5 +13,10 @@ router.use(require('./chat'));
 router.use(require('./topic'));
 router.use(require('./mindmap'));
 router.use(require('./glossary'));
+router.use(require('./socratic'));
+router.use(require('./study-plan'));
+router.use(require('./predict'));
+router.use(require('./error-analysis'));
+router.use(require('./compare'));
 
 module.exports = router;
