@@ -1,18 +1,13 @@
 /**
  * Toast utility — compatible avec ToastContainer.jsx
- * ToastContainer appelle _registerToast(setToasts) au montage.
+ * ToastContainer appelle toast._register(setToasts) au montage.
  * toast.error/success/info/warn() pousse une notification dans le state React.
  */
 
 let _setToasts = null;
 
-export function _registerToast(setter) {
-  _setToasts = setter;
-}
-
 function show(message, type = 'info', duration = 4000) {
   if (!_setToasts) {
-    // Fallback si ToastContainer pas encore monté
     console.warn(`[toast:${type}]`, message);
     return;
   }
@@ -26,10 +21,11 @@ function show(message, type = 'info', duration = 4000) {
 }
 
 const toast = {
-  error:   (msg, d) => show(msg, 'error',   d),
-  success: (msg, d) => show(msg, 'success', d),
-  info:    (msg, d) => show(msg, 'info',    d),
-  warn:    (msg, d) => show(msg, 'warn',    d),
+  _register: (setter) => { _setToasts = setter; },
+  error:     (msg, d) => show(msg, 'error',   d),
+  success:   (msg, d) => show(msg, 'success', d),
+  info:      (msg, d) => show(msg, 'info',    d),
+  warn:      (msg, d) => show(msg, 'warn',    d),
 };
 
 export default toast;

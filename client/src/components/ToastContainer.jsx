@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { _registerToast } from '../utils/toast';
+import toast from '../utils/toast';
 
 const ICONS = {
   success: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
@@ -10,7 +10,7 @@ const ICONS = {
 
 export default function ToastContainer() {
   const [toasts, setToasts] = useState([]);
-  useEffect(() => { _registerToast(setToasts); }, []);
+  useEffect(() => { toast._register(setToasts); }, []);
 
   return (
     <div className="toast-container" aria-live="polite">
