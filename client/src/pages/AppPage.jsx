@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
-import Logo from '../components/Logo.jsx';
 import Onboarding from './Onboarding.jsx';
-import ForYouSection from '../components/ForYouSection.jsx';
-import ActivitySection from '../components/ActivitySection.jsx';
+import AppHeader from '../components/AppHeader.jsx';
+import DashboardPanel from '../components/DashboardPanel.jsx';
 import FoldersPanel from '../components/FoldersPanel.jsx';
 import StatsPanel from '../components/StatsPanel.jsx';
 import HistoryPanel from '../components/HistoryPanel.jsx';
@@ -15,35 +14,20 @@ import QuizSection from '../components/QuizSection.jsx';
 import FlashcardSection from '../components/FlashcardSection.jsx';
 import ChatSection from '../components/ChatSection.jsx';
 import GlossarySection from '../components/GlossarySection.jsx';
-import DashboardStats from '../components/DashboardStats.jsx';
 import FloatNav from '../components/FloatNav.jsx';
 import SaveFolderModal from '../components/SaveFolderModal.jsx';
 import LibraryPanel from '../components/LibraryPanel.jsx';
 import MindmapModal from '../components/MindmapModal.jsx';
 import TTSBar from '../components/TTSBar.jsx';
-import UserMenu from '../components/UserMenu.jsx';
-import JetonWidget from '../components/JetonWidget.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
 import GoalModal from '../components/GoalModal.jsx';
 import FeedbackButton from '../components/FeedbackButton.jsx';
-import SRSReviewWidget from '../components/SRSReviewWidget.jsx';
-import TopicStatsWidget from '../components/TopicStatsWidget.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { getDueCards } from '../hooks/useFlashcards.js';
-import { useSummarize } from '../hooks/useSummarize.js';
-import { useExamSheet } from '../hooks/useExamSheet.js';
-import { useQuiz } from '../hooks/useQuiz.js';
-import { useFlashcards } from '../hooks/useFlashcards.js';
-import { useChat } from '../hooks/useChat.js';
-import { useGlossary } from '../hooks/useGlossary.js';
 import { useSessions } from '../hooks/useSessions.js';
 import { usePrepareSession } from '../hooks/usePrepareSession.js';
 import { useJetons } from '../hooks/useJetons.js';
-import { useSocratic } from '../hooks/useSocratic.js';
-import { useStudyPlan } from '../hooks/useStudyPlan.js';
-import { usePredict } from '../hooks/usePredict.js';
-import { useErrorAnalysis } from '../hooks/useErrorAnalysis.js';
-import { useCompare } from '../hooks/useCompare.js';
+import { useAiSuite } from '../hooks/useAiSuite.js';
 import SocraticSection from '../components/SocraticSection.jsx';
 import StudyPlanSection from '../components/StudyPlanSection.jsx';
 import PredictSection from '../components/PredictSection.jsx';
@@ -117,63 +101,39 @@ export default function AppPage() {
     restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef,
   });
 
-  // ── Hooks AI ───────────────────────────────────────────────────────────────
-  const { results: summaryResults, streaming: summaryStreaming,
-          loading: summarizing, summarize, reset: resetSummary,
-          restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
-
-  const { md: examMd, streaming: examStreaming, loading: examLoading,
-          generate: generateExam, reset: resetExam,
-          restoreFrom: restoreExamFrom } = useExamSheet({ saveSession });
-
+  // ── Hooks AI (agrégés dans useAiSuite) ──────────────────────────────────────
   const {
-    questions, answers: quizAnswers, idx: quizIdx, submitted: quizSubmitted,
-    score: quizScore, loading: quizLoading,
-    generate: generateQuiz, reset: resetQuiz, restoreFrom: restoreQuizFrom,
-    selectAnswer, goTo: quizGoTo, submit: submitQuiz, retryWrong,
-  } = useQuiz({ saveSession });
-
-  const {
-    decks, deckIdx, cards, cardStates, srsOnlyDue,
-    loading: fcLoading,
-    generate: generateFlashcards, reset: resetFlashcards, restoreFrom: restoreFcFrom,
+    // résumé
+    summaryResults, summaryStreaming, summarizing, summarize, resetSummary,
+    // fiche d'examen
+    examMd, examStreaming, examLoading, generateExam, resetExam,
+    // quiz
+    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading,
+    generateQuiz, resetQuiz, selectAnswer, quizGoTo, submitQuiz, retryWrong,
+    // flashcards
+    decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,
+    generateFlashcards, resetFlashcards, restoreFcFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
-  } = useFlashcards({ saveSession });
+    // glossaire
+    glossaryTerms, glossaryLoading, glossaryError, generateGlossary, resetGlossary,
+    // chat
+    chatMessages, chatLoading, sendChat, resetChat,
+    // socratique
+    socraticHistory, socraticStreaming, socraticLoading, socraticError, socraticStarted,
+    sendSocratic, resetSocratic,
+    // plan de révision
+    studyPlan, studyPlanLoading, studyPlanError, generateStudyPlan, resetStudyPlan,
+    // prédicteur
+    predictResults, predictLoading, predictError, generatePredict,
+    // analyse d'erreurs
+    errorPatterns, errorMessage, errorLoading, errorAnalysisError,
+    analyzeErrors, getWrongAnswers,
+    // comparaison
+    compareMd, compareStreaming, compareLoading, compareError, generateCompare, resetCompare,
+  } = useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef });
 
-  // Maintient les refs à jour pour useSessions
-  useEffect(() => {
-    restoreSummaryRef.current = restoreSummaryFrom;
-    restoreExamRef.current    = restoreExamFrom;
-    restoreQuizRef.current    = restoreQuizFrom;
-    restoreFcRef.current      = restoreFcFrom;
-  }, [restoreSummaryFrom, restoreExamFrom, restoreQuizFrom, restoreFcFrom,
-      restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef]);
-
-  // ── Glossaire ──────────────────────────────────────────────────────────────
-  const { terms: glossaryTerms, loading: glossaryLoading, error: glossaryError,
-          generate: generateGlossary, reset: resetGlossary } = useGlossary();
-
-  // ── Chat ───────────────────────────────────────────────────────────────────
+  // ── Chat (état local de fichiers) ───────────────────────────────────────────
   const [chatFiles, setChatFiles] = useState([]);
-  const { messages: chatMessages, loading: chatLoading,
-          send: sendChat, reset: resetChat } = useChat();
-
-  // ── Nouvelles features ─────────────────────────────────────────────────────
-  const { history: socraticHistory, streaming: socraticStreaming, loading: socraticLoading,
-          error: socraticError, started: socraticStarted, send: sendSocratic, reset: resetSocratic } = useSocratic();
-
-  const { plan: studyPlan, loading: studyPlanLoading, error: studyPlanError,
-          generate: generateStudyPlan, reset: resetStudyPlan } = useStudyPlan();
-
-  const { results: predictResults, loading: predictLoading, error: predictError,
-          generate: generatePredict, reset: resetPredict } = usePredict();
-
-  const { patterns: errorPatterns, message: errorMessage, loading: errorLoading,
-          error: errorAnalysisError, analyze: analyzeErrors, reset: resetErrorAnalysis,
-          getWrongAnswers } = useErrorAnalysis();
-
-  const { md: compareMd, streaming: compareStreaming, loading: compareLoading,
-          error: compareError, generate: generateCompare, reset: resetCompare } = useCompare();
 
   // ── Jetons ─────────────────────────────────────────────────────────────────
   const { balance } = useJetons();
@@ -394,77 +354,32 @@ export default function AppPage() {
         onResetOnboarding={() => setShowOnboarding(true)}
       />
 
-      <header>
-        <button
-          className={`back-home-btn${activePanel === 'dashboard-panel' ? ' hidden' : ''}`}
-          id="back-home-btn"
-          title="Tableau de bord"
-          onClick={() => setActivePanel('dashboard-panel')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div className="header-logo" id="header-logo" onClick={() => setActivePanel('dashboard-panel')} style={{ cursor: 'pointer' }}>
-          <Logo />
-        </div>
-        <div className="header-right">
-          <JetonWidget />
-          <UserMenu user={user} onOpenSettings={() => setShowSettings(true)} />
-        </div>
-      </header>
+      <AppHeader
+        activePanel={activePanel}
+        user={user}
+        onHome={() => setActivePanel('dashboard-panel')}
+        onOpenSettings={() => setShowSettings(true)}
+      />
 
       <main>
 
         {/* DASHBOARD */}
         <div className={`panel dashboard-panel${activePanel !== 'dashboard-panel' ? ' hidden' : ''}`} id="dashboard-panel">
-          <div className="dash-greeting">
-            <h1 className="dash-greeting-title">
-              {greeting}{user ? <>, <em>{user.name.split(' ')[0]}</em></> : null}
-            </h1>
-            <p className="dash-greeting-sub">Que souhaitez-vous réviser aujourd&apos;hui ?</p>
-          </div>
-          <div className="dash-quick-actions">
-            <button className="dash-qaction dq-purple" onClick={handleDashUpload}>
-              <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></span>
-              <span className="dash-qaction-label">Charger un cours</span>
-              <span className="dash-qaction-hint">PDF, PPT, DOCX</span>
-            </button>
-            <button className="dash-qaction dq-blue" disabled={!lastSession} onClick={handleDashContinue}>
-              <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
-              <span className="dash-qaction-label">Continuer</span>
-              <span className="dash-qaction-hint">{lastSession?.files?.[0] || 'Aucune session'}</span>
-            </button>
-            <button className="dash-qaction dq-gold" onClick={handleDashFolders}>
-              <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
-              <span className="dash-qaction-label">Mes matières</span>
-              <span className="dash-qaction-hint">Cours classés</span>
-            </button>
-            <button className="dash-qaction dq-teal" onClick={handleDashLibrary}>
-              <span className="dash-qaction-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-              <span className="dash-qaction-label">Bibliothèque</span>
-              <span className="dash-qaction-hint">Tous les cours</span>
-            </button>
-          </div>
-          <div className="dash-stats-row">
-            <div className="panel-header" style={{ marginBottom: '.5rem' }}>
-              <div className="panel-label">Progression</div>
-              <button className="ghost-btn" onClick={() => eventBus.emit('dashboard:refresh')}>Actualiser</button>
-            </div>
-            <DashboardStats onLastSession={setLastSession} />
-          </div>
-          <ForYouSection onActivity={() => setActivityKey(k => k + 1)} />
-          <SRSReviewWidget onReview={handleSRSReview} />
-          <TopicStatsWidget />
-          <div className="dash-bottom-links">
-            <button className="dash-link" onClick={handleDashHistory}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-              Mes cours récents
-            </button>
-            <button className="dash-link" onClick={handleDashStats}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="1"/><rect x="12" y="7" width="3" height="11" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg>
-              Statistiques
-            </button>
-          </div>
-          <ActivitySection refreshKey={activityKey} />
+          <DashboardPanel
+            greeting={greeting}
+            user={user}
+            lastSession={lastSession}
+            activityKey={activityKey}
+            onUpload={handleDashUpload}
+            onContinue={handleDashContinue}
+            onFolders={handleDashFolders}
+            onLibrary={handleDashLibrary}
+            onHistory={handleDashHistory}
+            onStats={handleDashStats}
+            onLastSession={setLastSession}
+            onActivity={() => setActivityKey(k => k + 1)}
+            onSRSReview={handleSRSReview}
+          />
         </div>
 
         {/* STATISTIQUES */}
