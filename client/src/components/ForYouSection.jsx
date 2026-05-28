@@ -69,7 +69,6 @@ export default function ForYouSection({ onActivity }) {
   }
 
   // ── Sujets récents depuis l'historique localStorage ───────────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const recentTopics = useMemo(() => {
     try {
       const sessions = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');

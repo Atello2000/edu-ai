@@ -142,7 +142,6 @@ export default function AppPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user && !user.onboarding_done) setShowOnboarding(true);
-    window.__editProfile = () => setShowOnboarding(true);
   }, [user]);
 
   // ── Bridges pour les parties de app.js non encore migrées ─────────────────
@@ -156,24 +155,6 @@ export default function AppPage() {
     return () => { delete window.__setFolderFiles; };
   }, [resetSummary]);
 
-  // ── Sync uploadedFiles → window.uploadedFilesMeta pour le mindmap (app.js) ─
-  useEffect(() => {
-    window.uploadedFilesMeta = uploadedFiles;
-  }, [uploadedFiles]);
-
-  // ── Sync summaryResults → bridges ───────────────────────────────────────────
-  const summaryResultsRef = useRef(summaryResults);
-  useEffect(() => {
-    summaryResultsRef.current = summaryResults;
-    window._setSummaryResults?.(summaryResults);
-    window._summaryResultsRef = () => summaryResultsRef.current;
-  }, [summaryResults]);
-
-  // ── Bridge navigation → app.js résiduel (mindmap handler) ───────────────
-  useEffect(() => {
-    window.__appShowPanel = setActivePanel;
-    return () => { delete window.__appShowPanel; };
-  }, []);
 
   // ── Effets secondaires lors du changement de panneau ─────────────────────
   useEffect(() => {
@@ -196,15 +177,14 @@ export default function AppPage() {
         });
         eventBus.emit('folders:refresh');
         toast.success('Cours ajouté à la matière.');
-      } catch (_) {
+      } catch {
         toast.error('Erreur lors de l\'ajout à la matière.');
       }
       setPendingFolderId(null);
       setActivePanel('folders-panel');
     } else {
-      // Chemin normal — lancer une session
+      // Chemin normal — aller aux actions, sans ouvrir la modal d'objectif ici
       setActivePanel('actions-section');
-      setShowGoalModal(true);
       window.__showSaveFolderModal?.(files);
     }
   }, [pendingFolderId, resetSummary, resetExam, resetQuiz, resetFlashcards, resetChat]);
@@ -215,21 +195,25 @@ export default function AppPage() {
     setActivePanel('upload-section');
   }, []);
 
-  const handleGoalSelect = useCallback((goal) => {
-    setSessionGoal(goal);
-    setShowGoalModal(false);
-  }, []);
-
-  // ── Préparer ma session — lance résumé + quiz + flashcards en parallèle ──
+  // ── Préparer ma session — ouvre la modal d'objectif, puis lance immédiatement ──
   const handlePrepareSession = useCallback(() => {
     const files = window.__getSelectedFiles?.() || uploadedFiles;
     if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
-    const { quizCount, quizDiff, fcCount } = getGoalParams(sessionGoal);
+    setShowGoalModal(true);
+  }, [uploadedFiles]);
+
+  const handleGoalSelect = useCallback((goal) => {
+    setSessionGoal(goal);
+    setShowGoalModal(false);
+    // Lancer la session immédiatement avec l'objectif choisi
+    const files = window.__getSelectedFiles?.() || uploadedFiles;
+    if (!files.length) return;
+    const { quizCount, quizDiff, fcCount } = getGoalParams(goal); // goal direct, pas sessionGoal (async)
     setActivePanel('summary-section');
     summarize(files);
     generateQuiz(files, { count: quizCount, difficulty: quizDiff });
     generateFlashcards(files, { count: fcCount });
-  }, [uploadedFiles, sessionGoal, summarize, generateQuiz, generateFlashcards]);
+  }, [uploadedFiles, summarize, generateQuiz, generateFlashcards]);
 
   // ── Erreurs quiz → Flashcards ─────────────────────────────────────────────
   const handleErrorsToFlashcards = useCallback((wrongQs) => {

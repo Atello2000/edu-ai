@@ -24,8 +24,22 @@ export default function LibraryPanel() {
   }
 
   useEffect(() => {
-    loadFiles();
-    return eventBus.on('folders:refresh', loadFiles);
+    let active = true;
+    async function load() {
+      setLoading(true);
+      try {
+        const res  = await fetch('/api/folders/files/all');
+        const data = await res.json();
+        if (active) setFiles(data.files || []);
+      } catch {
+        if (active) setFiles([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    load();
+    const off = eventBus.on('folders:refresh', loadFiles);
+    return () => { active = false; off(); };
   }, []);
 
   function toggleSelect(id) {

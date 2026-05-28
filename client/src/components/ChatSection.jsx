@@ -77,6 +77,8 @@ export default function ChatSection({ files = [], messages = [], loading, onSend
   const messagesRef = useRef(null);
 
   useEffect(() => {
+    // Réinitialise la sélection quand la liste de fichiers change
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveFiles(new Set(files.map((_, i) => i)));
   }, [files]);
 

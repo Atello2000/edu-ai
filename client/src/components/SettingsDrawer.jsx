@@ -3,6 +3,7 @@ import toast from '../utils/toast';
 import { useConfirm } from './ConfirmModal';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { usePush } from '../hooks/usePush.js';
+import eventBus from '../utils/eventBus';
 import Logo from './Logo.jsx';
 
 const PREFS_KEY      = 'jangalai-prefs';
