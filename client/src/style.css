@@ -226,7 +226,7 @@ header {
   font-weight: 400; letter-spacing: .04em; color: var(--text);
 }
 .jlogo .jlogo-word em {
-  font-style: normal; font-weight: 700; color: var(--blue);
+  font-style: normal; font-weight: 700; color: var(--gold);
 }
 /* Taille dans le header app */
 .header-logo .jlogo { font-size: 1.25rem; }
