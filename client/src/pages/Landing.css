@@ -55,11 +55,11 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .mockup-sidebar-title { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: .8rem; }
 .mockup-file { display: flex; align-items: center; gap: .5rem; padding: .45rem .6rem; border-radius: 6px; font-size: .78rem; color: var(--muted); margin-bottom: .25rem; }
 .mockup-file .fi { display:inline-flex; align-items:center; flex-shrink:0; }
-.mockup-file.active { background: var(--blue-bg); color: var(--blue); }
+.mockup-file.active { background: var(--gold-bg); color: var(--gold); }
 .mockup-main { padding: 1.5rem; }
 .mockup-tabs { display: flex; gap: .5rem; margin-bottom: 1.2rem; }
 .mockup-tab { font-size: .75rem; padding: .3rem .8rem; border-radius: 99px; border: 1px solid var(--border); color: var(--muted); }
-.mockup-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+.mockup-tab.active { background: var(--gold); border-color: var(--gold); color: #0a0a0a; }
 .mockup-card-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem; margin-bottom: .75rem; }
 .mockup-card-q { font-size: .82rem; font-weight: 600; margin-bottom: .5rem; }
 .mockup-card-a { font-size: .78rem; color: var(--muted); }
@@ -70,7 +70,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .mockup-btn.easy { background: rgba(29,209,161,.15); color: var(--teal); }
 .mockup-progress { display: flex; gap: .75rem; font-size: .72rem; color: var(--muted); align-items: center; margin-top: 1rem; }
 .mockup-progress-bar { flex: 1; height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
-.mockup-progress-fill { height: 100%; background: var(--blue); border-radius: 99px; width: 68%; }
+.mockup-progress-fill { height: 100%; background: var(--gold); border-radius: 99px; width: 68%; }
 
 .section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
 .section-label { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--gold); margin-bottom: .75rem; }
