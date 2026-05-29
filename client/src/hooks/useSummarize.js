@@ -33,6 +33,7 @@ function parseSseBuffer(buffer, onEvent) {
 export function useSummarize({ saveSession } = {}) {
   const [results,   setResults]   = useState([]);
   const [streaming, setStreaming] = useState({});
+  const [progress,  setProgress]  = useState({}); // {[name]: message} — cours volumineux (passe 1)
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
 
@@ -45,6 +46,7 @@ export function useSummarize({ saveSession } = {}) {
     xhrRef.current?.abort();
     setResults([]);
     setStreaming({});
+    setProgress({});
     setError(null);
     partials.current    = {};
     accumulated.current = [];
@@ -77,6 +79,11 @@ export function useSummarize({ saveSession } = {}) {
         const next = (partials.current[data.name] || '') + (data.text || '');
         partials.current[data.name] = next;
         setStreaming(prev => ({ ...prev, [data.name]: next }));
+        // Le streaming réel a commencé → on retire le message de progression
+        setProgress(prev => {
+          if (!(data.name in prev)) return prev;
+          const n = { ...prev }; delete n[data.name]; return n;
+        });
 
       } else if (data.type === 'done') {
         const full  = partials.current[data.name] || '';
@@ -84,12 +91,8 @@ export function useSummarize({ saveSession } = {}) {
         const entry = { name: data.name, summary: full };
         accumulated.current = [...accumulated.current, entry];
         setResults(r => [...r, entry]);
-        setStreaming(prev => {
-          const n = { ...prev };
-          delete n[data.name];
-          delete n[`__progress__${data.name}`]; // purge le message de progression
-          return n;
-        });
+        setStreaming(prev => { const n = { ...prev }; delete n[data.name]; return n; });
+        setProgress(prev => { const n = { ...prev }; delete n[data.name]; return n; });
 
       } else if (data.type === 'end') {
         if (accumulated.current.length) {
@@ -97,19 +100,14 @@ export function useSummarize({ saveSession } = {}) {
           eventBus.emit('quota:refresh');
           eventBus.emit('dashboard:refresh');
         }
-        // Filet de sécurité : supprime tout résidu de progression
-        setStreaming(prev => {
-          const n = {};
-          for (const k of Object.keys(prev)) if (!k.startsWith('__progress__')) n[k] = prev[k];
-          return n;
-        });
+        setProgress({});
         setLoading(false);
 
       } else if (data.type === 'progress') {
-        // Cours volumineux — mise à jour du message de chargement
-        setStreaming(prev => ({
+        // Cours volumineux (passe 1) — message lisible affiché dans la carte en cours
+        setProgress(prev => ({
           ...prev,
-          [`__progress__${data.name}`]: data.message || `Partie ${data.step}/${data.total}…`,
+          [data.name]: data.message || `Partie ${data.step}/${data.total}…`,
         }));
 
       } else if (data.type === 'error') {
@@ -150,5 +148,5 @@ export function useSummarize({ saveSession } = {}) {
     xhr.send(JSON.stringify({ files, lang: getLang() }));
   }, [saveSession]);
 
-  return { results, streaming, loading, error, summarize, reset, restoreFrom };
+  return { results, streaming, progress, loading, error, summarize, reset, restoreFrom };
 }

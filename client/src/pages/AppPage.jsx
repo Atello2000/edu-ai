@@ -104,7 +104,7 @@ export default function AppPage() {
   // ── Hooks AI (agrégés dans useAiSuite) ──────────────────────────────────────
   const {
     // résumé
-    summaryResults, summaryStreaming, summarizing, summarize, resetSummary,
+    summaryResults, summaryStreaming, summaryProgress, summarizing, summarize, resetSummary,
     // fiche d'examen
     examMd, examStreaming, examLoading, generateExam, resetExam,
     // quiz
@@ -475,6 +475,7 @@ export default function AppPage() {
             <SummaryResults
               results={summaryResults}
               streaming={summaryStreaming}
+              progress={summaryProgress}
               onCopyAll={() => {
                 const all = summaryResults.map(r => `## ${r.name}\n\n${r.summary}`).join('\n\n---\n\n');
                 navigator.clipboard.writeText(all);

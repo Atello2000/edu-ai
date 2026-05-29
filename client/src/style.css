@@ -781,6 +781,10 @@ main {
 /* Streaming */
 .streaming-badge { font-family:'DM Mono',monospace; font-size:.65rem; color:var(--gold); animation:pulse 1.4s ease-in-out infinite; }
 .summary-stream-body { padding:.75rem 1rem 1rem; min-height:80px; }
+.summary-progress {
+  display:flex; align-items:center; gap:.6rem;
+  font-size:.85rem; color:var(--muted); padding:.4rem 0;
+}
 .summary-skeleton { display:flex; flex-direction:column; gap:.55rem; }
 .skel-line {
   height:.7rem; border-radius:4px;

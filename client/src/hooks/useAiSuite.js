@@ -28,7 +28,7 @@ import { useCompare } from './useCompare.js';
  */
 export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef }) {
   // ── Hooks AI ───────────────────────────────────────────────────────────────
-  const { results: summaryResults, streaming: summaryStreaming,
+  const { results: summaryResults, streaming: summaryStreaming, progress: summaryProgress,
           loading: summarizing, summarize, reset: resetSummary,
           restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
 
@@ -86,7 +86,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
 
   return {
     // résumé
-    summaryResults, summaryStreaming, summarizing, summarize, resetSummary, restoreSummaryFrom,
+    summaryResults, summaryStreaming, summaryProgress, summarizing, summarize, resetSummary, restoreSummaryFrom,
     // fiche d'examen
     examMd, examStreaming, examLoading, generateExam, resetExam, restoreExamFrom,
     // quiz

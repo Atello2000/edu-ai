@@ -25,7 +25,7 @@ function SectionIcon({ cls }) {
 }
 
 /* ── Carte de résumé en cours de streaming ────────────────────────────────── */
-function StreamingCard({ name, text }) {
+function StreamingCard({ name, text, progressMsg }) {
   const ext      = name.split('.').pop().toUpperCase();
   const sections = buildSummarySections(text || '');
 
@@ -45,15 +45,25 @@ function StreamingCard({ name, text }) {
       </div>
 
       {sections.length === 0 ? (
-        /* Avant le premier ## : skeleton neutre, pas de texte brut */
-        <div className="summary-stream-body">
-          <div className="summary-skeleton">
-            <div className="skel-line skel-title" />
-            <div className="skel-line" style={{width:'92%'}} />
-            <div className="skel-line" style={{width:'78%'}} />
-            <div className="skel-line" style={{width:'85%'}} />
+        progressMsg ? (
+          /* Cours volumineux (passe 1) : message de progression lisible */
+          <div className="summary-stream-body">
+            <div className="summary-progress">
+              <div className="spinner" style={{ width: 16, height: 16 }} />
+              <span>{progressMsg}</span>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Avant le premier ## : skeleton neutre, pas de texte brut */
+          <div className="summary-stream-body">
+            <div className="summary-skeleton">
+              <div className="skel-line skel-title" />
+              <div className="skel-line" style={{width:'92%'}} />
+              <div className="skel-line" style={{width:'78%'}} />
+              <div className="skel-line" style={{width:'85%'}} />
+            </div>
+          </div>
+        )
       ) : (
         <div className="summary-sections">
           {sections.map((s, i) => {
@@ -208,15 +218,19 @@ function SummaryCard({ result }) {
  *   onCopyAll ()                   bouton "Copier tout"
  *   onRegen   ()                   bouton "Régénérer"
  */
-export default function SummaryResults({ results = [], streaming, onCopyAll, onRegen }) {
+export default function SummaryResults({ results = [], streaming, progress, onCopyAll, onRegen }) {
   const [activeTab, setActiveTab] = useState(0);
 
-  const streamingEntries = Object.entries(streaming || {});
-  const hasContent = results.length > 0 || streamingEntries.length > 0;
+  // Cartes en cours = union des fichiers en streaming et en progression (passe 1),
+  // sans doublon. Le message de progression n'est jamais une carte distincte.
+  const streamingMap = streaming || {};
+  const progressMap  = progress  || {};
+  const inFlightNames = [...new Set([...Object.keys(streamingMap), ...Object.keys(progressMap)])];
+  const hasContent = results.length > 0 || inFlightNames.length > 0;
 
   if (!hasContent) return null;
 
-  const allDone = results.length > 0 && streamingEntries.length === 0;
+  const allDone = results.length > 0 && inFlightNames.length === 0;
 
   return (
     <>
@@ -254,9 +268,14 @@ export default function SummaryResults({ results = [], streaming, onCopyAll, onR
         </div>
       )}
 
-      {/* Cartes en cours de streaming */}
-      {streamingEntries.map(([name, text]) => (
-        <StreamingCard key={name} name={name} text={text} />
+      {/* Cartes en cours (streaming réel ou progression passe 1) */}
+      {inFlightNames.map(name => (
+        <StreamingCard
+          key={name}
+          name={name}
+          text={streamingMap[name]}
+          progressMsg={progressMap[name]}
+        />
       ))}
 
       {/* Cartes finales */}
