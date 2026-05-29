@@ -100,12 +100,27 @@ function SummaryCard({ result }) {
   const baseName = name.replace(/\.[^.]+$/, '');
   const sections = buildSummarySections(summary);
 
-  const [allCollapsed, setAllCollapsed] = useState(false);
-  const [copying,      setCopying]      = useState(false);
-  const [pdfLoading,   setPdfLoading]   = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState(new Set());
+  const [copying,           setCopying]           = useState(false);
+  const [pdfLoading,        setPdfLoading]        = useState(false);
+
+  const allCollapsed = sections.length > 0 && collapsedSections.size === sections.length;
 
   function toggleAll() {
-    setAllCollapsed(c => !c);
+    if (allCollapsed) {
+      setCollapsedSections(new Set());
+    } else {
+      setCollapsedSections(new Set(sections.map((_, i) => i)));
+    }
+  }
+
+  function toggleSection(i) {
+    setCollapsedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
   }
 
   async function handleCopy() {
@@ -186,17 +201,21 @@ function SummaryCard({ result }) {
           sections.map((s, i) => (
             <div
               key={i}
-              className={`summary-section ${s.cls}${allCollapsed ? ' collapsed' : ''}`}
+              className={`summary-section ${s.cls}${collapsedSections.has(i) ? ' collapsed' : ''}`}
             >
-              <div
+              <button
+                type="button"
                 className="summary-section-header"
-                onClick={() => {/* per-section collapse handled by child if needed */}}
+                onClick={() => toggleSection(i)}
+                aria-expanded={!collapsedSections.has(i)}
+                aria-controls={`sum-section-body-${i}`}
               >
                 <SectionIcon cls={s.cls} />
                 <span className="section-title">{s.title}</span>
-                <span className="section-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
-              </div>
+                <span className="section-chevron" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+              </button>
               <div
+                id={`sum-section-body-${i}`}
                 className="summary-section-body"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(window.marked?.parse(s.lines.join('\n').trim()) ?? s.lines.join('\n')),

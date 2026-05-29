@@ -5,6 +5,14 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Focus visible — navigation clavier (WCAG 2.1 AA) */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
 /* ── DARK (default) ── */
 :root, [data-theme="dark"] {
   --bg:           #070b14;
@@ -55,6 +63,17 @@
 
   --fc-front-bg:  linear-gradient(135deg,#111827,#182035);
   --fc-back-bg:   linear-gradient(135deg,#0d1e1a,#101e1c);
+
+  /* Z-index scale — ne jamais utiliser de valeurs arbitraires */
+  --z-tooltip:     200;
+  --z-dropdown:    300;
+  --z-nav:         500;
+  --z-overlay:     900;
+  --z-drawer:      901;
+  --z-header:     1000;
+  --z-modal-bg:   1100;
+  --z-modal:      1200;
+  --z-toast:      1400;
 
   color-scheme: dark;
 }
@@ -516,7 +535,7 @@ main {
   font-size:.8rem; text-align:center; margin:0 .25rem;
   transition:border-color .2s;
 }
-.act-card-body input[type=number]:focus { outline:none; border-color:var(--gold); }
+.act-card-body input[type=number]:focus-visible { border-color:var(--gold); outline: 2px solid var(--gold-glow); outline-offset: 2px; }
 
 .act-card-body select {
   background:var(--card); border:1px solid var(--border);
@@ -525,7 +544,7 @@ main {
   font-family:'Outfit',sans-serif; cursor:pointer; margin-left:.25rem;
   transition:border-color .2s;
 }
-.act-card-body select:focus { outline:none; border-color:var(--gold); }
+.act-card-body select:focus-visible { border-color:var(--gold); outline: 2px solid var(--gold-glow); outline-offset: 2px; }
 
 .regen-link {
   background:none; border:none; cursor:pointer;
@@ -630,6 +649,8 @@ main {
   display:flex; align-items:center; gap:.75rem;
   padding:.85rem 1rem;
   cursor:pointer; user-select:none; transition:background .15s;
+  /* button reset */
+  width:100%; background:none; border:none; text-align:left; font:inherit; color:inherit;
 }
 .summary-section-header:hover { background:rgba(255,255,255,.03); }
 
@@ -3103,7 +3124,7 @@ main {
 .toast-container {
   position: fixed; bottom: 1.5rem; right: 1.5rem;
   display: flex; flex-direction: column; gap: .6rem;
-  z-index: 9999; pointer-events: none;
+  z-index: var(--z-toast); pointer-events: none;
 }
 .toast {
   display: flex; align-items: center; gap: .6rem;
@@ -3136,7 +3157,7 @@ main {
 .maintenance-banner {
   position: fixed;
   top: 0; left: 0; right: 0;
-  z-index: 9999;
+  z-index: var(--z-toast);
   background: linear-gradient(90deg, rgba(224,160,32,.15), rgba(255,107,129,.10));
   border-bottom: 1px solid rgba(224,160,32,.35);
   backdrop-filter: blur(8px);
@@ -3703,4 +3724,26 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   word-break: break-all;
   max-width: 100%;
   text-align: left;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   REDUCED MOTION — WCAG 2.1 §2.3 (Success Criterion 2.3.3)
+   Désactive toutes les animations/transitions pour les utilisateurs
+   ayant activé « Réduire les animations » dans leur système.
+   ════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:       .01ms !important;
+    animation-iteration-count: 1    !important;
+    transition-duration:      .01ms !important;
+    scroll-behavior:          auto  !important;
+  }
+
+  /* Éléments avec animations infinies — neutraliser explicitement */
+  .skel-line, .skel-title             { animation: none !important; }
+  .stream-cursor                      { animation: none !important; }
+  .spinner                            { animation: none !important; }
+  .toast                              { animation: none !important; }
+  .summary-section                    { animation: none !important; }
+  .fc-card-inner                      { transition: none !important; }
 }
