@@ -132,6 +132,12 @@ export default function Login() {
 
           {error && <div className="auth-error show">{error}</div>}
 
+          <a href="/api/auth/google" className="google-btn">
+            <GoogleIcon /> Continuer avec Google
+          </a>
+
+          <div className="auth-divider">ou</div>
+
           {tab === 'login' ? (
             <form className="auth-form" onSubmit={handleLogin}>
               <div className="form-group">
@@ -144,10 +150,6 @@ export default function Login() {
               </div>
               <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
               <p className="forgot-link"><Link to="/forgot-password">Mot de passe oublié ?</Link></p>
-              <div className="auth-divider">ou</div>
-              <a href="/api/auth/google" className="google-btn">
-                <GoogleIcon /> Continuer avec Google
-              </a>
             </form>
           ) : (
             <form className="auth-form" onSubmit={handleRegister}>
@@ -164,10 +166,6 @@ export default function Login() {
                 <input type="password" name="password" placeholder="8 caractères minimum" required autoComplete="new-password" minLength="8" value={form.password} onChange={onChange} />
               </div>
               <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Création…' : 'Créer mon compte'}</button>
-              <div className="auth-divider">ou</div>
-              <a href="/api/auth/google" className="google-btn">
-                <GoogleIcon /> Continuer avec Google
-              </a>
             </form>
           )}
         </div>
