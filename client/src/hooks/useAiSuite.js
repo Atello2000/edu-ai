@@ -9,7 +9,6 @@ import { useSocratic } from './useSocratic.js';
 import { useStudyPlan } from './useStudyPlan.js';
 import { usePredict } from './usePredict.js';
 import { useErrorAnalysis } from './useErrorAnalysis.js';
-import { useCompare } from './useCompare.js';
 
 /**
  * useAiSuite — agrège tous les hooks IA de l'app (résumé, fiche, quiz, flashcards,
@@ -81,9 +80,6 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
           error: errorAnalysisError, analyze: analyzeErrors, reset: resetErrorAnalysis,
           getWrongAnswers } = useErrorAnalysis();
 
-  const { md: compareMd, streaming: compareStreaming, loading: compareLoading,
-          error: compareError, generate: generateCompare, reset: resetCompare } = useCompare();
-
   return {
     // résumé
     summaryResults, summaryStreaming, summaryProgress, summarizing, summarize, resetSummary, restoreSummaryFrom,
@@ -110,7 +106,5 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
     // analyse d'erreurs
     errorPatterns, errorMessage, errorLoading, errorAnalysisError,
     analyzeErrors, resetErrorAnalysis, getWrongAnswers,
-    // comparaison
-    compareMd, compareStreaming, compareLoading, compareError, generateCompare, resetCompare,
   };
 }

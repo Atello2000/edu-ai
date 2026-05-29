@@ -32,7 +32,6 @@ import SocraticSection from '../components/SocraticSection.jsx';
 import StudyPlanSection from '../components/StudyPlanSection.jsx';
 import PredictSection from '../components/PredictSection.jsx';
 import ErrorAnalysisSection from '../components/ErrorAnalysisSection.jsx';
-import CompareSection from '../components/CompareSection.jsx';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -128,8 +127,6 @@ export default function AppPage() {
     // analyse d'erreurs
     errorPatterns, errorMessage, errorLoading, errorAnalysisError,
     analyzeErrors, getWrongAnswers,
-    // comparaison
-    compareMd, compareStreaming, compareLoading, compareError, generateCompare, resetCompare,
   } = useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef });
 
   // ── Chat (état local de fichiers) ───────────────────────────────────────────
@@ -188,13 +185,6 @@ export default function AppPage() {
     if (!predictResults.length) generatePredict(files);
   }, [predictResults, generatePredict]);
 
-  const handleCompare = useCallback(() => {
-    const files = selectedFilesRef.current;
-    if (files.length < 2) { toast.warn('Sélectionnez au moins 2 fichiers pour la comparaison.'); return; }
-    setActivePanel('compare-section');
-    if (!compareMd) generateCompare(files);
-  }, [compareMd, generateCompare]);
-
   const handleStudyPlan    = useCallback(() => setActivePanel('study-plan-section'), []);
   const handleErrorAnalysis = useCallback(() => setActivePanel('error-analysis-section'), []);
 
@@ -206,12 +196,6 @@ export default function AppPage() {
     restoreFcFrom([{ name: 'Erreurs récurrentes', flashcards: cards }]);
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
-
-  const handleCompareRegen = useCallback(() => {
-    resetCompare();
-    const files = selectedFilesRef.current;
-    if (files.length >= 2) generateCompare(files);
-  }, [resetCompare, generateCompare]);
 
   // ── Effets secondaires onboarding ─────────────────────────────────────────
   useEffect(() => {
@@ -441,13 +425,10 @@ export default function AppPage() {
             sessionGoal={sessionGoal}
             onSocratic={handleSocratic}
             onPredict={handlePredict}
-            onCompare={handleCompare}
             onStudyPlan={handleStudyPlan}
             onErrorAnalysis={handleErrorAnalysis}
             predictLoading={predictLoading}
-            compareLoading={compareLoading}
             predictResults={predictResults}
-            compareMd={compareMd}
             selectedFileIds={selectedFileIds}
             onSelectionChange={setSelectedFileIds}
             quizCount={quizCount}
@@ -651,20 +632,6 @@ export default function AppPage() {
               wrongCount={getWrongAnswers().length}
               onAnalyze={analyzeErrors}
               onCreateFlashcards={handleErrorsToFlashcardsFromAnalysis}
-            />
-          </ErrorBoundary>
-        </div>
-
-        {/* COMPARAISON MULTI-SOURCES */}
-        <div className={`panel${activePanel !== 'compare-section' ? ' hidden' : ''}`} id="compare-section">
-          <ErrorBoundary>
-            <CompareSection
-              md={compareMd}
-              streaming={compareStreaming}
-              loading={compareLoading}
-              error={compareError}
-              fileNames={selectedFiles.map(f => f.name)}
-              onRegen={compareMd ? handleCompareRegen : undefined}
             />
           </ErrorBoundary>
         </div>

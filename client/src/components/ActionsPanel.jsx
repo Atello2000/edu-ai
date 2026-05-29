@@ -14,7 +14,6 @@ const COSTS = {
   session:         10,  // résumé + quiz + flashcards selon objectif
   socratic:        1,
   predict:         3,
-  compare:         4,
   'study-plan':    1,
   'error-analysis':1,
 };
@@ -80,13 +79,10 @@ export default function ActionsPanel({
   sessionGoal,
   onSocratic,
   onPredict,
-  onCompare,
   onStudyPlan,
   onErrorAnalysis,
   predictLoading,
-  compareLoading,
   predictResults,
-  compareMd,
   // ── Sélection de fichiers (levé dans AppPage) ─────────────────────────────
   selectedFileIds,         // Set | null (null = tous sélectionnés)
   onSelectionChange,       // (Set | null) => void
@@ -419,22 +415,6 @@ export default function ActionsPanel({
             </div>
             <button className="act-btn purple" disabled={!hasFiles} onClick={onPredict}>
               {predictLoading ? 'Analyse…' : predictResults?.length > 0 ? 'Voir les prédictions' : 'Analyser'}
-            </button>
-          </div>
-
-          <div className="act-card act-card-wide" data-color="rose">
-            <div className="act-card-icon rose">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-            </div>
-            <div className="act-card-body">
-              <strong>Confrontation de sources</strong>
-              <span>Compare 2 cours sur le même sujet, identifie contradictions et compléments</span>
-              <JetonBadge action="compare" />
-            </div>
-            <button className="act-btn rose" disabled={!hasFiles} onClick={onCompare}>
-              {compareLoading ? 'Analyse…' : compareMd ? 'Voir la comparaison' : 'Comparer'}
             </button>
           </div>
 
