@@ -298,28 +298,29 @@ export default function ActionsPanel({
           </button>
         </div>
 
-        {/* ── Actions secondaires (repliées par défaut) ────────────────── */}
-        {showMore && <>
-          <div className="act-card" data-color="purple">
-            <div className="act-card-icon purple">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-              </svg>
-            </div>
-            <div className="act-card-body">
-              <strong>Résumer</strong>
-              <span>Résumé structuré en 5 sections</span>
-              <JetonBadge action="summarize" />
-            </div>
-            <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
-              {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
-            </button>
-            {summaryResults.length > 0 && (
-              <button className="regen-link" id="summarize-regen-btn" onClick={onSummaryRegen}>↺ Régénérer</button>
-            )}
+        {/* ── 4e carte : Résumer (toujours visible) ─────────────────────── */}
+        <div className="act-card act-card-wide" data-color="purple">
+          <div className="act-card-icon purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
           </div>
+          <div className="act-card-body">
+            <strong>Résumer</strong>
+            <span>Résumé structuré en 5 sections</span>
+            <JetonBadge action="summarize" />
+          </div>
+          <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
+            {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
+          </button>
+          {summaryResults.length > 0 && (
+            <button className="regen-link" id="summarize-regen-btn" onClick={onSummaryRegen}>↺ Régénérer</button>
+          )}
+        </div>
 
+        {/* ── Voir plus : Chat, Fiche, Carte mentale, Glossaire ─────────── */}
+        {showMore && <>
           <div className="act-card act-card-wide" data-color="gold">
             <div className="act-card-icon gold">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -384,9 +385,21 @@ export default function ActionsPanel({
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
             </button>
           </div>
+        </>}
 
-          {/* Séparateur */}
-          <div className="act-section-label">Outils avancés</div>
+        {/* Bouton Voir plus / Voir moins */}
+        <div className="act-more-row">
+          <button className="act-more-btn" onClick={() => setShowMore(m => !m)}>
+            {showMore ? '− Voir moins' : '+ Voir plus'}
+          </button>
+        </div>
+
+      </div>
+
+      {/* ════════════════ Outils avancés — section séparée ════════════════ */}
+      <div className="act-advanced-section">
+        <div className="act-section-label">Outils avancés</div>
+        <div className="action-trio">
 
           <div className="act-card act-card-wide" data-color="blue">
             <div className="act-card-icon blue">
@@ -445,15 +458,8 @@ export default function ActionsPanel({
             </div>
             <button className="act-btn rose" onClick={onErrorAnalysis}>Analyser</button>
           </div>
-        </>}
 
-        {/* Bouton + / − */}
-        <div className="act-more-row">
-          <button className="act-more-btn" onClick={() => setShowMore(m => !m)}>
-            {showMore ? '− Moins d\'options' : '+ Plus d\'options'}
-          </button>
         </div>
-
       </div>
     </>
   );
