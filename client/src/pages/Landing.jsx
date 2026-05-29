@@ -76,7 +76,7 @@ export default function Landing() {
       </nav>
 
       <section className="hero">
-        <div className="hero-badge fade-up">L'assistant IA qui révise avec vous</div>
+        <div className="hero-eyebrow fade-up">Révision intelligente · Jangalai</div>
         <h1 className="fade-up fade-up-delay-1">Révisez plus vite,<br />apprenez <em>différemment</em></h1>
         <p className="fade-up fade-up-delay-2">
           Importez votre PDF, PPT ou DOCX et choisissez votre objectif. En quelques secondes, Jangalai génère résumé, quiz, flashcards et carte mentale — le tout adapté à votre filière.
