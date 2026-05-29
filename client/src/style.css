@@ -494,7 +494,7 @@ main {
 
 /* ════════════════════════════════ ACTION CARDS ════════════════════════════════ */
 
-.action-trio { display:grid; grid-template-columns:repeat(3,1fr); gap:.9rem; }
+.action-trio { display:grid; grid-template-columns:repeat(2,1fr); gap:.9rem; }
 
 .act-card {
   background:var(--surface); border:1px solid var(--border);
@@ -553,8 +553,8 @@ main {
 }
 .regen-link:hover { color:var(--text); }
 
-/* Chat card wide */
-.act-card-wide { grid-column:span 3; flex-direction:row; align-items:center; gap:1rem; }
+/* Full-width cards */
+.act-card-wide { grid-column:span 2; flex-direction:row; align-items:center; gap:1rem; }
 
 /* ════════════════════════════════ SUMMARY ════════════════════════════════ */
 
@@ -1688,8 +1688,8 @@ kbd {
     padding:1.6rem 1.5rem;
   }
   .panel-title { font-size:1.55rem; }
-  .action-trio { grid-template-columns:repeat(2,1fr); }
-  .act-card-wide { grid-column:span 2; }
+  .action-trio { grid-template-columns:1fr; }
+  .act-card-wide { grid-column:span 1; }
   .summary-file-header { flex-direction:column; }
   .summary-file-actions { justify-content:flex-start; }
   #summary-results { max-height:none; }
@@ -2950,8 +2950,12 @@ main {
   margin: 1.25rem 0 .25rem;
 }
 
-/* ── Prep session card ───────────────────────────────────────────────────── */
-.act-card-prepare { border-color: var(--blue); }
+/* ── Prep session card — carte action primaire ───────────────────────────── */
+.act-card-prepare {
+  border-color: var(--blue);
+  background: linear-gradient(135deg, var(--surface) 55%, rgba(61,126,255,.06) 100%);
+}
+.act-card-prepare .act-card-body strong { font-size:.95rem; }
 .prep-goal-tag {
   display: inline-block;
   background: rgba(var(--blue-rgb, 90,152,246), .12);
