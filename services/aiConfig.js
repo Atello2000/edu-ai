@@ -42,6 +42,15 @@ const PROVIDERS = {
       { id: 'deepseek-chat', label: 'DeepSeek Chat' },
     ],
   },
+  gemini: {
+    label: 'Google Gemini',
+    envKey: 'GEMINI_API_KEY',
+    models: [
+      { id: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash — recommandé' },
+      { id: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash — le plus capable' },
+      { id: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash — stable' },
+    ],
+  },
 };
 
 async function getAiConfig() {
@@ -100,10 +109,12 @@ async function getJsonAiConfig() {
 // Règle : Claude/DeepSeek ne sont jamais utilisés automatiquement pour les
 // actions standard. Le x50 de surcoût par rapport à Mistral est trop risqué.
 
-// Groq en premier (gratuit, rapide) → Mistral en fallback (payant, illimité)
+// Groq en premier (gratuit, rapide) → Gemini Flash → Mistral en fallback
 const CHEAP_PRIORITY = [
   { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
     provider: 'groq',    model: 'llama-3.3-70b-versatile' },
+  { keys: ['GEMINI_API_KEY'],
+    provider: 'gemini',  model: 'gemini-2.0-flash' },
   { keys: ['MISTRAL_API_KEY'],
     provider: 'mistral', model: 'mistral-small-latest' },
 ];
@@ -135,11 +146,10 @@ async function getAiConfigForAction(action) {
   }
 
   if (STRUCTURED_ACTIONS.has(action)) {
-    // Actions Markdown structurées : Groq 70B en priorité (gratuit + capable)
-    // sinon provider principal configuré (Claude) — Mistral Small exclu (trop petit)
-    const groq = CHEAP_PRIORITY.find(p => p.provider === 'groq');
-    if (groq && groq.keys.some(k => process.env[k])) {
-      return { provider: groq.provider, model: groq.model };
+    // Actions Markdown structurées : Groq 70B → Gemini 2.0 Flash → Claude (dernier recours)
+    // Mistral Small exclu : trop petit pour du Markdown sectionné fiable
+    for (const { keys, provider, model } of CHEAP_PRIORITY) {
+      if (keys.some(k => process.env[k])) return { provider, model };
     }
     return getAiConfig(); // Claude ou provider admin
   }

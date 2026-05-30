@@ -4,7 +4,7 @@ const { getAiConfigForAction } = require('../services/aiConfig');
 // pour rendre le routing déterministe, puis on restaure après chaque test.
 const PROVIDER_KEYS = [
   'GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3',
-  'MISTRAL_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY',
+  'MISTRAL_API_KEY', 'ANTHROPIC_API_KEY', 'DEEPSEEK_API_KEY', 'GEMINI_API_KEY',
 ];
 
 let saved = {};

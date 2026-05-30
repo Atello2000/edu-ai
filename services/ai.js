@@ -27,6 +27,14 @@ const mistral = process.env.MISTRAL_API_KEY
   ? new OpenAI({ apiKey: process.env.MISTRAL_API_KEY, baseURL: 'https://api.mistral.ai/v1' })
   : null;
 
+// Gemini via endpoint compatible OpenAI (pas besoin de SDK séparé)
+const gemini = process.env.GEMINI_API_KEY
+  ? new OpenAI({
+      apiKey:  process.env.GEMINI_API_KEY,
+      baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+    })
+  : null;
+
 const MODEL_LABEL = 'IA';
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
@@ -141,6 +149,25 @@ async function* streamMistral(model, messages, maxTokens) {
   }
 }
 
+async function* streamGemini(model, messages, maxTokens) {
+  if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY)');
+  const label = model.includes('2.5') ? 'Gemini 2.5 Flash'
+              : model.includes('2.0') ? 'Gemini 2.0 Flash'
+              : 'Gemini 1.5 Flash';
+  const stream = await gemini.chat.completions.create({
+    model, max_tokens: maxTokens, stream: true, messages,
+    stream_options: { include_usage: true },
+  });
+  for await (const chunk of stream) {
+    if (chunk.usage) {
+      yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+      continue;
+    }
+    const text = chunk.choices[0]?.delta?.content || '';
+    if (text) yield { text, model: label };
+  }
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 async function* aiStream(prompt, maxTokens = 4096, config = null) {
@@ -150,6 +177,7 @@ async function* aiStream(prompt, maxTokens = 4096, config = null) {
     if (provider === 'anthropic') { yield* streamAnthropic(model, messages, maxTokens, null); return; }
     if (provider === 'deepseek')  { yield* streamDeepSeek(model, messages, maxTokens); return; }
     if (provider === 'mistral')   { yield* streamMistral(model, messages, maxTokens); return; }
+    if (provider === 'gemini')    { yield* streamGemini(model, messages, maxTokens); return; }
     yield* streamGroq(model, messages, maxTokens);
   } catch (err) {
     // Groq 413 : requête trop grande pour le free tier (limite TPM 12 000)
@@ -202,6 +230,12 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
       const mistralLabel = model.includes('large') ? 'Mistral Large' : model.includes('small') ? 'Mistral Small' : 'Mistral 7B';
       const r = await mistral.chat.completions.create({ model, max_tokens: maxTokens, messages });
       return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+    }
+    if (provider === 'gemini') {
+      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY)');
+      const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
+      const r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages });
+      return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
     }
     // groq
     const r = await groqComplete({ model, max_tokens: maxTokens, messages });
