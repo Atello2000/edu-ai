@@ -42,7 +42,26 @@ export function buildSummaryDoc(fileName, summaryMd) {
   const setDraw  = c => pdf.setDrawColor(c[0], c[1], c[2]);
   const fillRect = (x, yy, w, h, c) => { setFill(c); pdf.rect(x, yy, w, h, 'F'); };
   const hline    = (x1, yy, x2, c, lw = 0.3) => { setDraw(c); pdf.setLineWidth(lw); pdf.line(x1, yy, x2, yy); };
-  const wrap     = (text, maxW) => pdf.splitTextToSize(String(text), maxW);
+
+  /**
+   * Remplace les caractères Unicode hors Latin-1 par des équivalents ASCII
+   * avant de les passer à jsPDF (qui utilise Helvetica = Latin-1 uniquement).
+   * Sans ça, les caractères hors-plage font planter la mesure de texte et
+   * provoquent le rendu lettre-par-lettre visible dans les PDFs.
+   */
+  function sanitize(text) {
+    return String(text)
+      .replace(/≤/g, '<=').replace(/≥/g, '>=')
+      .replace(/[→⟶]/g, '->').replace(/[←⟵]/g, '<-')
+      .replace(/[×·]/g, 'x').replace(/÷/g, '/')
+      .replace(/[–—]/g, '-').replace(/…/g, '...')
+      .replace(/[""«»]/g, '"').replace(/['']/g, "'")
+      .replace(/°/g, '°')   // degré : dans Latin-1
+      .replace(/µ|μ/g, 'µ') // micro : dans Latin-1
+      .replace(/[^\x00-\xFF]/g, ''); // tout le reste hors Latin-1 → supprimé
+  }
+
+  const wrap = (text, maxW) => pdf.splitTextToSize(sanitize(String(text)), maxW);
 
   function drawHeader(isFirst) {
     const bandH = isFirst ? 40 : 13;
@@ -88,10 +107,12 @@ export function buildSummaryDoc(fileName, summaryMd) {
     const bodW = CW - 5;
 
     need(16);
-    const cleanTitle = section.title
-      .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
-      .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/gu, '')
-      .trim();
+    const cleanTitle = sanitize(
+      section.title
+        .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+        .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/gu, '')
+        .trim()
+    );
     // Style épuré : onglet d'accent coloré + titre foncé + filet coloré dessous
     fillRect(ML, y, 2.6, 6.5, col);
     pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11.5);
@@ -141,7 +162,7 @@ export function buildSummaryDoc(fileName, summaryMd) {
 
     for (const raw of section.lines) {
       const line = raw.trimEnd();
-      if (!line) { y += 2.5; continue; }
+      if (!line || /^--+$/.test(line)) { y += 2.5; continue; }
 
       if (line.startsWith('> ')) {
         const text  = stripMd(line.slice(2));
