@@ -1,23 +1,14 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
+// Bundlés via npm — plus de dépendance CDN, fonctionne hors-ligne
+import { Transformer } from 'markmap-lib';
+import { Markmap }     from 'markmap-view';
 
 /**
  * Modal de carte mentale (markmap).
  *
  * Écoute l'événement eventBus 'mindmap:open' avec payload { name, markdown }.
  */
-
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const s = Object.assign(document.createElement('script'), {
-      src,
-      onload:  resolve,
-      onerror: reject,
-    });
-    document.head.appendChild(s);
-  });
-}
 
 export default function MindmapModal() {
   const [visible,    setVisible]    = useState(false);
@@ -52,14 +43,10 @@ export default function MindmapModal() {
     let cancelled = false;
     (async () => {
       try {
-        await loadScript('https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js');
-        await loadScript('https://cdn.jsdelivr.net/npm/markmap-lib@0.15/dist/browser/index.js');
-        await loadScript('https://cdn.jsdelivr.net/npm/markmap-view@0.15/dist/browser/index.js');
         if (cancelled) return;
 
-        const base = courseName.replace(/\.[^.]+$/, '');
-        const md   = `# ${base}\n\n${pendingMd}`;
-        const { Transformer, Markmap } = window.markmap;
+        const base        = courseName.replace(/\.[^.]+$/, '');
+        const md          = `# ${base}\n\n${pendingMd}`;
         const transformer = new Transformer();
         const { root }    = transformer.transform(md);
 
@@ -75,13 +62,9 @@ export default function MindmapModal() {
         instanceRef.current.fit();
       } catch (err) {
         if (cancelled) return;
-        const isNetwork = err?.message?.includes('load') || !navigator.onLine;
-        const msg = isNetwork
-          ? 'Connexion requise pour la carte mentale. Vérifiez votre réseau et réessayez.'
-          : 'Impossible de charger la carte mentale.';
         svgEl.innerHTML = `<foreignObject x="10%" y="35%" width="80%" height="30%">
           <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Outfit,sans-serif;font-size:14px;color:var(--muted);text-align:center;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px">
-            <div style="color:var(--rose);margin-bottom:.5rem">⚠ ${msg}</div>
+            <div style="color:var(--rose);margin-bottom:.5rem">⚠ Impossible de charger la carte mentale.</div>
             <button onclick="location.reload()" style="font-size:12px;padding:.3rem .8rem;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;cursor:pointer">Réessayer</button>
           </div>
         </foreignObject>`;
@@ -91,7 +74,7 @@ export default function MindmapModal() {
     return () => { cancelled = true; };
   }, [visible, pendingMd, courseName]);
 
-  // Écoute l'événement eventBus au lieu des bridges window.__
+  // Écoute l'événement eventBus
   useEffect(() => {
     return eventBus.on('mindmap:open', ({ name, markdown }) => {
       setCourseName(name);
@@ -123,7 +106,10 @@ export default function MindmapModal() {
               const svg = svgRef.current;
               if (!svg) return;
               const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
-              const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${courseName.replace(/\.[^.]+$/, '')}-mindmap.svg` });
+              const a = Object.assign(document.createElement('a'), {
+                href:     URL.createObjectURL(blob),
+                download: `${courseName.replace(/\.[^.]+$/, '')}-mindmap.svg`,
+              });
               a.click(); URL.revokeObjectURL(a.href);
             }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>

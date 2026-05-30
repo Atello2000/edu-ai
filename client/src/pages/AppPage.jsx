@@ -12,7 +12,7 @@ import UploadZone from '../components/UploadZone.jsx';
 import FloatNav from '../components/FloatNav.jsx';
 import SaveFolderModal from '../components/SaveFolderModal.jsx';
 import LibraryPanel from '../components/LibraryPanel.jsx';
-import MindmapModal from '../components/MindmapModal.jsx';
+const MindmapModal = lazy(() => import('../components/MindmapModal.jsx'));
 import TTSBar from '../components/TTSBar.jsx';
 import ActionsPanel from '../components/ActionsPanel.jsx';
 import GoalModal from '../components/GoalModal.jsx';
@@ -685,7 +685,7 @@ export default function AppPage() {
 
       <FloatNav hasFiles={uploadedFiles.length > 0} activePanel={activePanel} onNavigate={setActivePanel} />
 
-      <MindmapModal />
+      <Suspense fallback={null}><MindmapModal /></Suspense>
 
       {/* Loader global (utilisé par handleMindmap dans ActionsPanel) */}
       <div className="loader hidden" id="loader">
