@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const { prepare } = require('../db');
+const logger  = require('../services/logger');
 
 async function calcStreak(userId) {
   const rows = (await prepare(
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
     ).run(req.user.id, topic.trim().slice(0, 120), type, score ?? null, total ?? null);
     res.json({ ok: true });
   } catch (err) {
-    console.error('POST /activity error:', err.message);
+    logger.error('POST /activity error', { message: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -85,7 +86,7 @@ router.get('/summary', async (req, res) => {
 
     res.json({ streak, totalSessions, recentActivity, topTopics, bestScores });
   } catch (err) {
-    console.error('GET /activity/summary error:', err.message);
+    logger.error('GET /activity/summary error', { message: err.message });
     res.status(500).json({ error: err.message });
   }
 });

@@ -86,6 +86,14 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ token });
 });
 
+// ── Rate limit login/forgot — anti brute-force (10 req/15min par IP) ────────
+const loginLimiter = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
+});
+app.use('/api/auth/login',           loginLimiter);
+app.use('/api/auth/forgot-password', loginLimiter);
+
 // ── Routes publiques (pas de CSRF — pas de cookie d'auth non plus) ───────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api',      require('./routes/misc'));

@@ -9,7 +9,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── Clients ───────────────────────────────────────────────────────────────────
 
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
-const groqClients = ['GROQ_API_KEY', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3']
+const groqClients = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3']
   .map(k => process.env[k]).filter(Boolean)
   .map(apiKey => new OpenAI({ apiKey, baseURL: GROQ_BASE }));
 
@@ -52,12 +52,15 @@ async function groqComplete(params) {
   if (!groqClients.length) throw new Error('Aucune clé Groq configurée (GROQ_API_KEY)');
   let lastErr;
   for (let i = 0; i < groqClients.length; i++) {
-    const client = groqClients[(_groqIdx + i) % groqClients.length];
+    const idx = (_groqIdx + i) % groqClients.length;
+    const client = groqClients[idx];
     try {
-      return await client.chat.completions.create(params);
+      const result = await client.chat.completions.create(params);
+      _groqIdx = (idx + 1) % groqClients.length; // round-robin réel
+      return result;
     } catch (err) {
       lastErr = err;
-      if (err?.status === 429) { logger.warn(`Groq key rate-limited, trying next`); continue; }
+      if (err?.status === 429) { logger.warn(`Groq key ${idx} rate-limited, trying next`); continue; }
       throw err;
     }
   }
@@ -68,12 +71,15 @@ async function groqStream(params) {
   if (!groqClients.length) throw new Error('Aucune clé Groq configurée (GROQ_API_KEY)');
   let lastErr;
   for (let i = 0; i < groqClients.length; i++) {
-    const client = groqClients[(_groqIdx + i) % groqClients.length];
+    const idx = (_groqIdx + i) % groqClients.length;
+    const client = groqClients[idx];
     try {
-      return await client.chat.completions.create({ ...params, stream: true });
+      const stream = await client.chat.completions.create({ ...params, stream: true });
+      _groqIdx = (idx + 1) % groqClients.length; // round-robin réel
+      return stream;
     } catch (err) {
       lastErr = err;
-      if (err?.status === 429) { logger.warn(`Groq key rate-limited (stream), trying next`); continue; }
+      if (err?.status === 429) { logger.warn(`Groq key ${idx} rate-limited (stream), trying next`); continue; }
       throw err;
     }
   }

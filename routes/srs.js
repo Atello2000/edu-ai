@@ -57,8 +57,14 @@ router.get('/srs/due-count', async (req, res) => {
 
 // POST /api/srs/sync — upsert batch depuis le client
 router.post('/srs/sync', async (req, res) => {
-  const { cards } = req.body;
-  if (!Array.isArray(cards) || !cards.length) return res.json({ synced: 0 });
+  const rawCards = req.body.cards;
+  if (!Array.isArray(rawCards) || !rawCards.length) return res.json({ synced: 0 });
+  // Limiter à 500 cartes par sync, tronquer les champs texte (anti-abus)
+  const cards = rawCards.slice(0, 500).map(c => ({
+    ...c,
+    front: String(c.front || '').slice(0, 2000),
+    back:  String(c.back  || '').slice(0, 2000),
+  }));
 
   try {
     // Upsert en une seule requête avec VALUES multiples
