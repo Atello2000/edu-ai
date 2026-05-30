@@ -3938,6 +3938,13 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 }
 .pomo-mode-break .pomo-pill-dot { background: var(--teal); }
 
+/* Handle de déplacement */
+.pomo-drag-handle {
+  cursor: grab;
+  user-select: none;
+}
+.pomo-drag-handle:active { cursor: grabbing; }
+
 .pomo-close {
   background: none;
   border: none;
@@ -4011,22 +4018,13 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   border-color: rgba(255,107,129,.2) !important;
 }
 
-/* Positionnement du conteneur Pomo dans l'AppPage */
+/* Le widget gère lui-même sa position fixed via inline style */
 .pomo-sidebar-container {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  top: auto;
-  z-index: 1000;
-  pointer-events: all;
-  animation: slideInRight .32s cubic-bezier(.4,0,.2,1) both;
+  display: contents;
 }
 
 @media (max-width: 1100px) {
   .pomo-sidebar-container {
-    bottom: 5.5rem;
-    right: 1rem;
-  }
 }
 
 /* ── STREAK BADGE HEADER ── */
