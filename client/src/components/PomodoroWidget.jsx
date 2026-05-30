@@ -38,6 +38,16 @@ export default function PomodoroWidget({ onClose }) {
   const [isMuted,   setIsMuted]   = useState(false);
 
   const timerRef = useRef(null);
+  const modeRef = useRef(mode);
+  const isMutedRef = useRef(isMuted);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   const totalTime = mode === 'study' ? TIME_STUDY : TIME_BREAK;
 
@@ -45,10 +55,11 @@ export default function PomodoroWidget({ onClose }) {
     setTimeLeft(prev => {
       if (prev <= 1) {
         setIsRunning(false);
-        const nextMode = mode === 'study' ? 'break' : 'study';
+        const currentMode = modeRef.current;
+        const nextMode = currentMode === 'study' ? 'break' : 'study';
         setMode(nextMode);
         setTimeLeft(nextMode === 'study' ? TIME_STUDY : TIME_BREAK);
-        if (!isMuted) playChime(nextMode === 'break');
+        if (!isMutedRef.current) playChime(nextMode === 'break');
         toast.success(
           nextMode === 'break'
             ? 'Session terminée ! Profitez de votre pause bien méritée ☕'
@@ -58,7 +69,7 @@ export default function PomodoroWidget({ onClose }) {
       }
       return prev - 1;
     });
-  }, [mode, isMuted]);
+  }, []);
 
   useEffect(() => {
     if (isRunning) {

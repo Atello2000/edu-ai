@@ -361,7 +361,6 @@ export default function AppPage() {
         onOpenSettings={() => setShowSettings(true)}
         onTogglePomodoro={() => setShowPomodoro(p => !p)}
         showPomodoro={showPomodoro}
-        activityKey={activityKey}
       />
 
       <main>

@@ -3,6 +3,7 @@ import Logo from './Logo.jsx';
 import UserMenu from './UserMenu.jsx';
 import JetonWidget from './JetonWidget.jsx';
 import { apiFetch } from '../utils/apiFetch';
+import eventBus from '../utils/eventBus';
 
 /**
  * AppHeader — barre supérieure de l'app : retour tableau de bord, logo, jetons, menu.
@@ -14,7 +15,6 @@ import { apiFetch } from '../utils/apiFetch';
  * @param {Function} p.onOpenSettings
  * @param {Function} p.onTogglePomodoro  - basculer le minuteur Pomodoro
  * @param {boolean}  p.showPomodoro      - si le Pomodoro est affiché
- * @param {number}   p.activityKey       - clé de rafraîchissement d'activité
  */
 export default function AppHeader({
   activePanel,
@@ -23,7 +23,6 @@ export default function AppHeader({
   onOpenSettings,
   onTogglePomodoro,
   showPomodoro,
-  activityKey,
 }) {
   const [streak, setStreak] = useState(0);
 
@@ -39,16 +38,20 @@ export default function AppHeader({
           setStreak(data.streak || 0);
         }
       } catch (err) {
-        console.error('Failed to fetch streak in AppHeader:', err);
+        /* Silencieux en production */
       }
     }
 
     fetchStreak();
 
+    // S'abonner aux rafraîchissements d'activité du dashboard pour actualiser le streak
+    const unsubscribe = eventBus.on('dashboard:refresh', fetchStreak);
+
     return () => {
       active = false;
+      unsubscribe();
     };
-  }, [user, activityKey]);
+  }, [user]);
 
   return (
     <header>
