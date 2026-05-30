@@ -2,20 +2,11 @@ import { useState, useEffect } from 'react';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
-// Coûts par action — identiques pour tous les plans (miroir de services/jetons.js)
-const COSTS = {
-  summarize:       3,
-  quiz:            2,   // ← corrigé (était 4)
-  flashcards:      1,   // ← corrigé (était 3)
-  chat:            1,
-  'exam-sheet':    3,
-  glossary:        2,
-  mindmap:         2,
-  session:         10,  // résumé + quiz + flashcards selon objectif
-  socratic:        1,
-  predict:         3,
-  'study-plan':    1,
-  'error-analysis':1,
+// Coûts par défaut (fallback si les coûts dynamiques ne sont pas encore chargés)
+const DEFAULT_COSTS = {
+  summarize: 3, quiz: 2, flashcards: 1, chat: 1,
+  'exam-sheet': 3, glossary: 2, mindmap: 2, session: 6,
+  socratic: 1, predict: 3, 'study-plan': 1, 'error-analysis': 1,
 };
 
 /**
@@ -42,8 +33,8 @@ function jetonColor(cost) {
   return 'rose';
 }
 
-function JetonBadge({ action }) {
-  const cost  = COSTS[action] ?? 1;
+function JetonBadge({ action, costs }) {
+  const cost  = (costs ?? DEFAULT_COSTS)[action] ?? DEFAULT_COSTS[action] ?? 1;
   const color = jetonColor(cost);
   return (
     <span className={`jeton-badge jeton-badge-${color}`}>
@@ -54,6 +45,7 @@ function JetonBadge({ action }) {
 }
 
 export default function ActionsPanel({
+  jetonCosts,
   hasFiles,
   uploadedFiles = [],
   onGoUpload,
@@ -219,7 +211,7 @@ export default function ActionsPanel({
                 sessionGoal === 'memorize'   ? 'Mémoriser' : "S'entraîner"
               }</span></>}
             </span>
-            <JetonBadge action="session" />
+            <JetonBadge costs={jetonCosts} action="session" />
           </div>
           <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
             {prepLoading ? 'En cours…' : 'Lancer'}
@@ -272,7 +264,7 @@ export default function ActionsPanel({
                 <option value="30">30 min</option>
               </select>
             </label>
-            <JetonBadge action="quiz" />
+            <JetonBadge costs={jetonCosts} action="quiz" />
           </div>
           <button className="act-btn blue" id="quiz-btn" disabled={!hasFiles} onClick={onQuiz}>
             {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
@@ -296,7 +288,7 @@ export default function ActionsPanel({
                 onChange={e => onFcCountChange?.(parseInt(e.target.value) || 10)}
               /> cartes
             </label>
-            <JetonBadge action="flashcards" />
+            <JetonBadge costs={jetonCosts} action="flashcards" />
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
             {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
@@ -314,7 +306,7 @@ export default function ActionsPanel({
           <div className="act-card-body">
             <strong>Résumer</strong>
             <span>Résumé structuré en 5 sections</span>
-            <JetonBadge action="summarize" />
+            <JetonBadge costs={jetonCosts} action="summarize" />
           </div>
           <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
             {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
@@ -336,7 +328,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Chat avec le cours</strong>
               <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-              <JetonBadge action="chat" />
+              <JetonBadge costs={jetonCosts} action="chat" />
             </div>
             <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
@@ -350,7 +342,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Fiche d&apos;examen</strong>
               <span>Définitions, pièges, tableaux et questions probables</span>
-              <JetonBadge action="exam-sheet" />
+              <JetonBadge costs={jetonCosts} action="exam-sheet" />
             </div>
             <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
               {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
@@ -368,7 +360,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Carte mentale</strong>
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-              <JetonBadge action="mindmap" />
+              <JetonBadge costs={jetonCosts} action="mindmap" />
             </div>
             <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
           </div>
@@ -384,7 +376,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Glossaire automatique</strong>
               <span>Extrait les termes clés et leur définition</span>
-              <JetonBadge action="glossary" />
+              <JetonBadge costs={jetonCosts} action="glossary" />
             </div>
             <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
@@ -415,7 +407,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Mode Socratique</strong>
               <span>L&apos;IA vous interroge sur votre cours comme un examinateur</span>
-              <JetonBadge action="socratic" />
+              <JetonBadge costs={jetonCosts} action="socratic" />
             </div>
             <button className="act-btn blue" disabled={!hasFiles} onClick={onSocratic}>Démarrer</button>
           </div>
@@ -429,7 +421,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Questions probables</strong>
               <span>Prédit les questions susceptibles de tomber à l&apos;examen</span>
-              <JetonBadge action="predict" />
+              <JetonBadge costs={jetonCosts} action="predict" />
             </div>
             <button className="act-btn purple" disabled={!hasFiles} onClick={onPredict}>
               {predictLoading ? 'Analyse…' : predictResults?.length > 0 ? 'Voir les prédictions' : 'Analyser'}
@@ -445,7 +437,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Plan de révision</strong>
               <span>Planning jour par jour jusqu&apos;à votre examen, basé sur vos points faibles</span>
-              <JetonBadge action="study-plan" />
+              <JetonBadge costs={jetonCosts} action="study-plan" />
             </div>
             <button className="act-btn gold" onClick={onStudyPlan}>Planifier</button>
           </div>
@@ -459,7 +451,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Erreurs récurrentes</strong>
               <span>Analyse vos confusions et lacunes à partir de l&apos;historique de quiz</span>
-              <JetonBadge action="error-analysis" />
+              <JetonBadge costs={jetonCosts} action="error-analysis" />
             </div>
             <button className="act-btn rose" onClick={onErrorAnalysis}>Analyser</button>
           </div>

@@ -6,6 +6,14 @@ const router  = express.Router();
 const { requireAuth }             = require('../middleware/auth');
 const { getBalance, JETON_COSTS, MONTHLY_JETONS } = require('../services/jetons');
 
+// GET /api/jetons/prices — coûts publics (pas d'auth, pour UI et landing)
+router.get('/jetons/prices', (req, res) => {
+  res.json({
+    costs: JETON_COSTS,
+    session: (JETON_COSTS.summarize || 3) + (JETON_COSTS.quiz || 2) + (JETON_COSTS.flashcards || 1),
+  });
+});
+
 // GET /api/jetons — solde + historique + config des coûts
 router.get('/jetons', requireAuth, async (req, res) => {
   try {

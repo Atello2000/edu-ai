@@ -147,7 +147,7 @@ export default function AppPage() {
   const [chatFiles, setChatFiles] = useState([]);
 
   // ── Jetons ─────────────────────────────────────────────────────────────────
-  const { balance } = useJetons();
+  const { balance, costs: jetonCosts } = useJetons();
 
   // ── Session prep ───────────────────────────────────────────────────────────
   const { showGoalModal, sessionGoal, prepLoading, handlePrepareSession, handleGoalSelect } =
@@ -414,6 +414,7 @@ export default function AppPage() {
         {/* ACTIONS */}
         <div className={`panel${activePanel !== 'actions-section' ? ' hidden' : ''}`} id="actions-section">
           <ActionsPanel
+            jetonCosts={jetonCosts}
             hasFiles={hasFiles}
             uploadedFiles={uploadedFiles}
             onGoUpload={() => setActivePanel('upload-section')}
