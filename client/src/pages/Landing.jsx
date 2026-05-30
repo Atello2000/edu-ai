@@ -79,7 +79,7 @@ export default function Landing() {
         <div className="hero-eyebrow fade-up">Révision assistée par IA</div>
         <h1 className="fade-up fade-up-delay-1">Révisez plus vite,<br />apprenez <em>différemment</em></h1>
         <p className="fade-up fade-up-delay-2">
-          PDF, PPT ou DOCX — Jangalai génère résumé structuré, quiz adapté à votre niveau, flashcards SM-2 et carte mentale en quelques secondes. Choisissez votre objectif, l'IA fait le reste.
+          Importez votre cours, choisissez votre objectif. Jangalai s'occupe du reste.
         </p>
         <div className="hero-btns fade-up fade-up-delay-3">
           <Link to="/login" className="btn-hero">Commencer gratuitement →</Link>
