@@ -76,8 +76,8 @@ export default function Landing() {
       </nav>
 
       <section className="hero">
-        <div className="hero-eyebrow fade-up">Pour les étudiants de Licence, Master et Doctorat</div>
-        <h1 className="fade-up fade-up-delay-1">Chargez votre cours.<br />Révisez en <em>30 secondes.</em></h1>
+        <div className="hero-eyebrow fade-up">Révision assistée par IA</div>
+        <h1 className="fade-up fade-up-delay-1">Révisez plus vite,<br />apprenez <em>différemment</em></h1>
         <p className="fade-up fade-up-delay-2">
           PDF, PPT ou DOCX — Jangalai génère résumé structuré, quiz adapté à votre niveau, flashcards SM-2 et carte mentale en quelques secondes. Choisissez votre objectif, l'IA fait le reste.
         </p>
@@ -270,7 +270,7 @@ export default function Landing() {
       </div>
 
       <div className="cta-section">
-        <h2 className="fade-up">La veille d'un examen,<br />chaque minute <em>compte</em></h2>
+        <h2 className="fade-up">Révisez mieux.<br /><em>Commencez aujourd'hui.</em></h2>
         <p className="fade-up fade-up-delay-1">Jangalai est disponible 24h/24, sans rendez-vous, sans abonnement requis. Chargez votre cours, choisissez votre objectif — résumé, quiz, flashcards — et commencez à réviser en moins d'une minute.</p>
         <Link to="/login" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>Créer mon compte gratuit →</Link>
         <div className="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Prêt en 60 secondes</div>
