@@ -32,10 +32,11 @@ function playChime(isBreak) {
 }
 
 export default function PomodoroWidget({ onClose }) {
-  const [mode,      setMode]      = useState('study'); // 'study' | 'break'
-  const [timeLeft,  setTimeLeft]  = useState(TIME_STUDY);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isMuted,   setIsMuted]   = useState(false);
+  const [mode,       setMode]      = useState('study'); // 'study' | 'break'
+  const [timeLeft,   setTimeLeft]  = useState(TIME_STUDY);
+  const [isRunning,  setIsRunning] = useState(false);
+  const [isMuted,    setIsMuted]   = useState(false);
+  const [collapsed,  setCollapsed] = useState(false);
 
   const timerRef = useRef(null);
   const modeRef = useRef(mode);
@@ -107,15 +108,39 @@ export default function PomodoroWidget({ onClose }) {
     return `${m}:${s}`;
   };
 
+  if (collapsed) {
+    return (
+      <div
+        className={`pomo-pill pomo-mode-${mode}`}
+        onClick={() => setCollapsed(false)}
+        title="Agrandir le minuteur"
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="14" r="8" />
+          <path d="M10 3h4" /><path d="M12 3v3" />
+          <path d="M12 10v4l2.5 2.5" />
+        </svg>
+        <span className="pomo-pill-time">{formatTime(timeLeft)}</span>
+        {isRunning && <span className="pomo-pill-dot" />}
+      </div>
+    );
+  }
+
   return (
     <div className={`pomo-widget pomo-mode-${mode}`}>
       <div className="pomo-header">
         <span className="pomo-title">
-          ⏱️ Focus <em>{mode === 'study' ? 'Étude' : 'Pause'}</em>
+          Focus <em>{mode === 'study' ? 'Étude' : 'Pause'}</em>
         </span>
-        <button className="pomo-close" onClick={onClose} title="Masquer le minuteur">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <div style={{ display: 'flex', gap: '.25rem' }}>
+          <button className="pomo-close" onClick={() => setCollapsed(true)} title="Réduire">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <button className="pomo-close" onClick={onClose} title="Fermer">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
 
       <div className="pomo-circle-wrap">
