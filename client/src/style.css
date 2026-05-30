@@ -482,6 +482,13 @@ main {
   font-weight:400; font-size:.78rem; color:var(--muted);
   cursor:pointer; text-transform:none; letter-spacing:0;
 }
+.file-truncated-badge {
+  font-family:'DM Mono',monospace; font-size:.6rem; font-weight:600;
+  color:#e0a020; background:rgba(224,160,32,.12);
+  border:1px solid rgba(224,160,32,.3); border-radius:4px;
+  padding:.1rem .4rem; white-space:nowrap; flex-shrink:0;
+}
+
 .file-checkbox {
   display:flex; align-items:center; gap:.7rem;
   padding:.48rem .3rem; font-size:.85rem;

@@ -68,15 +68,23 @@ export default function MindmapModal() {
           paddingX:         20,
           duration:         400,
           maxWidth:         260,
-          colorFreezeLevel: 2,   // couleur figée au niveau 2 → branches cohérentes
+          colorFreezeLevel: 2,
           zoom:             true,
           pan:              true,
         }, root);
         instanceRef.current.fit();
-      } catch {
+      } catch (err) {
         if (cancelled) return;
-        svgEl.innerHTML = `<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-          fill="var(--rose)" font-family="Outfit,sans-serif" font-size="14">Erreur de chargement de la bibliothèque</text>`;
+        const isNetwork = err?.message?.includes('load') || !navigator.onLine;
+        const msg = isNetwork
+          ? 'Connexion requise pour la carte mentale. Vérifiez votre réseau et réessayez.'
+          : 'Impossible de charger la carte mentale.';
+        svgEl.innerHTML = `<foreignObject x="10%" y="35%" width="80%" height="30%">
+          <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Outfit,sans-serif;font-size:14px;color:var(--muted);text-align:center;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px">
+            <div style="color:var(--rose);margin-bottom:.5rem">⚠ ${msg}</div>
+            <button onclick="location.reload()" style="font-size:12px;padding:.3rem .8rem;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;cursor:pointer">Réessayer</button>
+          </div>
+        </foreignObject>`;
       }
     })();
 

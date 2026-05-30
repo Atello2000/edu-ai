@@ -5,18 +5,22 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
 const { splitIntoChunks, chunkCost } = require('../../services/chunker');
 
 const GLOSSARY_MAX_TOKENS = 3000;
 
-// POST /api/glossary — extraction de termes avec chunking
+// POST /api/glossary — extraction de termes avec chunking + SSE streaming
 router.post('/glossary', async (req, res) => {
-  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
+  const send = sseSetup(req, res);
+  let deducted = 0;
+
   try {
     const { files } = req.body;
-    if (!files?.length)
-      return res.status(400).json({ error: 'Aucun fichier fourni.' });
+    if (!files?.length) {
+      send({ type: 'error', message: 'Aucun fichier fourni.' });
+      return res.end();
+    }
 
     const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang = langLabel(lang);
@@ -35,17 +39,24 @@ router.post('/glossary', async (req, res) => {
 
     // ── 2. Vérifier et déduire les jetons ─────────────────────────────────
     const jeton = await checkAndDeduct(req.user?.id, 'glossary', req.user?.plan || 'free', totalCost);
-    if (!jeton.ok)
-      return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+    if (!jeton.ok) {
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
+    }
     deducted = jeton.cost || 0;
 
-    // ── 3. Extraire les termes de chaque chunk ────────────────────────────
+    // ── 3. Extraire les termes chunk par chunk (avec progression SSE) ─────
     const aiCfg    = await getAiConfigForAction('glossary');
     const allTerms = [];
+    let   total    = fileData.reduce((n, { chunks }) => n + chunks.length, 0);
+    let   step     = 0;
 
     for (const { file, chunks } of fileData) {
       for (let i = 0; i < chunks.length; i++) {
+        step++;
         const chunkLabel = chunks.length > 1 ? ` (partie ${i + 1}/${chunks.length})` : '';
+        send({ type: 'progress', step, total,
+               message: `${file.name}${chunkLabel} — extraction des termes…` });
 
         const prompt = `${ctx}Tu es un assistant pédagogique expert. Extrais les termes techniques et concepts clés de ce contenu de cours${chunkLabel} ${inLang}.
 
@@ -74,7 +85,13 @@ ${chunks[i]}`;
         if (usage) logTokens(req.user?.id, 'glossary', usage.provider, usage.input, usage.output);
 
         const parsed = parseJsonResponse(raw, { terms: [] });
-        allTerms.push(...(parsed.terms || []));
+        const newTerms = parsed.terms || [];
+        allTerms.push(...newTerms);
+
+        // Émettre les termes de ce chunk dès qu'ils sont prêts
+        if (newTerms.length > 0) {
+          send({ type: 'terms_chunk', terms: newTerms });
+        }
       }
     }
 
@@ -90,13 +107,14 @@ ${chunks[i]}`;
       })
       .sort((a, b) => a.term.localeCompare(b.term, 'fr', { sensitivity: 'base' }));
 
-    res.json({ terms });
+    send({ type: 'end', terms });
 
   } catch (err) {
     logger.error('AI glossary error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'glossary', deducted);
-    res.status(500).json({ error: err.message });
+    send({ type: 'error', message: err.message });
   }
+  res.end();
 });
 
 module.exports = router;

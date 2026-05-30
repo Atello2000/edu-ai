@@ -133,6 +133,12 @@ ${chunks[i]}`;
       send({ type: 'done', name: file.name, questions: finalQuestions });
     }
 
+    // Faille 4 : si AUCUNE question générée sur l'ensemble des fichiers → rembourser
+    const totalGenerated = allResults.reduce((n, r) => n + r.quiz.questions.length, 0);
+    if (totalGenerated === 0) {
+      throw new Error('Aucune question n\'a pu être générée. Vérifiez le contenu du fichier et réessayez.');
+    }
+
     send({ type: 'end', model: streamModel, results: allResults });
 
   } catch (err) {
