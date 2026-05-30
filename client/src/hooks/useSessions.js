@@ -1,20 +1,45 @@
 import { useEffect, useCallback, useRef } from 'react';
 import eventBus from '../utils/eventBus';
+import { idb } from '../utils/idb';
 
-const HISTORY_KEY = 'jangalai-sessions';
+const HISTORY_KEY  = 'jangalai-sessions'; // localStorage — gardé pour migration
+const MAX_SESSIONS = 10;
 
+// ── Lecture synchrone depuis localStorage (fallback + migration) ──────────────
 export function getSessions() {
-  return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch { return []; }
+}
+
+// ── Lecture async depuis IDB (source de vérité après migration) ───────────────
+export async function getSessionsAsync() {
+  try {
+    const rows = await idb.getAll('sessions');
+    // Trier par timestamp décroissant (le plus récent en premier)
+    return rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  } catch {
+    return getSessions(); // fallback localStorage si IDB indisponible
+  }
+}
+
+// ── Migration one-shot localStorage → IDB ────────────────────────────────────
+async function migrateFromLocalStorage() {
+  try {
+    const migrated = localStorage.getItem('jangalai-idb-migrated');
+    if (migrated) return;
+    const sessions = getSessions();
+    if (sessions.length) {
+      await Promise.all(sessions.map(s => idb.put('sessions', s)));
+    }
+    localStorage.setItem('jangalai-idb-migrated', '1');
+  } catch { /* silencieux */ }
 }
 
 /**
- * Gère l'historique de sessions (localStorage).
+ * Gère l'historique de sessions (IndexedDB, avec fallback localStorage).
  *
  * Reçoit des refs pour les fonctions restore (créées dans AppPage avant les hooks AI),
  * ce qui évite la dépendance circulaire.
- *
- * Retourne { saveSession, restoreSession } : saveSession est passé aux hooks AI
- * (useSummarize, etc.), restoreSession est passé en prop onRestore à HistoryPanel.
  */
 export function useSessions({
   uploadedFiles,
@@ -28,30 +53,66 @@ export function useSessions({
   const filesRef = useRef(uploadedFiles);
   useEffect(() => { filesRef.current = uploadedFiles; }, [uploadedFiles]);
 
+  // Migration one-shot au montage
+  useEffect(() => { migrateFromLocalStorage(); }, []);
+
   // ── saveSession ───────────────────────────────────────────────────────────
   const saveSession = useCallback((update) => {
     const files = filesRef.current;
     if (!files.length) return;
 
-    let sessions = getSessions();
     const fileKey = files.map(f => f.name).sort().join('|');
-    let idx = sessions.findIndex(s => s.fileKey === fileKey);
 
-    if (idx === -1) {
-      sessions.unshift({
-        id: Date.now(), fileKey, timestamp: Date.now(),
-        files:     files.map(f => f.name),
-        filesMeta: files.map(f => ({ name: f.name, text: f.text || '' })),
-      });
-      idx = 0;
-    }
-    if (!sessions[idx].filesMeta && files.some(f => f.text)) {
-      sessions[idx].filesMeta = files.map(f => ({ name: f.name, text: f.text || '' }));
-    }
-    Object.assign(sessions[idx], update, { timestamp: Date.now() });
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, 10)));
-    eventBus.emit('history:refresh');
-    eventBus.emit('dashboard:refresh');
+    (async () => {
+      try {
+        // Charger toutes les sessions depuis IDB
+        let sessions = await getSessionsAsync();
+        let idx = sessions.findIndex(s => s.fileKey === fileKey);
+
+        if (idx === -1) {
+          sessions.unshift({
+            id: Date.now(), fileKey, timestamp: Date.now(),
+            files:     files.map(f => f.name),
+            filesMeta: files.map(f => ({ name: f.name, text: f.text || '' })),
+          });
+          idx = 0;
+        }
+        if (!sessions[idx].filesMeta && files.some(f => f.text)) {
+          sessions[idx].filesMeta = files.map(f => ({ name: f.name, text: f.text || '' }));
+        }
+        Object.assign(sessions[idx], update, { timestamp: Date.now() });
+
+        // Écrire la session mise à jour dans IDB
+        await idb.put('sessions', sessions[idx]);
+
+        // Garder au plus MAX_SESSIONS — supprimer les plus anciennes
+        const sorted = sessions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        const toDelete = sorted.slice(MAX_SESSIONS);
+        await Promise.all(toDelete.map(s => idb.delete('sessions', s.id)));
+
+        // Miroir localStorage pour getSessions() synchrone (HistoryPanel initial render)
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(sorted.slice(0, MAX_SESSIONS)));
+
+        eventBus.emit('history:refresh');
+        eventBus.emit('dashboard:refresh');
+      } catch {
+        // Fallback : écriture localStorage seule
+        let sessions = getSessions();
+        const idx2 = sessions.findIndex(s => s.fileKey === fileKey);
+        if (idx2 === -1) {
+          sessions.unshift({
+            id: Date.now(), fileKey, timestamp: Date.now(),
+            files:     files.map(f => f.name),
+            filesMeta: files.map(f => ({ name: f.name, text: f.text || '' })),
+          });
+        }
+        const i = idx2 === -1 ? 0 : idx2;
+        Object.assign(sessions[i], update, { timestamp: Date.now() });
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, MAX_SESSIONS)));
+        eventBus.emit('history:refresh');
+        eventBus.emit('dashboard:refresh');
+      }
+    })();
   }, []); // stable grâce au ref
 
   // ── restoreSession ────────────────────────────────────────────────────────

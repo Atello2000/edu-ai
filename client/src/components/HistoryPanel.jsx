@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
+import { idb } from '../utils/idb';
+import { getSessions } from '../hooks/useSessions';
 
 const HISTORY_KEY = 'jangalai-sessions';
 
@@ -11,24 +13,40 @@ const TAG_LABELS = [
 ];
 
 export default function HistoryPanel({ onRestore }) {
-  const [sessions, setSessions] = useState(() =>
-    JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
-  );
+  // Init synchrone depuis localStorage (rendu immédiat), puis IDB prend le relai
+  const [sessions, setSessions] = useState(() => getSessions());
 
-  const refresh = useCallback(() =>
-    setSessions(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')),
-  []);
+  const refresh = useCallback(async () => {
+    try {
+      const rows = await idb.getAll('sessions');
+      setSessions(rows.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)));
+    } catch {
+      setSessions(getSessions());
+    }
+  }, []);
 
+  // Charger depuis IDB au montage + écouter les rafraîchissements
+  useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => eventBus.on('history:refresh', refresh), [refresh]);
 
-  function deleteSession(id) {
-    const updated = sessions.filter(s => s.id !== id);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-    setSessions(updated);
+  async function deleteSession(id) {
+    try {
+      await idb.delete('sessions', id);
+      // Miroir localStorage
+      const updated = getSessions().filter(s => s.id !== id);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    } catch {
+      const updated = getSessions().filter(s => s.id !== id);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+    }
+    setSessions(prev => prev.filter(s => s.id !== id));
     eventBus.emit('dashboard:refresh');
   }
 
-  function clearAll() {
+  async function clearAll() {
+    try {
+      await idb.clear('sessions');
+    } catch { /* silencieux */ }
     localStorage.removeItem(HISTORY_KEY);
     setSessions([]);
     eventBus.emit('dashboard:refresh');

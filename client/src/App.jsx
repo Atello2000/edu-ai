@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth.jsx';
 import { useDir } from './hooks/useDir.js';
+import OfflineBanner from './components/OfflineBanner.jsx';
 
 // Chargement synchrone — page d'atterrissage (premier rendu critique)
 import Landing from './pages/Landing.jsx';
@@ -35,6 +36,8 @@ function GuestRoute({ children }) {
 export default function App() {
   useDir(); // Applique dir="rtl" sur <html> si lang === 'ar'
   return (
+    <>
+    <OfflineBanner />
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/"                element={<Landing />} />
@@ -47,5 +50,6 @@ export default function App() {
         <Route path="*"                element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
+    </>
   );
 }

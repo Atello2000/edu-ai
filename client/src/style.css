@@ -3756,6 +3756,33 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   .fc-card-inner                      { transition: none !important; }
 }
 
+/* ── Banner offline ──────────────────────────────────────────────────────────── */
+.offline-banner {
+  position: fixed;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem 1.1rem;
+  background: #1a1a2e;
+  border: 1px solid var(--rose);
+  color: var(--rose);
+  border-radius: var(--radius-sm);
+  font-size: .8rem;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  pointer-events: none;
+  animation: fadeInUp .25s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    SUPPORT RTL — Arabe (dir="rtl" posé par useDir.js sur <html>)
    Utilise les propriétés logiques CSS pour s'adapter automatiquement
