@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
 import Onboarding from './Onboarding.jsx';
 import AppHeader from '../components/AppHeader.jsx';
@@ -8,12 +8,6 @@ import StatsPanel from '../components/StatsPanel.jsx';
 import HistoryPanel from '../components/HistoryPanel.jsx';
 import SettingsDrawer from '../components/SettingsDrawer.jsx';
 import UploadZone from '../components/UploadZone.jsx';
-import SummaryResults from '../components/SummarySection.jsx';
-import ExamSheetSection from '../components/ExamSheetSection.jsx';
-import QuizSection from '../components/QuizSection.jsx';
-import FlashcardSection from '../components/FlashcardSection.jsx';
-import ChatSection from '../components/ChatSection.jsx';
-import GlossarySection from '../components/GlossarySection.jsx';
 import FloatNav from '../components/FloatNav.jsx';
 import SaveFolderModal from '../components/SaveFolderModal.jsx';
 import LibraryPanel from '../components/LibraryPanel.jsx';
@@ -28,10 +22,18 @@ import { useSessions } from '../hooks/useSessions.js';
 import { usePrepareSession } from '../hooks/usePrepareSession.js';
 import { useJetons } from '../hooks/useJetons.js';
 import { useAiSuite } from '../hooks/useAiSuite.js';
-import SocraticSection from '../components/SocraticSection.jsx';
-import StudyPlanSection from '../components/StudyPlanSection.jsx';
-import PredictSection from '../components/PredictSection.jsx';
-import ErrorAnalysisSection from '../components/ErrorAnalysisSection.jsx';
+
+// Sections lourdes — chargées à la demande (lazy, mount-once)
+const SummaryResults       = lazy(() => import('../components/SummarySection.jsx'));
+const ExamSheetSection     = lazy(() => import('../components/ExamSheetSection.jsx'));
+const QuizSection          = lazy(() => import('../components/QuizSection.jsx'));
+const FlashcardSection     = lazy(() => import('../components/FlashcardSection.jsx'));
+const ChatSection          = lazy(() => import('../components/ChatSection.jsx'));
+const GlossarySection      = lazy(() => import('../components/GlossarySection.jsx'));
+const SocraticSection      = lazy(() => import('../components/SocraticSection.jsx'));
+const StudyPlanSection     = lazy(() => import('../components/StudyPlanSection.jsx'));
+const PredictSection       = lazy(() => import('../components/PredictSection.jsx'));
+const ErrorAnalysisSection = lazy(() => import('../components/ErrorAnalysisSection.jsx'));
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -87,6 +89,18 @@ export default function AppPage() {
 
   // ── Panel navigation ──────────────────────────────────────────────────────
   const [activePanel, setActivePanel] = useState('dashboard-panel');
+
+  // Mount-once : les sections lazy ne sont montées qu'à leur première visite,
+  // puis restent dans le DOM (CSS hidden) pour préserver leur état.
+  const [mountedPanels, setMountedPanels] = useState(
+    () => new Set(['dashboard-panel', 'actions-section', 'upload-section'])
+  );
+  useEffect(() => {
+    setMountedPanels(prev => {
+      if (prev.has(activePanel)) return prev;
+      return new Set([...prev, activePanel]);
+    });
+  }, [activePanel]);
 
   // ── Refs pour restore — créées avant useSessions ET avant les hooks AI ────
   const restoreSummaryRef = useRef(null);
@@ -445,7 +459,7 @@ export default function AppPage() {
         </div>
 
         {/* RÉSUMÉS */}
-        <div className={`panel${activePanel !== 'summary-section' ? ' hidden' : ''}`} id="summary-section">
+        {mountedPanels.has('summary-section') && <div className={`panel${activePanel !== 'summary-section' ? ' hidden' : ''}`} id="summary-section">
           {summarizing && (
             <div className="loader-inline">
               <div className="spinner" style={{ width: 20, height: 20 }}></div>
@@ -453,22 +467,24 @@ export default function AppPage() {
             </div>
           )}
           <ErrorBoundary>
-            <SummaryResults
-              results={summaryResults}
-              streaming={summaryStreaming}
-              progress={summaryProgress}
-              onCopyAll={() => {
-                const all = summaryResults.map(r => `## ${r.name}\n\n${r.summary}`).join('\n\n---\n\n');
-                navigator.clipboard.writeText(all);
-              }}
-              onRegen={handleSummaryRegen}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <SummaryResults
+                results={summaryResults}
+                streaming={summaryStreaming}
+                progress={summaryProgress}
+                onCopyAll={() => {
+                  const all = summaryResults.map(r => `## ${r.name}\n\n${r.summary}`).join('\n\n---\n\n');
+                  navigator.clipboard.writeText(all);
+                }}
+                onRegen={handleSummaryRegen}
+              />
+            </Suspense>
             <TTSBar />
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* FICHE D'EXAMEN */}
-        <div className={`panel${activePanel !== 'exam-sheet-section' ? ' hidden' : ''}`} id="exam-sheet-section">
+        {mountedPanels.has('exam-sheet-section') && <div className={`panel${activePanel !== 'exam-sheet-section' ? ' hidden' : ''}`} id="exam-sheet-section">
           {examLoading && (
             <div className="loader-inline">
               <div className="spinner" style={{ width: 20, height: 20 }}></div>
@@ -476,17 +492,19 @@ export default function AppPage() {
             </div>
           )}
           <ErrorBoundary>
-            <ExamSheetSection
-              md={examMd}
-              streaming={examStreaming}
-              fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
-              onRegen={examMd ? handleExamRegen : undefined}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <ExamSheetSection
+                md={examMd}
+                streaming={examStreaming}
+                fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
+                onRegen={examMd ? handleExamRegen : undefined}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* QUIZ */}
-        <div className={`panel${activePanel !== 'quiz-section' ? ' hidden' : ''}`} id="quiz-section">
+        {mountedPanels.has('quiz-section') && <div className={`panel${activePanel !== 'quiz-section' ? ' hidden' : ''}`} id="quiz-section">
           <div className="panel-header">
             <div>
               <div className="panel-label">Évaluation</div>
@@ -503,25 +521,27 @@ export default function AppPage() {
             </div>
           )}
           <ErrorBoundary>
-            <QuizSection
-              questions={questions}
-              answers={quizAnswers}
-              idx={quizIdx}
-              submitted={quizSubmitted}
-              score={quizScore}
-              examMode={examMode}
-              examMins={examMins}
-              onSelect={selectAnswer}
-              onGoTo={quizGoTo}
-              onSubmit={submitQuiz}
-              onRetryWrong={retryWrong}
-              onErrorsToFlashcards={handleErrorsToFlashcards}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <QuizSection
+                questions={questions}
+                answers={quizAnswers}
+                idx={quizIdx}
+                submitted={quizSubmitted}
+                score={quizScore}
+                examMode={examMode}
+                examMins={examMins}
+                onSelect={selectAnswer}
+                onGoTo={quizGoTo}
+                onSubmit={submitQuiz}
+                onRetryWrong={retryWrong}
+                onErrorsToFlashcards={handleErrorsToFlashcards}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* FLASHCARDS */}
-        <div className={`panel${activePanel !== 'flashcard-section' ? ' hidden' : ''}`} id="flashcard-section">
+        {mountedPanels.has('flashcard-section') && <div className={`panel${activePanel !== 'flashcard-section' ? ' hidden' : ''}`} id="flashcard-section">
           <div className="panel-header">
             <div>
               <div className="panel-label">Mémorisation</div>
@@ -535,106 +555,120 @@ export default function AppPage() {
             </div>
           )}
           <ErrorBoundary>
-            <FlashcardSection
-              decks={decks}
-              deckIdx={deckIdx}
-              cards={cards}
-              cardStates={cardStates}
-              srsOnlyDue={srsOnlyDue}
-              onMark={markCard}
-              onShuffle={shuffle}
-              onRestart={restart}
-              onRedoWrong={redoWrong}
-              onSwitchDeck={switchDeck}
-              onToggleSrs={toggleSrs}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <FlashcardSection
+                decks={decks}
+                deckIdx={deckIdx}
+                cards={cards}
+                cardStates={cardStates}
+                srsOnlyDue={srsOnlyDue}
+                onMark={markCard}
+                onShuffle={shuffle}
+                onRestart={restart}
+                onRedoWrong={redoWrong}
+                onSwitchDeck={switchDeck}
+                onToggleSrs={toggleSrs}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* GLOSSAIRE */}
-        <div className={`panel${activePanel !== 'glossary-section' ? ' hidden' : ''}`} id="glossary-section">
+        {mountedPanels.has('glossary-section') && <div className={`panel${activePanel !== 'glossary-section' ? ' hidden' : ''}`} id="glossary-section">
           <ErrorBoundary>
-            <GlossarySection
-              terms={glossaryTerms}
-              loading={glossaryLoading}
-              error={glossaryError}
-              onRegen={glossaryTerms.length > 0 ? handleGlossaryRegen : undefined}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <GlossarySection
+                terms={glossaryTerms}
+                loading={glossaryLoading}
+                error={glossaryError}
+                onRegen={glossaryTerms.length > 0 ? handleGlossaryRegen : undefined}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* CHAT */}
-        <div className={`panel${activePanel !== 'chat-section' ? ' hidden' : ''}`} id="chat-section">
+        {mountedPanels.has('chat-section') && <div className={`panel${activePanel !== 'chat-section' ? ' hidden' : ''}`} id="chat-section">
           {chatLoading && (
             <div className="loader-inline" style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
               <div className="spinner" style={{ width: 14, height: 14 }}></div>
             </div>
           )}
           <ErrorBoundary>
-            <ChatSection
-              files={chatFiles}
-              messages={chatMessages}
-              loading={chatLoading}
-              onSend={sendChat}
-              onClear={resetChat}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <ChatSection
+                files={chatFiles}
+                messages={chatMessages}
+                loading={chatLoading}
+                onSend={sendChat}
+                onClear={resetChat}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* MODE SOCRATIQUE */}
-        <div className={`panel${activePanel !== 'socratic-section' ? ' hidden' : ''}`} id="socratic-section">
+        {mountedPanels.has('socratic-section') && <div className={`panel${activePanel !== 'socratic-section' ? ' hidden' : ''}`} id="socratic-section">
           <ErrorBoundary>
-            <SocraticSection
-              files={selectedFiles}
-              history={socraticHistory}
-              streaming={socraticStreaming}
-              loading={socraticLoading}
-              error={socraticError}
-              started={socraticStarted}
-              onSend={sendSocratic}
-              onReset={resetSocratic}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <SocraticSection
+                files={selectedFiles}
+                history={socraticHistory}
+                streaming={socraticStreaming}
+                loading={socraticLoading}
+                error={socraticError}
+                started={socraticStarted}
+                onSend={sendSocratic}
+                onReset={resetSocratic}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* PLAN DE RÉVISION */}
-        <div className={`panel${activePanel !== 'study-plan-section' ? ' hidden' : ''}`} id="study-plan-section">
+        {mountedPanels.has('study-plan-section') && <div className={`panel${activePanel !== 'study-plan-section' ? ' hidden' : ''}`} id="study-plan-section">
           <ErrorBoundary>
-            <StudyPlanSection
-              plan={studyPlan}
-              loading={studyPlanLoading}
-              error={studyPlanError}
-              onGenerate={generateStudyPlan}
-              onReset={resetStudyPlan}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <StudyPlanSection
+                plan={studyPlan}
+                loading={studyPlanLoading}
+                error={studyPlanError}
+                onGenerate={generateStudyPlan}
+                onReset={resetStudyPlan}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* PRÉDICTEUR */}
-        <div className={`panel${activePanel !== 'predict-section' ? ' hidden' : ''}`} id="predict-section">
+        {mountedPanels.has('predict-section') && <div className={`panel${activePanel !== 'predict-section' ? ' hidden' : ''}`} id="predict-section">
           <ErrorBoundary>
-            <PredictSection
-              results={predictResults}
-              loading={predictLoading}
-              error={predictError}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <PredictSection
+                results={predictResults}
+                loading={predictLoading}
+                error={predictError}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
         {/* ERREURS RÉCURRENTES */}
-        <div className={`panel${activePanel !== 'error-analysis-section' ? ' hidden' : ''}`} id="error-analysis-section">
+        {mountedPanels.has('error-analysis-section') && <div className={`panel${activePanel !== 'error-analysis-section' ? ' hidden' : ''}`} id="error-analysis-section">
           <ErrorBoundary>
-            <ErrorAnalysisSection
-              patterns={errorPatterns}
-              message={errorMessage}
-              loading={errorLoading}
-              error={errorAnalysisError}
-              wrongCount={getWrongAnswers().length}
-              onAnalyze={analyzeErrors}
-              onCreateFlashcards={handleErrorsToFlashcardsFromAnalysis}
-            />
+            <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
+              <ErrorAnalysisSection
+                patterns={errorPatterns}
+                message={errorMessage}
+                loading={errorLoading}
+                error={errorAnalysisError}
+                wrongCount={getWrongAnswers().length}
+                onAnalyze={analyzeErrors}
+                onCreateFlashcards={handleErrorsToFlashcardsFromAnalysis}
+              />
+            </Suspense>
           </ErrorBoundary>
-        </div>
+        </div>}
 
       </main>
 

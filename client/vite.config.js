@@ -13,5 +13,17 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router-dom')) {
+            return 'vendor-react';
+          }
+          if (id.includes('node_modules/marked') || id.includes('node_modules/dompurify')) {
+            return 'vendor-markdown';
+          }
+        },
+      },
+    },
   }
 });
