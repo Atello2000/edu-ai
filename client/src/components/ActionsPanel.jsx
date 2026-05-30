@@ -183,7 +183,7 @@ export default function ActionsPanel({
               <span className="file-ext">{f.name.split('.').pop().toUpperCase()}</span>
               <span className="file-item-name">{f.name}</span>
               {f.truncated && (
-                <span className="file-truncated-badge" title="Fichier trop long — seuls les 150 000 premiers caractères ont été traités">
+                <span className="file-truncated-badge" title="Fichier très volumineux — seuls les 200 000 premiers caractères ont été traités">
                   ⚠ tronqué
                 </span>
               )}

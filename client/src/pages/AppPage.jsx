@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import Onboarding from './Onboarding.jsx';
 import AppHeader from '../components/AppHeader.jsx';
 import DashboardPanel from '../components/DashboardPanel.jsx';
+import PomodoroWidget from '../components/PomodoroWidget.jsx';
 import FoldersPanel from '../components/FoldersPanel.jsx';
 import StatsPanel from '../components/StatsPanel.jsx';
 import HistoryPanel from '../components/HistoryPanel.jsx';
@@ -49,6 +50,7 @@ export default function AppPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
   const [activityKey,    setActivityKey]    = useState(0);
+  const [showPomodoro,   setShowPomodoro]   = useState(false);
 
   // ── État upload ────────────────────────────────────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -357,6 +359,9 @@ export default function AppPage() {
         user={user}
         onHome={() => setActivePanel('dashboard-panel')}
         onOpenSettings={() => setShowSettings(true)}
+        onTogglePomodoro={() => setShowPomodoro(p => !p)}
+        showPomodoro={showPomodoro}
+        activityKey={activityKey}
       />
 
       <main>
@@ -688,6 +693,11 @@ export default function AppPage() {
 
       <SaveFolderModal filesToSave={filesToSave} onClose={() => setFilesToSave(null)} />
       <FeedbackButton />
+      {showPomodoro && (
+        <div className="pomo-sidebar-container">
+          <PomodoroWidget onClose={() => setShowPomodoro(false)} />
+        </div>
+      )}
     </>
   );
 }

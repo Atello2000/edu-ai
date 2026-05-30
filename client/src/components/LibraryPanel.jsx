@@ -81,7 +81,7 @@ export default function LibraryPanel({ onUseFiles }) {
       : filtered;
     if (!src.length) { toast.warn('Aucun cours à utiliser.'); return; }
     const mapped = src.map(f => ({
-      id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size,
+      id: f.filename, name: f.orig_name, path: '', text: f.text || '', size: f.size, truncated: !!f.truncated,
     }));
     onUseFiles?.(mapped);
   }
@@ -167,7 +167,16 @@ export default function LibraryPanel({ onUseFiles }) {
                     onClick={e => e.stopPropagation()}
                   />
                   <span className="file-ext">{ext}</span>
-                  <span className="folder-file-name">{f.orig_name}</span>
+                  <span className="folder-file-name" style={{ display: 'inline-flex', alignItems: 'center', gap: '.4rem', flex: 1, minWidth: 0 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.orig_name}
+                    </span>
+                    {f.truncated && (
+                      <span className="file-truncated-badge" title="Fichier très volumineux — seuls les 200 000 premiers caractères ont été traités">
+                        ⚠ tronqué
+                      </span>
+                    )}
+                  </span>
                   <span className="folder-file-date">{date}</span>
                   <button
                     className="folder-file-del"

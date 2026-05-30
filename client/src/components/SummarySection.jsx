@@ -177,6 +177,11 @@ function SummaryCard({ result }) {
           <button className="summary-action-btn pdf pdf-btn" onClick={handlePdf} disabled={pdfLoading}>
             <PdfIcon /> {pdfLoading ? '⏳' : 'PDF'}
           </button>
+          <button className="summary-action-btn print-btn" onClick={() => window.print()}>
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M4 4V1h8v3M2 5h12v6H2V5zm3 8v2h6v-2H5z"/>
+            </svg> Imprimer
+          </button>
         </div>
       </div>
 

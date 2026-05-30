@@ -243,7 +243,7 @@ header {
 }
 
 /* Header buttons */
-.theme-toggle, .stats-toggle, .back-home-btn, .settings-btn {
+.theme-toggle, .stats-toggle, .back-home-btn, .settings-btn, .pomo-toggle-btn {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -259,6 +259,9 @@ header {
 .back-home-btn:hover  { background: var(--surface); border-color: var(--border); color: var(--text); }
 .settings-btn:hover   { background: var(--surface); border-color: var(--border); color: var(--text); transform: rotate(45deg); }
 .stats-toggle.active  { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+.pomo-toggle-btn:hover  { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+.pomo-toggle-btn.active { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+
 
 /* ════════════════════════════════ MAIN ════════════════════════════════ */
 
@@ -3851,4 +3854,247 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 [dir="rtl"] .section h2 {
   font-family: 'Cairo', sans-serif;
   font-weight: 600;
+}
+
+/* ── POMODORO WIDGET ── */
+.pomo-widget {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 240px;
+  animation: scaleIn 0.28s cubic-bezier(.4,0,.2,1) both;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.pomo-widget:hover {
+  border-color: var(--border-sub);
+  box-shadow: 0 8px 32px rgba(0,0,0,.35);
+}
+
+.pomo-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-sub);
+  padding-bottom: .45rem;
+}
+
+.pomo-title {
+  font-size: .83rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.pomo-title em {
+  font-style: normal;
+  color: var(--gold);
+}
+
+.pomo-mode-break .pomo-title em {
+  color: var(--teal);
+}
+
+.pomo-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.pomo-close:hover {
+  color: var(--rose);
+}
+
+.pomo-circle-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pomo-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 120px;
+  height: 120px;
+}
+
+.pomo-bg-circle {
+  fill: none;
+  stroke: var(--border-sub);
+}
+
+.pomo-progress-circle {
+  fill: none;
+  transition: stroke-dashoffset 1s linear, stroke 0.3s;
+  stroke-linecap: round;
+}
+
+.pomo-mode-study .pomo-progress-circle {
+  stroke: var(--gold);
+}
+
+.pomo-mode-break .pomo-progress-circle {
+  stroke: var(--teal);
+}
+
+.pomo-time {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.55rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.pomo-controls {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.pomo-btn-start {
+  padding: .4rem 1rem !important;
+  font-size: .78rem !important;
+}
+
+.pomo-mute-btn.muted {
+  color: var(--rose) !important;
+  border-color: rgba(255,107,129,.2) !important;
+}
+
+/* Positionnement du conteneur Pomo dans l'AppPage */
+.pomo-sidebar-container {
+  position: fixed;
+  top: 72px;
+  right: 1.5rem;
+  z-index: 1000;
+  pointer-events: all;
+  animation: slideInRight .32s cubic-bezier(.4,0,.2,1) both;
+}
+
+@media (max-width: 1100px) {
+  .pomo-sidebar-container {
+    position: fixed;
+    bottom: 5.5rem;
+    top: auto;
+    right: 1rem;
+  }
+}
+
+/* ── STREAK BADGE HEADER ── */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  font-size: .83rem;
+  font-weight: 600;
+  color: var(--gold);
+  background: var(--gold-bg);
+  border: 1px solid rgba(212,169,76,.25);
+  border-radius: 20px;
+  padding: .25rem .75rem;
+  font-family: 'Outfit', sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  transition: transform .2s, box-shadow .2s;
+  cursor: help;
+}
+
+.streak-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--gold-glow);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RÈGLES D'IMPRESSION & EXPORT PDF (Tâche 2)
+   ════════════════════════════════════════════════════════════════════ */
+@media print {
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 12pt !important;
+    font-family: 'Outfit', 'Georgia', serif !important;
+  }
+  
+  /* Cacher les éléments superflus de l'UI */
+  header, nav, footer,
+  .float-nav, .back-home-btn, .tts-bar, .loader,
+  .summary-toolbar, .summary-tabs, .summary-file-header-left button,
+  .summary-action-btn, .regen-link, .feedback-btn,
+  .act-more-row, .act-advanced-section, .folders-empty,
+  #loader, .jlogo-spark, .sac-edit-btn, .sac-avatar {
+    display: none !important;
+  }
+
+  /* Éviter de masquer le conteneur principal et forcer le plein écran */
+  #root, main, .panel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Forcer l'affichage de l'élément que l'on souhaite imprimer */
+  .panel.hidden {
+    display: none !important; /* Garder masqué les autres panneaux */
+  }
+  
+  /* Forcer l'affichage complet du panneau actif */
+  .panel:not(.hidden) {
+    display: block !important;
+  }
+
+  .summary-section.collapsed .summary-section-body {
+    display: block !important;
+  }
+  
+  .section-chevron {
+    display: none !important;
+  }
+
+  /* Forcer le style clair imprimable */
+  .summary-section, .summary-item, .exam-sheet-card {
+    background: #ffffff !important;
+    border: 1px solid #dddddd !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 2rem !important;
+  }
+
+  .summary-section-body {
+    color: #111111 !important;
+    line-height: 1.6 !important;
+  }
+
+  /* Citations et blockquotes imprimables aérés */
+  blockquote {
+    border-left: 4px solid #333333 !important;
+    background: #f9f9f9 !important;
+    color: #222222 !important;
+    padding: 0.8rem 1.2rem !important;
+  }
+
+  /* Questions et formulaires quiz */
+  .quiz-q-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    border: 1px solid #ccc !important;
+    padding: 1.2rem !important;
+    margin-bottom: 1.5rem !important;
+  }
 }

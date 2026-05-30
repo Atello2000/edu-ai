@@ -1,17 +1,55 @@
+import { useEffect, useState } from 'react';
 import Logo from './Logo.jsx';
 import UserMenu from './UserMenu.jsx';
 import JetonWidget from './JetonWidget.jsx';
+import { apiFetch } from '../utils/apiFetch';
 
 /**
  * AppHeader — barre supérieure de l'app : retour tableau de bord, logo, jetons, menu.
  *
  * @param {object}   p
- * @param {string}   p.activePanel     — panneau actif (masque le bouton retour sur le dashboard)
+ * @param {string}   p.activePanel       — panneau actif (masque le bouton retour sur le dashboard)
  * @param {object}   p.user
- * @param {Function} p.onHome          — retour au tableau de bord
+ * @param {Function} p.onHome            — retour au tableau de bord
  * @param {Function} p.onOpenSettings
+ * @param {Function} p.onTogglePomodoro  - basculer le minuteur Pomodoro
+ * @param {boolean}  p.showPomodoro      - si le Pomodoro est affiché
+ * @param {number}   p.activityKey       - clé de rafraîchissement d'activité
  */
-export default function AppHeader({ activePanel, user, onHome, onOpenSettings }) {
+export default function AppHeader({
+  activePanel,
+  user,
+  onHome,
+  onOpenSettings,
+  onTogglePomodoro,
+  showPomodoro,
+  activityKey,
+}) {
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+
+    async function fetchStreak() {
+      try {
+        const res = await apiFetch('/api/activity/summary');
+        if (res.ok && active) {
+          const data = await res.json();
+          setStreak(data.streak || 0);
+        }
+      } catch (err) {
+        console.error('Failed to fetch streak in AppHeader:', err);
+      }
+    }
+
+    fetchStreak();
+
+    return () => {
+      active = false;
+    };
+  }, [user, activityKey]);
+
   return (
     <header>
       <button
@@ -26,9 +64,22 @@ export default function AppHeader({ activePanel, user, onHome, onOpenSettings })
         <Logo />
       </div>
       <div className="header-right">
+        {streak > 0 && (
+          <div className="streak-badge" title={`Série d'étude de ${streak} jours ! Gardez le rythme ! 🔥`}>
+            🔥 {streak}
+          </div>
+        )}
+        <button
+          className={`pomo-toggle-btn${showPomodoro ? ' active' : ''}`}
+          onClick={onTogglePomodoro}
+          title={showPomodoro ? 'Fermer le minuteur Focus' : 'Ouvrir le minuteur Focus'}
+        >
+          ⏱️
+        </button>
         <JetonWidget />
         <UserMenu user={user} onOpenSettings={onOpenSettings} />
       </div>
     </header>
   );
 }
+

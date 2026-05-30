@@ -6,7 +6,7 @@ const multer   = require('multer');
 const { LIMITS } = require('../middleware/quota');
 const { extractTextFromBuffer } = require('../services/text');
 
-const MAX_TEXT_UPLOAD = 150000; // ~28 000 mots — couvre les cours longs sans couper silencieusement
+const MAX_TEXT_UPLOAD = 200000; // ~40 000 mots — couvre les cours très longs
 
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
 const coursesDir  = path.join(__dirname, '..', 'courses');
@@ -38,21 +38,20 @@ router.post('/upload', (req, res, next) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'Aucun fichier reçu' });
   const files = await Promise.all(req.files.map(async f => {
     let text = '';
+    let truncated = false;
+    let originalLength = 0;
     try {
       const raw = await extractTextFromBuffer(f.buffer, f.originalname);
-      const truncated = raw.length > MAX_TEXT_UPLOAD;
+      truncated = raw.length > MAX_TEXT_UPLOAD;
       text = truncated ? raw.slice(0, MAX_TEXT_UPLOAD) : raw;
-      if (truncated) {
-        // Faille 3 : avertir le client que le contenu a été tronqué
-        Object.assign(fileResult, { truncated: true, originalLength: raw.length });
-      }
+      originalLength = raw.length;
     } catch (e) {}
     const id = Date.now() + '-' + Math.round(Math.random() * 1e9);
     // multer lit les noms de fichiers UTF-8 en Latin-1 par défaut →
     // re-décoder les octets latin1 comme UTF-8 pour restaurer les accents
     let name = f.originalname;
     try { name = Buffer.from(f.originalname, 'latin1').toString('utf8'); } catch {}
-    const fileResult = { id, name, size: f.size, text };
+    const fileResult = { id, name, size: f.size, text, truncated, originalLength };
     return fileResult;
   }));
   res.json({ success: true, files });

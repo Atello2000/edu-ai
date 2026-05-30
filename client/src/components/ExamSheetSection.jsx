@@ -51,6 +51,11 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
           >
             {pdfLoading ? '⏳' : 'Exporter PDF'}
           </button>
+          <button className="ghost-btn" onClick={() => window.print()} disabled={!current}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <path d="M6 9V2h12v7M4 9h16v10H4V9zm3 10v2h10v-2H7z"/>
+            </svg> Imprimer
+          </button>
         </div>
       </div>
 

@@ -59,7 +59,7 @@ router.delete('/:id', async (req, res) => {
 // ── List ALL files across all folders (library) ──────────────────────────────
 router.get('/files/all', async (req, res) => {
   const files = await prepare(`
-    SELECT ff.id, ff.filename, ff.orig_name, ff.size, ff.text, ff.created_at,
+    SELECT ff.id, ff.filename, ff.orig_name, ff.size, ff.text, ff.truncated, ff.created_at,
            f.id AS folder_id, f.name AS folder_name, f.icon AS folder_icon
     FROM folder_files ff
     JOIN folders f ON f.id = ff.folder_id
@@ -75,7 +75,7 @@ router.get('/:id/files', async (req, res) => {
     .get(req.params.id, req.user.id);
   if (!folder) return res.status(404).json({ error: 'Dossier introuvable' });
   const files = await prepare(
-    'SELECT id, filename, orig_name, size, text, created_at FROM folder_files WHERE folder_id = ? ORDER BY LOWER(orig_name)'
+    'SELECT id, filename, orig_name, size, text, truncated, created_at FROM folder_files WHERE folder_id = ? ORDER BY LOWER(orig_name)'
   ).all(folder.id);
   res.json({ files });
 });
@@ -91,8 +91,8 @@ router.post('/:id/files', async (req, res) => {
 
   for (const f of files) {
     await prepare(
-      'INSERT INTO folder_files (folder_id, filename, orig_name, size, text) VALUES (?, ?, ?, ?, ?) ON CONFLICT (folder_id, filename) DO NOTHING'
-    ).run(folder.id, f.id || f.filename, f.name || f.orig_name, f.size || 0, f.text || '');
+      'INSERT INTO folder_files (folder_id, filename, orig_name, size, text, truncated) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (folder_id, filename) DO NOTHING'
+    ).run(folder.id, f.id || f.filename, f.name || f.orig_name, f.size || 0, f.text || '', f.truncated ? 1 : 0);
   }
   res.json({ ok: true });
 });

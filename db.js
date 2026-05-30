@@ -202,6 +202,7 @@ async function initSchema() {
       PRIMARY KEY (user_id, card_hash)
     )`,
     `CREATE INDEX IF NOT EXISTS idx_srs_next_review ON srs_progress(user_id, next_review)`,
+    "ALTER TABLE folder_files ADD COLUMN IF NOT EXISTS truncated INTEGER NOT NULL DEFAULT 0",
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}
