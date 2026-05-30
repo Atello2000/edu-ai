@@ -28,7 +28,7 @@ import { useErrorAnalysis } from './useErrorAnalysis.js';
 export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef }) {
   // ── Hooks AI ───────────────────────────────────────────────────────────────
   const { results: summaryResults, streaming: summaryStreaming, progress: summaryProgress,
-          loading: summarizing, summarize, reset: resetSummary,
+          loading: summarizing, error: summaryError, summarize, reset: resetSummary,
           restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
 
   const { md: examMd, streaming: examStreaming, loading: examLoading,
@@ -37,7 +37,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
 
   const {
     questions, answers: quizAnswers, idx: quizIdx, submitted: quizSubmitted,
-    score: quizScore, loading: quizLoading,
+    score: quizScore, loading: quizLoading, error: quizError,
     generate: generateQuiz, reset: resetQuiz, restoreFrom: restoreQuizFrom,
     selectAnswer, goTo: quizGoTo, submit: submitQuiz, retryWrong,
   } = useQuiz({ saveSession });
@@ -82,11 +82,11 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
 
   return {
     // résumé
-    summaryResults, summaryStreaming, summaryProgress, summarizing, summarize, resetSummary, restoreSummaryFrom,
+    summaryResults, summaryStreaming, summaryProgress, summarizing, summaryError, summarize, resetSummary, restoreSummaryFrom,
     // fiche d'examen
     examMd, examStreaming, examLoading, generateExam, resetExam, restoreExamFrom,
     // quiz
-    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading,
+    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError,
     generateQuiz, resetQuiz, restoreQuizFrom, selectAnswer, quizGoTo, submitQuiz, retryWrong,
     // flashcards
     decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,

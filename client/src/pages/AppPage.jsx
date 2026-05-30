@@ -119,11 +119,11 @@ export default function AppPage() {
   // ── Hooks AI (agrégés dans useAiSuite) ──────────────────────────────────────
   const {
     // résumé
-    summaryResults, summaryStreaming, summaryProgress, summarizing, summarize, resetSummary,
+    summaryResults, summaryStreaming, summaryProgress, summarizing, summaryError, summarize, resetSummary,
     // fiche d'examen
     examMd, examStreaming, examLoading, generateExam, resetExam,
     // quiz
-    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading,
+    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError,
     generateQuiz, resetQuiz, selectAnswer, quizGoTo, submitQuiz, retryWrong,
     // flashcards
     decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,
@@ -471,6 +471,9 @@ export default function AppPage() {
               <span>Génération en cours…</span>
             </div>
           )}
+          {summaryError && !summarizing && (
+            <div className="error-banner" role="alert">⚠ {summaryError}</div>
+          )}
           <ErrorBoundary>
             <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
               <SummaryResults
@@ -524,6 +527,9 @@ export default function AppPage() {
               <div className="spinner" style={{ width: 20, height: 20 }}></div>
               <span>{questions.length > 0 ? `${questions.length} question${questions.length > 1 ? 's' : ''} générée${questions.length > 1 ? 's' : ''}…` : 'Génération du quiz…'}</span>
             </div>
+          )}
+          {quizError && !quizLoading && (
+            <div className="error-banner" role="alert">⚠ {quizError}</div>
           )}
           <ErrorBoundary>
             <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>

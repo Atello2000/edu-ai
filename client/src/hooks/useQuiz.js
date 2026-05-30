@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
+import { apiFetch } from '../utils/apiFetch';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
@@ -42,7 +43,7 @@ export function useQuiz({ saveSession } = {}) {
     reset();
     setLoading(true);
     try {
-      const res = await fetch('/api/quiz', {
+      const res = await apiFetch('/api/quiz', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ files, count, difficulty, lang: getLang() }),
