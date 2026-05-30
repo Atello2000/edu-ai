@@ -76,10 +76,10 @@ export default function Landing() {
       </nav>
 
       <section className="hero">
-        <div className="hero-eyebrow fade-up">Révision intelligente · Jangalai</div>
-        <h1 className="fade-up fade-up-delay-1">Révisez plus vite,<br />apprenez <em>différemment</em></h1>
+        <div className="hero-eyebrow fade-up">Pour les étudiants de Licence, Master et Doctorat</div>
+        <h1 className="fade-up fade-up-delay-1">Chargez votre cours.<br />Révisez en <em>30 secondes.</em></h1>
         <p className="fade-up fade-up-delay-2">
-          Importez votre PDF, PPT ou DOCX et choisissez votre objectif. En quelques secondes, Jangalai génère résumé, quiz, flashcards et carte mentale — le tout adapté à votre filière.
+          PDF, PPT ou DOCX — Jangalai génère résumé structuré, quiz adapté à votre niveau, flashcards SM-2 et carte mentale en quelques secondes. Choisissez votre objectif, l'IA fait le reste.
         </p>
         <div className="hero-btns fade-up fade-up-delay-3">
           <Link to="/login" className="btn-hero">Commencer gratuitement →</Link>
@@ -87,6 +87,7 @@ export default function Landing() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg> Voir comment ça marche
           </a>
         </div>
+        <p className="hero-social-proof fade-up fade-up-delay-4">Gratuit · Aucune carte bancaire · Prêt en 60 s</p>
       </section>
 
 
@@ -269,8 +270,8 @@ export default function Landing() {
       </div>
 
       <div className="cta-section">
-        <h2 className="fade-up">Votre coach de révision,<br /><em>toujours prêt</em></h2>
-        <p className="fade-up fade-up-delay-1">Objectif de session, "Préparer ma session", révision des erreurs, carte mentale, flashcards SRS. Tout ce dont vous avez besoin avant un examen, en un seul endroit.</p>
+        <h2 className="fade-up">La veille d'un examen,<br />chaque minute <em>compte</em></h2>
+        <p className="fade-up fade-up-delay-1">Jangalai est disponible 24h/24, sans rendez-vous, sans abonnement requis. Chargez votre cours, choisissez votre objectif — résumé, quiz, flashcards — et commencez à réviser en moins d'une minute.</p>
         <Link to="/login" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>Créer mon compte gratuit →</Link>
         <div className="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Prêt en 60 secondes</div>
       </div>
@@ -282,7 +283,7 @@ export default function Landing() {
           <a href="#pricing">Tarifs</a>
           <a href="#faq">FAQ</a>
           <Link to="/login">Connexion</Link>
-          <Link to="/login" style={{ color: 'var(--blue)' }}>Inscription</Link>
+          <Link to="/login" className="footer-cta-link">Inscription gratuite</Link>
         </div>
         <div>© 2026 Jangalai</div>
       </footer>

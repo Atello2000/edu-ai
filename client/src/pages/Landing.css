@@ -36,6 +36,7 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 .btn-hero:hover { opacity: .92; box-shadow: 0 6px 28px var(--blue-glow); }
 .btn-hero-outline { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: .9rem 2.2rem; font-family: 'Outfit', sans-serif; font-size: 1rem; cursor: pointer; transition: border-color .2s, color .2s; display: inline-flex; align-items: center; gap: .5rem; }
 .btn-hero-outline:hover { border-color: var(--blue); color: var(--blue); }
+.hero-social-proof { font-size: .78rem; color: var(--muted); margin-top: -.5rem; letter-spacing: .02em; }
 
 .stats-bar { display: flex; justify-content: center; gap: 3.5rem; flex-wrap: wrap; padding: 2rem; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: var(--surface); }
 .stat-item { text-align: center; }
@@ -160,6 +161,7 @@ footer { padding: 2.5rem; border-top: 1px solid var(--border); display: flex; al
 .footer-links { display: flex; gap: 1.5rem; }
 .footer-links a { color: var(--muted); transition: color .2s; }
 .footer-links a:hover { color: var(--blue); }
+.footer-cta-link { color: var(--blue) !important; font-weight: 600; }
 
 .page-loader { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--muted); font-family: 'Outfit', sans-serif; }
 

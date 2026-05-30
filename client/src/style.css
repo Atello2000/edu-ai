@@ -1722,6 +1722,13 @@ kbd {
   .act-card-icon { width:42px; height:42px; border-radius:12px; flex-shrink:0; }
   .act-card-body { flex:1; }
 
+  /* Dashboard mobile */
+  .dash-quick-actions { grid-template-columns:repeat(2,1fr); }
+  .dash-greeting-title { font-size:1.65rem; }
+  .dash-qaction { padding:1.1rem .7rem; }
+  .dash-qaction-icon { width:40px; height:40px; }
+  .dash-bottom-links { flex-wrap:wrap; }
+
   .drop-zone { padding:2rem 1.2rem; }
   .drop-icon { font-size:2rem; }
 
@@ -1787,6 +1794,8 @@ kbd {
   .header-actions { gap:.35rem; }
   .fnav-btn { padding:.32rem .55rem; }
   .stats-grid { grid-template-columns:1fr 1fr; }
+  .dash-quick-actions { grid-template-columns:1fr 1fr; gap:.5rem; }
+  .dash-greeting-title { font-size:1.45rem; }
 }
 
 /* ── Dashboard ─────────────────────────────────────────────────────────────── */
