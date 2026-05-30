@@ -87,7 +87,7 @@ export default function Landing() {
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg> Voir comment ça marche
           </a>
         </div>
-        <p className="hero-social-proof fade-up fade-up-delay-4">Gratuit · Aucune carte bancaire · Prêt en 60 s</p>
+        <p className="hero-social-proof fade-up fade-up-delay-4">100% gratuit pour commencer · Aucun engagement</p>
       </section>
 
 
