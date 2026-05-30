@@ -6,6 +6,7 @@ const fs           = require('fs');
 const cookieParser = require('cookie-parser');
 const { globalLimiter, aiLimiter } = require('./middleware/rateLimit');
 const { requireAuth } = require('./middleware/auth');
+const { generateAndSetCsrfToken, doubleCsrfProtection } = require('./middleware/csrf');
 
 const helmet = require('helmet');
 const logger = require('./services/logger');
@@ -79,17 +80,27 @@ app.use('/api', globalLimiter);
   } catch (_) {}
 });
 
-// ── Routes publiques ──────────────────────────────────────────────────────────
+// ── CSRF token endpoint (public — nécessaire avant login) ────────────────────
+app.get('/api/csrf-token', (req, res) => {
+  const token = generateAndSetCsrfToken(req, res);
+  res.json({ token });
+});
+
+// ── Routes publiques (pas de CSRF — pas de cookie d'auth non plus) ───────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api',      require('./routes/misc'));
 
-// ── Routes protégées (auth requise) ──────────────────────────────────────────
-app.use('/api',         requireAuth, aiLimiter, require('./routes/ai'));
-app.use('/api',         requireAuth, require('./routes/jetons'));
-app.use('/api/activity', requireAuth, require('./routes/activity'));
-app.use('/api/folders', requireAuth, require('./routes/folders'));
-app.use('/api/admin',    requireAuth, require('./routes/admin'));
-app.use('/api/feedback', requireAuth, require('./routes/feedback'));
+// ── CSRF sur les routes protégées (auth + token requis) ──────────────────────
+// Les routes publiques (upload, ping, auth) sont exclues car elles ne
+// consomment pas de ressources utilisateur et ne modifient pas d'état sensible.
+const csrfAndAuth = [requireAuth, doubleCsrfProtection];
+
+app.use('/api',         csrfAndAuth, aiLimiter, require('./routes/ai'));
+app.use('/api',         csrfAndAuth, require('./routes/jetons'));
+app.use('/api/activity', csrfAndAuth, require('./routes/activity'));
+app.use('/api/folders', csrfAndAuth, require('./routes/folders'));
+app.use('/api/admin',    csrfAndAuth, require('./routes/admin'));
+app.use('/api/feedback', csrfAndAuth, require('./routes/feedback'));
 app.use('/api/push',    require('./routes/push'));
 
 // SPA fallback — toutes les routes non-API renvoient index.html

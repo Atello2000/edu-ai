@@ -7,11 +7,17 @@ import { ConfirmProvider } from './components/ConfirmModal.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 import App from './App.jsx';
 import { marked } from 'marked';
+import { setupCsrfInterceptors, fetchCsrfToken } from './utils/csrf.js';
 import './style.css';
 
 // marked est désormais bundlé via npm (plus de CDN). On l'expose globalement pour
 // les composants qui appellent window.marked.parse(...) lors du rendu markdown.
 window.marked = marked;
+
+// CSRF : installer les intercepteurs fetch+XHR UNE SEULE FOIS,
+// puis récupérer le token du serveur pour initialiser le cookie.
+setupCsrfInterceptors();
+fetchCsrfToken();
 
 // ── PWA Service Worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
