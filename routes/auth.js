@@ -5,6 +5,7 @@ const crypto   = require('crypto');
 const router   = express.Router();
 const db       = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
+const { generateAndSetCsrfToken } = require('../middleware/csrf');
 const { sendVerifyEmail, sendResetEmail } = require('../services/email');
 const logger   = require('../services/logger');
 
@@ -17,9 +18,11 @@ const COOKIE_OPTS = {
 };
 const APP_URL = process.env.APP_URL || 'http://localhost:3001';
 
-function setToken(res, userId) {
+function setToken(res, userId, req) {
   const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
   res.cookie('jangalai.token', token, COOKIE_OPTS);
+  // Générer aussi le token CSRF lié à la session (cookie lisible + cookie signé)
+  if (req) generateAndSetCsrfToken(req, res);
 }
 
 async function getTokenUser(req) {
@@ -56,7 +59,7 @@ router.post('/register', async (req, res) => {
     const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
 
     sendVerifyEmail(user.email, verifyToken).catch(err => logger.error('sendVerifyEmail failed', { email: user.email, message: err.message }));
-    setToken(res, user.id);
+    setToken(res, user.id, req);
     res.json({ user });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
@@ -79,7 +82,7 @@ router.post('/login', async (req, res) => {
   const match = await bcrypt.compare(password, row.password);
   if (!match) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
 
-  setToken(res, row.id);
+  setToken(res, row.id, req);
   res.json({ user: { id: row.id, email: row.email, name: row.name, plan: row.plan, email_verified: row.email_verified, created_at: row.created_at } });
 });
 
@@ -164,7 +167,7 @@ router.get('/verify/:token', async (req, res) => {
     return res.redirect(`${APP_URL}/login?error=token_expired`);
 
   await db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
-  setToken(res, user.id);
+  setToken(res, user.id, req);
   res.redirect(`${APP_URL}/app?verified=1`);
 });
 
@@ -210,7 +213,7 @@ router.post('/reset-password', async (req, res) => {
 
   const hash = await bcrypt.hash(password, 12);
   await db.prepare('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL, email_verified = 1 WHERE id = ?').run(hash, user.id);
-  setToken(res, user.id);
+  setToken(res, user.id, req);
   res.json({ ok: true });
 });
 
@@ -278,7 +281,7 @@ router.get('/google/callback', async (req, res) => {
       }
     }
 
-    setToken(res, user.id);
+    setToken(res, user.id, req);
     res.redirect(`${APP_URL}/app`);
   } catch (err) {
     logger.error('Google OAuth error', { message: err.message, stack: err.stack });

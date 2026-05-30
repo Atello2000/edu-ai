@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 
 /**
@@ -20,7 +21,7 @@ export default function SaveFolderModal({ filesToSave, onClose }) {
 
   const fetchFolders = useCallback(async () => {
     try {
-      const res  = await fetch('/api/folders');
+      const res  = await apiFetch('/api/folders');
       const data = await res.json();
       setFolders(data.folders || []);
     } catch {
@@ -38,7 +39,7 @@ export default function SaveFolderModal({ filesToSave, onClose }) {
   const saveToFolder = useCallback(async (folderId) => {
     setSaving(true);
     try {
-      await fetch(`/api/folders/${folderId}/files`, {
+      await apiFetch(`/api/folders/${folderId}/files`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -59,7 +60,7 @@ export default function SaveFolderModal({ filesToSave, onClose }) {
     if (!name) return;
     setSaving(true);
     try {
-      const res  = await fetch('/api/folders', {
+      const res  = await apiFetch('/api/folders', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),

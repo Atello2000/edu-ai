@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 
 /**
  * Gère l'historique et l'envoi des messages du chat.
@@ -28,7 +29,7 @@ export function useChat() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ files, messages: [...history, { role: 'user', content: t }] }),

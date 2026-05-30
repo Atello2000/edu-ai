@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
+import { apiFetch } from '../utils/apiFetch';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
@@ -31,7 +32,7 @@ export function useErrorAnalysis() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/error-analysis', {
+      const res = await apiFetch('/api/error-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wrong_answers: wrongAnswers.slice(0, 30), lang: getLang() }),

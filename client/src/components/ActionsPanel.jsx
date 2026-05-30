@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 
@@ -124,7 +125,7 @@ export default function ActionsPanel({
 
     try {
       const file = files[0];
-      const res  = await fetch('/api/mindmap', {
+      const res  = await apiFetch('/api/mindmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ file }),
       });

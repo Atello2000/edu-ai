@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import { useConfirm } from './ConfirmModal';
 import eventBus from '../utils/eventBus';
@@ -93,7 +94,7 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
 
   async function loadFolders() {
     try {
-      const res = await fetch('/api/folders');
+      const res = await apiFetch('/api/folders');
       const data = await res.json();
       setFolders(data.folders || []);
     } catch {
@@ -105,7 +106,7 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
     setFilesLoading(true);
     setFilesError(null);
     try {
-      const res = await fetch(`/api/folders/${folder.id}/files`);
+      const res = await apiFetch(`/api/folders/${folder.id}/files`);
       const data = await res.json();
       setFolderFiles(data.files || []);
     } catch (err) {
@@ -158,7 +159,7 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
   async function deleteFile(fileId, fileName) {
     const ok = await confirm(`Retirer « ${fileName} » de cette matière ?`, { confirmLabel: 'Retirer', danger: true });
     if (!ok) return;
-    await fetch(`/api/folders/${currentFolder.id}/files/${fileId}`, { method: 'DELETE' });
+    await apiFetch(`/api/folders/${currentFolder.id}/files/${fileId}`, { method: 'DELETE' });
     setFolderFiles(prev => prev.filter(f => f.id !== fileId));
     setFolders(prev => prev.map(f =>
       f.id === currentFolder.id ? { ...f, file_count: Math.max(0, f.file_count - 1) } : f
@@ -188,7 +189,7 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
     try {
       const iconStr = buildIcon(modalIconKey, modalColorKey);
       if (modalMode === 'rename') {
-        const res = await fetch(`/api/folders/${currentFolder.id}`, {
+        const res = await apiFetch(`/api/folders/${currentFolder.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: modalName.trim(), icon: iconStr }),
@@ -198,7 +199,7 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
         await loadFolders();
         setCurrentFolder(f => ({ ...f, name: modalName.trim(), icon: iconStr }));
       } else {
-        const res = await fetch('/api/folders', {
+        const res = await apiFetch('/api/folders', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: modalName.trim(), icon: iconStr }),
@@ -218,7 +219,7 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
   async function deleteFolder() {
     const ok = await confirm(`Supprimer la matière « ${currentFolder.name} » et tous ses fichiers ?`, { confirmLabel: 'Supprimer', danger: true });
     if (!ok) return;
-    await fetch(`/api/folders/${currentFolder.id}`, { method: 'DELETE' });
+    await apiFetch(`/api/folders/${currentFolder.id}`, { method: 'DELETE' });
     await loadFolders();
     setView('list');
     setCurrentFolder(null);

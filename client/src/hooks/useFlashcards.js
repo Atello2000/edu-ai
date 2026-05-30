@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import toast from '../utils/toast';
+import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
+import { queueSrsUpdate } from '../utils/srsSync';
 
 function getLang() {
   try { return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr'; }
@@ -27,9 +29,12 @@ export function sm2Update(key, quality, card = null) {
   } else { c.interval = 1; c.repetitions = 0; }
   c.easeFactor = Math.max(1.3, c.easeFactor + 0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
   c.nextReview = Date.now() + c.interval * 86400000;
-  // Stocker le contenu de la carte pour pouvoir reconstruire les sessions de révision SRS
   if (card) { c.front = card.front; c.back = card.back; }
-  data[key] = c; setSRSData(data); return c;
+  c.updatedAt = Date.now();
+  data[key] = c; setSRSData(data);
+  // Sync vers PostgreSQL (debounced 3s)
+  queueSrsUpdate(key, c);
+  return c;
 }
 
 /** Retourne toutes les cartes dont la révision est due (front+back connus). */
@@ -113,7 +118,7 @@ export function useFlashcards({ saveSession } = {}) {
     reset();
     setLoading(true);
     try {
-      const res = await fetch('/api/flashcards', {
+      const res = await apiFetch('/api/flashcards', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ files, count, lang: getLang() }),

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import { useAuth } from '../hooks/useAuth';
 import './ForYouSection.css';
@@ -40,7 +41,7 @@ function timeAgo(ts) {
 }
 
 async function postActivity(topic, type, score = null, total = null) {
-  await fetch('/api/activity', {
+  await apiFetch('/api/activity', {
     method: 'POST', credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ topic, type, score, total }),
@@ -124,7 +125,7 @@ export default function ForYouSection({ onActivity }) {
     }
     setLoadingKey(key); setResult(null);
     try {
-      const r = await fetch('/api/topic', {
+      const r = await apiFetch('/api/topic', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, type, count: type === 'quiz' ? 5 : 8, lang: 'fr' }),

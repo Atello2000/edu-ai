@@ -16,11 +16,12 @@ const {
   generateCsrfToken,
   doubleCsrfProtection,
 } = doubleCsrf({
-  // Secret HMAC — mettre CSRF_SECRET dans les variables Railway
+  // Secret HMAC — définir CSRF_SECRET dans les variables Railway en prod
   getSecret: () => process.env.CSRF_SECRET || 'dev-csrf-secret-change-in-production',
 
-  // Identifiant de session : user id si authentifié, chaîne vide sinon
-  getSessionIdentifier: (req) => String(req.user?.id || ''),
+  // Pas de liaison session : le token est valable pour toute la durée du cookie.
+  // La sécurité repose sur la vérification HMAC cookie ↔ header.
+  getSessionIdentifier: () => '',
 
   // Cookie httpOnly qui stocke le hash (non accessible par le JS client)
   cookieName: '__jcsrf',

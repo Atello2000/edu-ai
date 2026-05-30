@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 
 export default function FeedbackButton() {
   const [open,    setOpen]    = useState(false);
@@ -10,7 +11,7 @@ export default function FeedbackButton() {
     if (!text.trim() || sending) return;
     setSending(true);
     try {
-      const res = await fetch('/api/feedback', {
+      const res = await apiFetch('/api/feedback', {
         method:  'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

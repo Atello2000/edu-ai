@@ -1,4 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { apiFetch } from '../utils/apiFetch';
+import { initSrsSync } from '../utils/srsSync';
 
 const AuthContext = createContext(null);
 
@@ -9,13 +11,16 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     fetch('/api/auth/me')
       .then(r => r.json())
-      .then(d => { setUser(d.user || null); })
+      .then(d => {
+        setUser(d.user || null);
+        if (d.user) initSrsSync(); // Charger + fusionner le SRS depuis le DB
+      })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
   async function login(email, password) {
-    const r = await fetch('/api/auth/login', {
+    const r = await apiFetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -27,7 +32,7 @@ export function AuthProvider({ children }) {
   }
 
   async function register(name, email, password) {
-    const r = await fetch('/api/auth/register', {
+    const r = await apiFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, password }),
@@ -39,7 +44,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await apiFetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
   }
 
