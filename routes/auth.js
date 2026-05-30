@@ -53,9 +53,10 @@ router.post('/register', async (req, res) => {
     const verifyToken = genToken();
     const verifyExp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
 
+    const currentMonth = new Date().toISOString().slice(0, 7);
     const info = await db.prepare(
-      'INSERT INTO users (email, password, name, verify_token, verify_expires) VALUES (?, ?, ?, ?, ?)'
-    ).run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp);
+      'INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, ?, 50, ?)'
+    ).run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp, currentMonth);
     const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
 
     sendVerifyEmail(user.email, verifyToken).catch(err => logger.error('sendVerifyEmail failed', { email: user.email, message: err.message }));
@@ -274,9 +275,10 @@ router.get('/google/callback', async (req, res) => {
         const { n: userCount } = await db.prepare('SELECT COUNT(*) AS n FROM users').get();
         if (userCount >= 12) return res.redirect(`${APP_URL}/login?error=beta_full`);
 
+        const currentMonth = new Date().toISOString().slice(0, 7);
         const r = await db.prepare(
-          'INSERT INTO users (email, password, name, google_id, email_verified) VALUES (?, ?, ?, ?, 1)'
-        ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id);
+          'INSERT INTO users (email, password, name, google_id, email_verified, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, 1, 50, ?)'
+        ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id, currentMonth);
         user = await db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
       }
     }

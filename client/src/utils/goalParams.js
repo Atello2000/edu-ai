@@ -1,5 +1,5 @@
 // Coûts fixes côté serveur (services/jetons.js) — jamais modifiés sans mise à jour ici
-export const COSTS = { summarize: 3, quiz: 2, flashcards: 1, examSheet: 3 };
+export const COSTS = { summarize: 3, quiz: 1, flashcards: 1, examSheet: 3 };
 
 /**
  * Retourne les paramètres de génération pour chaque objectif.
@@ -19,13 +19,13 @@ export function getGoalParams(goal) {
       return {
         genSummary: true, genExam: true, genQuiz: true, genFlashcards: true,
         quizCount: 10, quizDiff: 'difficile', fcCount: 8,
-        cost: COSTS.summarize + COSTS.examSheet + COSTS.quiz + COSTS.flashcards, // 9
+        cost: COSTS.summarize + COSTS.examSheet + COSTS.quiz + COSTS.flashcards, // 8
       };
     case 'understand':
       return {
         genSummary: true, genExam: false, genQuiz: true, genFlashcards: true,
         quizCount: 5, quizDiff: 'moyen', fcCount: 20,
-        cost: COSTS.summarize + COSTS.quiz + COSTS.flashcards, // 6
+        cost: COSTS.summarize + COSTS.quiz + COSTS.flashcards, // 5
       };
     case 'memorize':
       return {
@@ -37,13 +37,13 @@ export function getGoalParams(goal) {
       return {
         genSummary: true, genExam: false, genQuiz: true, genFlashcards: true,
         quizCount: 15, quizDiff: 'moyen', fcCount: 10,
-        cost: COSTS.summarize + COSTS.quiz + COSTS.flashcards, // 6
+        cost: COSTS.summarize + COSTS.quiz + COSTS.flashcards, // 5
       };
     default:
       return {
         genSummary: true, genExam: false, genQuiz: true, genFlashcards: true,
         quizCount: 5, quizDiff: 'moyen', fcCount: 10,
-        cost: COSTS.summarize + COSTS.quiz + COSTS.flashcards, // 6
+        cost: COSTS.summarize + COSTS.quiz + COSTS.flashcards, // 5
       };
   }
 }

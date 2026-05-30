@@ -15,7 +15,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── Coûts par action (mêmes pour tous les plans) ──────────────────────────────
 const JETON_COSTS = {
   summarize:       3,
-  quiz:            2,
+  quiz:            1,
   flashcards:      1,
   chat:            1,
   'exam-sheet':    3,
@@ -23,14 +23,14 @@ const JETON_COSTS = {
   mindmap:         2,
   socratic:        1,   // per exchange (dynamic: 2 if history >= 6)
   'study-plan':    1,   // light structured generation
-  predict:         3,   // per file, like summarize
+  predict:         2,   // per file, lighter than summarize
   'error-analysis':1,   // light pattern detection
   compare:         4,   // heavy multi-file analysis
 };
 
 // ── Allocation mensuelle par plan ─────────────────────────────────────────────
 const MONTHLY_JETONS = {
-  free: 30,   // ~7 quiz/mois
+  free: 50,   // ~6 sessions complètes/mois
   pro:  200,  // ~50 quiz/mois
   max:  600,  // ~150 quiz/mois
 };
