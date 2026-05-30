@@ -156,13 +156,8 @@ async function* streamGemini(model, messages, maxTokens) {
               : 'Gemini 1.5 Flash';
   const stream = await gemini.chat.completions.create({
     model, max_tokens: maxTokens, stream: true, messages,
-    stream_options: { include_usage: true },
   });
   for await (const chunk of stream) {
-    if (chunk.usage) {
-      yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-      continue;
-    }
     const text = chunk.choices[0]?.delta?.content || '';
     if (text) yield { text, model: label };
   }
@@ -186,10 +181,17 @@ async function* aiStream(prompt, maxTokens = 4096, config = null) {
     // → cascade : Gemini Flash → Mistral → admin config
     if (isGroqQuota) {
       logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
-      if (gemini) { yield* streamGemini('gemini-2.0-flash', messages, maxTokens); return; }
-      if (mistral) { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
+      if (gemini) {
+        try { yield* streamGemini('gemini-2.0-flash', messages, maxTokens); return; }
+        catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying Mistral`); }
+      }
+      if (mistral) {
+        try { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
+        catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
+      }
       const fallback = await getAiConfig();
       if (fallback.provider !== 'groq') { yield* aiStream(prompt, maxTokens, fallback); return; }
+      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
     }
 
     // Gemini/Mistral/autre échoue → retenter sur Groq
@@ -251,15 +253,20 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
     if (isGroqQuota) {
       logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
       if (gemini) {
-        const r = await gemini.chat.completions.create({ model: 'gemini-2.0-flash', max_tokens: maxTokens, messages });
-        return { text: r.choices[0].message.content, model: 'Gemini 2.0 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+        try {
+          const r = await gemini.chat.completions.create({ model: 'gemini-2.0-flash', max_tokens: maxTokens, messages });
+          return { text: r.choices[0].message.content, model: 'Gemini 2.0 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+        } catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying Mistral`); }
       }
       if (mistral) {
-        const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
-        return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+        try {
+          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
+          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+        } catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
       }
       const fallback = await getAiConfig();
       if (fallback.provider !== 'groq') return aiComplete(prompt, maxTokens, fallback);
+      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
     }
 
     // Autre provider échoue → Groq
