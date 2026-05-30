@@ -188,6 +188,20 @@ async function initSchema() {
     `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 600 WHEN plan = 'pro' THEN 200 ELSE 30 END,
        jetons_reset_date = to_char(NOW(), 'YYYY-MM')
      WHERE jetons = 0 AND jetons_reset_date IS NULL`,
+    // ── SRS / Flashcards — persistance PostgreSQL (Faille 2 audit) ──────────
+    `CREATE TABLE IF NOT EXISTS srs_progress (
+      user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      card_hash   TEXT    NOT NULL,
+      interval_days REAL  NOT NULL DEFAULT 1,
+      ease_factor REAL    NOT NULL DEFAULT 2.5,
+      repetitions INTEGER NOT NULL DEFAULT 0,
+      next_review BIGINT  NOT NULL DEFAULT 0,
+      front       TEXT    NOT NULL DEFAULT '',
+      back        TEXT    NOT NULL DEFAULT '',
+      updated_at  BIGINT  NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, card_hash)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_srs_next_review ON srs_progress(user_id, next_review)`,
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}

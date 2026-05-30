@@ -97,6 +97,7 @@ const csrfAndAuth = [requireAuth, doubleCsrfProtection];
 
 app.use('/api',         csrfAndAuth, aiLimiter, require('./routes/ai'));
 app.use('/api',         csrfAndAuth, require('./routes/jetons'));
+app.use('/api',         csrfAndAuth, require('./routes/srs'));
 app.use('/api/activity', csrfAndAuth, require('./routes/activity'));
 app.use('/api/folders', csrfAndAuth, require('./routes/folders'));
 app.use('/api/admin',    csrfAndAuth, require('./routes/admin'));

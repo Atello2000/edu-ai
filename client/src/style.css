@@ -3755,3 +3755,73 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   .summary-section                    { animation: none !important; }
   .fc-card-inner                      { transition: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   SUPPORT RTL — Arabe (dir="rtl" posé par useDir.js sur <html>)
+   Utilise les propriétés logiques CSS pour s'adapter automatiquement
+   au sens de lecture droite-à-gauche.
+   ════════════════════════════════════════════════════════════════════ */
+[dir="rtl"] {
+  /* Police arabe optimisée — remplace Outfit pour le texte en arabe */
+  font-family: 'Cairo', 'Outfit', sans-serif;
+}
+
+[dir="rtl"] body {
+  font-family: 'Cairo', 'Outfit', sans-serif;
+}
+
+/* Navigation flottante — aligner à gauche en RTL (miroir de right en LTR) */
+[dir="rtl"] .float-nav {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+/* Header — inverser les actions */
+[dir="rtl"] .header-actions-left  { left: auto; right: .85rem; }
+[dir="rtl"] .header-actions-right { right: auto; left: .85rem; }
+
+/* Toast — aligner à gauche en RTL */
+[dir="rtl"] .toast-container {
+  left: 1.5rem;
+  right: auto;
+}
+
+/* Sidebar (panels) — scrollbar à gauche en RTL */
+[dir="rtl"] #summary-results { direction: rtl; }
+[dir="rtl"] .summary-section-body { text-align: right; }
+
+/* Formulaires et inputs */
+[dir="rtl"] .form-group label { text-align: right; display: block; }
+[dir="rtl"] input, [dir="rtl"] select, [dir="rtl"] textarea {
+  text-align: right;
+}
+
+/* Badges et labels */
+[dir="rtl"] .jeton-badge { flex-direction: row-reverse; }
+[dir="rtl"] .file-checkbox { flex-direction: row-reverse; }
+
+/* Quick actions dashboard */
+[dir="rtl"] .dash-qaction { direction: rtl; }
+
+/* Cards d'action */
+[dir="rtl"] .act-card-wide { flex-direction: row-reverse; }
+[dir="rtl"] .act-card-body { text-align: right; }
+
+/* Float nav labels */
+[dir="rtl"] .fnav-label { font-family: 'Cairo', sans-serif; }
+
+/* Titres et paragraphes */
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3,
+[dir="rtl"] p, [dir="rtl"] span, [dir="rtl"] li {
+  font-family: 'Cairo', 'Outfit', sans-serif;
+}
+
+/* Cormorant Garamond ne supporte pas l'arabe — revenir sur Cairo */
+[dir="rtl"] .dash-greeting-title,
+[dir="rtl"] .panel-title,
+[dir="rtl"] .hero h1,
+[dir="rtl"] .section h2 {
+  font-family: 'Cairo', sans-serif;
+  font-weight: 600;
+}

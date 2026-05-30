@@ -1,33 +1,37 @@
 const express = require('express');
 const router  = express.Router();
-const { aiComplete }           = require('../../services/ai');
+const { aiStream }             = require('../../services/ai');
 const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { langLabel, parseJsonResponse } = require('./helpers');
+const { langLabel, parseJsonResponse, sseSetup } = require('./helpers');
 
-// POST /api/study-plan — plan de révision intelligent (JSON response, non-streaming)
+// POST /api/study-plan — plan de révision intelligent (SSE streaming)
 router.post('/study-plan', async (req, res) => {
-  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
+  const send = sseSetup(req, res);
+  let deducted = 0;
+
   try {
     const { exam_date, topics, srs_count, lang } = req.body;
 
     const jeton = await checkAndDeduct(req.user?.id, 'study-plan', req.user?.plan || 'free');
     if (!jeton.ok) {
-      return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
+      return res.end();
     }
     deducted = jeton.cost || 0;
 
+    send({ type: 'progress', message: 'Génération du plan de révision…' });
+
     // Calculer le nombre de jours disponibles (cap à 14)
-    // Guarde contre NaN si exam_date est absent/invalide (fallback : 7 jours)
     const examDateObj    = new Date(exam_date);
     const days_available = !isNaN(examDateObj)
       ? Math.min(14, Math.max(1, Math.ceil((examDateObj - Date.now()) / 86400000)))
       : 7;
 
-    const inLang      = langLabel(lang || 'fr');
-    const topicsText  = Array.isArray(topics)
+    const inLang     = langLabel(lang || 'fr');
+    const topicsText = Array.isArray(topics)
       ? topics.map(t => `- ${t.name} (moyenne: ${t.avg}%, sessions: ${t.sessions})`).join('\n')
       : 'Aucun sujet fourni';
 
@@ -64,17 +68,28 @@ Règles:
 - Jour avant l'examen: uniquement révision légère et SRS`;
 
     const aiCfg = await getAiConfigForAction('study-plan');
-    const { text: raw, usage } = await aiComplete(prompt, 2000, aiCfg);
-    if (usage) logTokens(req.user?.id, 'study-plan', usage.provider, usage.input, usage.output);
+    let raw = '';
+    for await (const chunk of aiStream(prompt, 2000, aiCfg)) {
+      if (chunk.usage) {
+        logTokens(req.user?.id, 'study-plan', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
+        continue;
+      }
+      raw += chunk.text;
+    }
 
     const plan = parseJsonResponse(raw, { days: [], advice: raw });
+    if (!plan.days?.length) {
+      throw new Error('Plan vide généré — réessayez avec une date d\'examen valide.');
+    }
 
-    res.json({ plan });
+    send({ type: 'end', plan });
+
   } catch (err) {
     logger.error('AI study-plan error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'study-plan', deducted);
-    res.status(500).json({ error: err.message });
+    send({ type: 'error', message: err.message });
   }
+  res.end();
 });
 
 module.exports = router;

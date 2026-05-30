@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth.jsx';
+import { useDir } from './hooks/useDir.js';
 
 // Chargement synchrone — page d'atterrissage (premier rendu critique)
 import Landing from './pages/Landing.jsx';
@@ -32,6 +33,7 @@ function GuestRoute({ children }) {
 }
 
 export default function App() {
+  useDir(); // Applique dir="rtl" sur <html> si lang === 'ar'
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
