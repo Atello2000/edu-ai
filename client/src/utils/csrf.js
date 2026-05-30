@@ -7,12 +7,8 @@
  */
 
 export function getCsrfToken() {
-  return (
-    document.cookie
-      .split('; ')
-      .find(r => r.startsWith('jangalai-csrf='))
-      ?.split('=')[1] || ''
-  );
+  const m = document.cookie.match(/(?:^|;\s*)jangalai-csrf=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
 }
 
 /** Appelle le serveur pour obtenir/renouveler le token CSRF */

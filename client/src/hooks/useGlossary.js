@@ -29,8 +29,7 @@ export function useGlossary() {
     xhr.open('POST', '/api/glossary', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Accept', 'text/event-stream');
-    const csrf = document.cookie.match(/(?:^|;\s*)jangalai-csrf=([^;]+)/)?.[1];
-    if (csrf) xhr.setRequestHeader('X-CSRF-Token', decodeURIComponent(csrf));
+
 
     function parseEvents(chunk) {
       buf += chunk;

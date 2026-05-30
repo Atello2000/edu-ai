@@ -7,11 +7,6 @@ function getLang() {
   } catch { return 'fr'; }
 }
 
-function getCsrfToken() {
-  // Read cookie jangalai-csrf if present (set by auth middleware)
-  const m = document.cookie.match(/(?:^|;\s*)jangalai-csrf=([^;]+)/);
-  return m ? m[1] : null;
-}
 
 /**
  * Parse SSE buffer and call onEvent for each complete event.
@@ -209,8 +204,6 @@ export function useSummarize({ saveSession } = {}) {
     xhrRef.current = xhr;
     xhr.open('POST', '/api/summarize', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
-    const csrf = getCsrfToken();
-    if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
 
     let processedLen = 0;
 
