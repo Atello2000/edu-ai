@@ -180,23 +180,26 @@ async function* aiStream(prompt, maxTokens = 4096, config = null) {
     if (provider === 'gemini')    { yield* streamGemini(model, messages, maxTokens); return; }
     yield* streamGroq(model, messages, maxTokens);
   } catch (err) {
-    // Groq 413 : requête trop grande pour le free tier (limite TPM 12 000)
-    // → fallback vers le provider admin (Claude/Mistral)
-    if (provider === 'groq' && err?.status === 413) {
+    const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);
+
+    // Groq 429/413 : quota journalier ou requête trop grande
+    // → cascade : Gemini Flash → Mistral → admin config
+    if (isGroqQuota) {
+      logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
+      if (gemini) { yield* streamGemini('gemini-2.0-flash', messages, maxTokens); return; }
+      if (mistral) { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
       const fallback = await getAiConfig();
-      if (fallback.provider !== 'groq') {
-        logger.warn(`Groq 413 (request too large), fallback → ${fallback.provider}`);
-        yield* aiStream(prompt, maxTokens, fallback);
-        return;
-      }
+      if (fallback.provider !== 'groq') { yield* aiStream(prompt, maxTokens, fallback); return; }
     }
-    // Fallback Groq si le provider principal échoue (clé invalide, quota, etc.)
+
+    // Gemini/Mistral/autre échoue → retenter sur Groq
     if (provider !== 'groq' && groqClients.length) {
       logger.warn(`Provider ${provider} failed (${err.message}), fallback → Groq`);
       yield* streamGroq('llama-3.3-70b-versatile', messages, maxTokens);
-    } else {
-      throw err;
+      return;
     }
+
+    throw err;
   }
 }
 
@@ -242,14 +245,24 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
     const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
     return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
   } catch (err) {
-    // Groq 413 : requête trop grande → fallback provider admin (Claude/Mistral)
-    if (provider === 'groq' && err?.status === 413) {
-      const fallback = await getAiConfig();
-      if (fallback.provider !== 'groq') {
-        logger.warn(`Groq 413 (request too large), fallback → ${fallback.provider}`);
-        return aiComplete(prompt, maxTokens, fallback);
+    const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);
+
+    // Groq 429/413 → cascade : Gemini → Mistral → admin config
+    if (isGroqQuota) {
+      logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
+      if (gemini) {
+        const r = await gemini.chat.completions.create({ model: 'gemini-2.0-flash', max_tokens: maxTokens, messages });
+        return { text: r.choices[0].message.content, model: 'Gemini 2.0 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
       }
+      if (mistral) {
+        const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
+        return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+      }
+      const fallback = await getAiConfig();
+      if (fallback.provider !== 'groq') return aiComplete(prompt, maxTokens, fallback);
     }
+
+    // Autre provider échoue → Groq
     if (provider !== 'groq' && groqClients.length) {
       logger.warn(`Provider ${provider} failed (${err.message}), fallback → Groq`);
       return tryGroqFallback();
