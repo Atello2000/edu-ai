@@ -243,7 +243,7 @@ header {
 }
 
 /* Header buttons */
-.theme-toggle, .stats-toggle, .back-home-btn, .settings-btn, .pomo-toggle-btn {
+.theme-toggle, .stats-toggle, .back-home-btn, .settings-btn {
   background: transparent;
   border: 1px solid transparent;
   border-radius: 8px;
@@ -259,7 +259,20 @@ header {
 .back-home-btn:hover  { background: var(--surface); border-color: var(--border); color: var(--text); }
 .settings-btn:hover   { background: var(--surface); border-color: var(--border); color: var(--text); transform: rotate(45deg); }
 .stats-toggle.active  { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
-.pomo-toggle-btn:hover  { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
+
+/* Bouton chronomètre — pill alignée sur jeton-widget */
+.pomo-toggle-btn {
+  display: flex; align-items: center; justify-content: center;
+  padding: .18rem .6rem;
+  height: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  color: var(--muted);
+  cursor: pointer; flex-shrink: 0;
+  transition: border-color .2s, box-shadow .2s, color .2s, background .2s;
+}
+.pomo-toggle-btn:hover  { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-bg); color: var(--gold); }
 .pomo-toggle-btn.active { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); }
 
 

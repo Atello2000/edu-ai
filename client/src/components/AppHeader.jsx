@@ -77,7 +77,13 @@ export default function AppHeader({
           onClick={onTogglePomodoro}
           title={showPomodoro ? 'Fermer le minuteur Focus' : 'Ouvrir le minuteur Focus'}
         >
-          ⏱️
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="14" r="8" />
+            <path d="M10 3h4" />
+            <path d="M12 3v3" />
+            <path d="M12 10v4l2.5 2.5" />
+          </svg>
         </button>
         <JetonWidget />
         <UserMenu user={user} onOpenSettings={onOpenSettings} />
