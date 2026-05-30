@@ -61,6 +61,50 @@ export function buildSummarySections(md) {
 /**
  * Strip markdown syntax pour usage dans jsPDF (conserve les accents).
  */
+/**
+ * sanitizePdf — rend un texte safe pour jsPDF (Helvetica = Latin-1 uniquement).
+ *
+ * jsPDF mesure les caractères un par un via le glyphe de la police intégrée.
+ * Tout caractère hors Latin-1 (U+0100 à U+FFFF) cause un échec silencieux
+ * de la mesure → rendu "l e t t r e   p a r   l e t t r e" ou glyphe corrompu.
+ *
+ * Règles :
+ *   1. Substitutions intelligentes : ≤→<=, µ→µ (reste dans Latin-1), etc.
+ *   2. Caractères dans Latin-1 (0x00–0xFF) : conservés tels quels.
+ *   3. Tout le reste (emojis, CJK, flèches Unicode, formules…) : supprimé.
+ */
+export function sanitizePdf(text) {
+  return String(text)
+    // Comparateurs
+    .replace(/≤/g, '<=').replace(/≥/g, '>=')
+    .replace(/≠/g, '!=').replace(/≈/g, '~=')
+    .replace(/±/g, '+/-')
+    // Flèches
+    .replace(/[→⟶➜➡]/g, '->').replace(/[←⟵⬅]/g, '<-')
+    .replace(/[↑⬆]/g, '^').replace(/[↓⬇]/g, 'v')
+    .replace(/↔/g, '<->')
+    // Opérateurs mathématiques
+    .replace(/×/g, 'x').replace(/÷/g, '/')
+    .replace(/·/g, '.').replace(/∙/g, '.')
+    .replace(/∞/g, 'inf').replace(/√/g, 'sqrt')
+    .replace(/∑/g, 'S').replace(/∏/g, 'P')
+    .replace(/∂/g, 'd').replace(/∫/g, 'int')
+    .replace(/°/g, '\xB0')   // U+00B0 DEGREE SIGN est dans Latin-1
+    .replace(/µ|μ/g, '\xB5') // U+00B5 MICRO SIGN est dans Latin-1
+    .replace(/²/g, '2').replace(/³/g, '3')
+    .replace(/¹/g, '1').replace(/⁰/g, '0')
+    .replace(/₀/g, '0').replace(/₁/g, '1').replace(/₂/g, '2')
+    .replace(/₃/g, '3').replace(/₄/g, '4')
+    // Ponctuation typographique
+    .replace(/[–—]/g, '-').replace(/…/g, '...')
+    .replace(/[""«»‹›]/g, '"').replace(/[''‚]/g, "'")
+    .replace(/­/g, '')  // soft hyphen
+    // Espaces spéciaux → espace normal
+    .replace(/[           ]/g, ' ')
+    // Tout ce qui reste hors Latin-1 → supprimé
+    .replace(/[^\x00-\xFF]/g, '');
+}
+
 export function stripMd(text) {
   return text
     .replace(/^#{1,6}\s*/,    '')

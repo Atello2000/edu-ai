@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { stripMd } from './summaryUtils.js';
+import { stripMd, sanitizePdf } from './summaryUtils.js';
 
 /**
  * Génère et télécharge la fiche d'examen en PDF.
@@ -32,18 +32,7 @@ export async function exportExamSheetToPDF(fileName, md) {
   const fillRect = (x, yy, w, h, c) => { setFill(c); pdf.rect(x, yy, w, h, 'F'); };
   const hline    = (x1, yy, x2, c, lw = 0.3) => { setDraw(c); pdf.setLineWidth(lw); pdf.line(x1, yy, x2, yy); };
 
-  function sanitize(text) {
-    return String(text)
-      .replace(/≤/g, '<=').replace(/≥/g, '>=')
-      .replace(/[→⟶]/g, '->').replace(/[←⟵]/g, '<-')
-      .replace(/[×·]/g, 'x').replace(/÷/g, '/')
-      .replace(/[–—]/g, '-').replace(/…/g, '...')
-      .replace(/[""«»]/g, '"').replace(/['']/g, "'")
-      .replace(/µ|μ/g, 'µ')
-      .replace(/[^\x00-\xFF]/g, '');
-  }
-
-  const wrap = (t, maxW) => pdf.splitTextToSize(sanitize(String(t)), maxW);
+  const wrap = (t, maxW) => pdf.splitTextToSize(sanitizePdf(String(t)), maxW);
 
   function drawHeader(isFirst) {
     const bH = isFirst ? 40 : 13;
