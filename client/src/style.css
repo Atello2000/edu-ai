@@ -3035,7 +3035,7 @@ main {
 /* ── Feedback floating button ─────────────────────────────────────────────── */
 .feedback-fab {
   position: fixed;
-  bottom: 5.5rem;
+  bottom: 1.5rem;
   right: 1.25rem;
   z-index: var(--z-sticky);
   width: 46px;
@@ -3066,7 +3066,7 @@ main {
 
 .feedback-panel {
   position: fixed;
-  bottom: 7rem;
+  bottom: 4.8rem;
   right: 1.25rem;
   z-index: calc(var(--z-sticky) - 1);
   width: min(340px, calc(100vw - 2rem));
@@ -3161,8 +3161,8 @@ main {
 }
 
 @media (max-width: 480px) {
-  .feedback-fab { bottom: 4.5rem; right: .75rem; }
-  .feedback-panel { bottom: 5.8rem; right: .75rem; }
+  .feedback-fab { bottom: 1.25rem; right: .75rem; }
+  .feedback-panel { bottom: 4.5rem; right: .75rem; }
 }
 
 /* ── Toasts ──────────────────────────────────────────────────────────────── */
