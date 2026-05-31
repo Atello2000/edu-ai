@@ -22,6 +22,15 @@ export default defineConfig({
           if (id.includes('node_modules/marked') || id.includes('node_modules/dompurify')) {
             return 'vendor-markdown';
           }
+          if (id.includes('node_modules/markmap-lib')) {
+            return 'vendor-markmap-lib';
+          }
+          if (id.includes('node_modules/markmap-view')) {
+            return 'vendor-markmap-view';
+          }
+          if (id.includes('node_modules/d3') || id.includes('node_modules/internmap')) {
+            return 'vendor-d3';
+          }
         },
       },
     },

@@ -1,14 +1,24 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
 // Bundlés via npm — plus de dépendance CDN, fonctionne hors-ligne
-import { Transformer } from 'markmap-lib';
-import { Markmap }     from 'markmap-view';
 
 /**
  * Modal de carte mentale (markmap).
  *
  * Écoute l'événement eventBus 'mindmap:open' avec payload { name, markdown }.
  */
+
+let markmapModulesPromise;
+function loadMarkmapModules() {
+  markmapModulesPromise ||= Promise.all([
+    import('markmap-lib/no-plugins'),
+    import('markmap-view'),
+  ]).then(([lib, view]) => ({
+    Transformer: lib.Transformer,
+    Markmap:     view.Markmap,
+  }));
+  return markmapModulesPromise;
+}
 
 export default function MindmapModal() {
   const [visible,    setVisible]    = useState(false);
@@ -45,6 +55,9 @@ export default function MindmapModal() {
       try {
         if (cancelled) return;
 
+        const { Transformer, Markmap } = await loadMarkmapModules();
+        if (cancelled) return;
+
         const base        = courseName.replace(/\.[^.]+$/, '');
         const md          = `# ${base}\n\n${pendingMd}`;
         const transformer = new Transformer();
@@ -60,7 +73,7 @@ export default function MindmapModal() {
           pan:              true,
         }, root);
         instanceRef.current.fit();
-      } catch (err) {
+      } catch {
         if (cancelled) return;
         svgEl.innerHTML = `<foreignObject x="10%" y="35%" width="80%" height="30%">
           <div xmlns="http://www.w3.org/1999/xhtml" style="font-family:Outfit,sans-serif;font-size:14px;color:var(--muted);text-align:center;padding:1rem;background:var(--surface);border:1px solid var(--border);border-radius:8px">

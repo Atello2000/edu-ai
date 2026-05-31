@@ -157,7 +157,6 @@
   font-family: 'Outfit', sans-serif;
   font-size: .88rem;
   color: var(--text);
-  outline: none;
   transition: border-color .2s;
   box-sizing: border-box;
 }
