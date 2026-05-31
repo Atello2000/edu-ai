@@ -151,7 +151,7 @@ export default function Login() {
             <form className="auth-form" onSubmit={handleLogin}>
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" name="email" placeholder="vous@email.com" required autoComplete="email" value={form.email} onChange={onChange} />
+                <input type="email" name="email" placeholder="vous@gmail.com" required autoComplete="email" value={form.email} onChange={onChange} />
               </div>
               <div className="form-group">
                 <label>Mot de passe</label>
@@ -162,20 +162,6 @@ export default function Login() {
             </form>
           ) : (
             <form className="auth-form" onSubmit={handleRegister}>
-              <div style={{
-                fontSize: '13px',
-                color: '#38bdf8',
-                background: 'rgba(56, 189, 248, 0.1)',
-                border: '1px solid rgba(56, 189, 248, 0.2)',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span>ℹ️ Seuls les e-mails Google (@gmail.com) sont autorisés.</span>
-              </div>
               <div className="form-group">
                 <label>Prénom / Nom</label>
                 <input type="text" name="name" placeholder="Votre nom complet" required autoComplete="off" value={form.name} onChange={onChange} />

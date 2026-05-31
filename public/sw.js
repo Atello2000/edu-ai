@@ -1,4 +1,4 @@
-const CACHE = 'jangalai-f6b65fe-1780258187050';
+const CACHE = 'jangalai-979f412-1780258698370';
 
 // IMPORTANT: never cache HTML entry points (/ or index.html) —
 // their hashed asset references change on every deploy and a stale
