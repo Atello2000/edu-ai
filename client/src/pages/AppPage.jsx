@@ -220,21 +220,29 @@ export default function AppPage() {
   }, [restoreFcFrom]);
 
   const handleSelectPlan = useCallback(async (planKey) => {
+    console.log("AppPage - handleSelectPlan called for plan:", planKey);
     try {
+      console.log("AppPage - Sending POST request to /api/payment/checkout...");
       const res = await apiFetch('/api/payment/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planKey })
       });
+      console.log("AppPage - Response received status:", res.status);
       const data = await res.json();
+      console.log("AppPage - Response data parsed:", data);
       if (data.error) {
         toast.error(data.error);
         return;
       }
       if (data.redirectUrl) {
+        console.log("AppPage - Redirecting to:", data.redirectUrl);
         window.location.href = data.redirectUrl;
+      } else {
+        console.error("AppPage - No redirectUrl returned by backend!");
       }
     } catch (err) {
+      console.error("AppPage - Error during checkout request:", err);
       toast.error('Erreur lors du lancement du paiement.');
     }
   }, []);

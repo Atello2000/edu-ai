@@ -134,7 +134,14 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                       background: plan.accent, color: '#fff', borderColor: plan.accent,
                     }}
                     disabled={isCurrent}
-                    onClick={() => onSelectPlan && onSelectPlan(plan.key)}
+                    onClick={() => {
+                      console.log("PlansModal - Button clicked for plan:", plan.key);
+                      if (onSelectPlan) {
+                        onSelectPlan(plan.key);
+                      } else {
+                        console.error("PlansModal - onSelectPlan is undefined in props!");
+                      }
+                    }}
                   >
                     {isCurrent ? '✓ Plan actuel' : `S'abonner au plan ${plan.name}`}
                   </button>
