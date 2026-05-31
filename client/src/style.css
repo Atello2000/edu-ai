@@ -4578,128 +4578,140 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 }
 
 /* ── PLANS MODAL ─────────────────────────────────────────────────────────── */
-.plans-modal { max-width: 780px; width: 94vw; padding: 1.5rem; }
 
-.pm-header {
+/* Wrapper — remplace modal-box pour ce modal */
+.plans-modal-wrap {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  width: min(860px, 94vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,.18);
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
+/* Header */
+.plans-modal-top {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 1rem; margin-bottom: 1.4rem;
 }
-.pm-title {
+.plans-modal-h2 {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 1.5rem; font-weight: 300; margin: 0 0 .2rem;
+  font-size: 1.5rem; font-weight: 300; margin: 0 0 .2rem; color: var(--text);
 }
-.pm-sub { font-size: .78rem; color: var(--muted); margin: 0; }
+.plans-modal-p { font-size: .78rem; color: var(--muted); margin: 0; }
+.plans-close-btn {
+  flex-shrink: 0; background: none; border: none; cursor: pointer;
+  color: var(--muted); padding: .25rem; line-height: 1;
+  border-radius: 6px; transition: color .15s, background .15s;
+}
+.plans-close-btn:hover { color: var(--text); background: var(--hover); }
 
-/* Grille — scroll horizontal sur mobile */
-.pm-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: .85rem;
-  align-items: start;
+/* ── Rangée de cartes — toujours 3 colonnes ── */
+.plans-cards-row {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: stretch;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 2px; /* évite que les box-shadow soient coupées */
 }
-@media (max-width: 600px) {
-  .pm-grid {
-    display: flex; gap: .75rem;
-    overflow-x: auto; scroll-snap-type: x mandatory;
-    padding-bottom: .5rem;
-    /* masquer la scrollbar */
-    scrollbar-width: none;
-  }
-  .pm-grid::-webkit-scrollbar { display: none; }
-}
+.plans-cards-row::-webkit-scrollbar { display: none; }
 
-/* ── Carte ── */
-.pm-card {
+/* ── Carte individuelle ── */
+.plan-tile {
+  flex: 1;
+  min-width: 210px;
   display: flex; flex-direction: column;
   border-radius: 12px;
   border: 1.5px solid var(--border);
   background: var(--surface);
   overflow: hidden;
-  transition: box-shadow .18s, transform .15s;
   scroll-snap-align: start;
-  min-width: 220px; /* mobile scroll */
+  transition: transform .15s, box-shadow .15s;
 }
-.pm-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.09); transform: translateY(-2px); }
+.plan-tile:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,.1); }
 
-/* Plan Max mis en avant */
-.pm-card-best {
-  border-color: var(--purple);
-  box-shadow: 0 4px 18px rgba(139,92,246,.16);
+.plan-tile-best {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 8px 28px rgba(0,0,0,.08);
 }
-.pm-card-best:hover { transform: translateY(-3px); }
+.plan-tile-current { border-color: var(--accent); }
 
-/* Plan actuel */
-.pm-card-teal.pm-card-current   { border-color: var(--teal); }
-.pm-card-gold.pm-card-current   { border-color: #f5a623; }
-.pm-card-purple.pm-card-current { border-color: var(--purple); }
-
-/* Bande couleur (div réel, plus fiable que ::before) */
-.pm-card-band { height: 3px; width: 100%; flex-shrink: 0; }
-
-/* Corps */
-.pm-card-body {
-  padding: 1rem 1.1rem 1.2rem;
-  display: flex; flex-direction: column; gap: .7rem; flex: 1;
+/* ── Header coloré de la carte ── */
+.plan-tile-head {
+  padding: 1.1rem 1.15rem .9rem;
+  background: var(--accent-bg);
+  border-bottom: 1px solid var(--accent);
+  display: flex; flex-direction: column; gap: .5rem;
 }
 
-/* Nom + badge */
-.pm-card-row { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
-.pm-plan-name {
-  font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--muted);
+.plan-tile-name-row {
+  display: flex; align-items: center; justify-content: space-between; gap: .4rem;
 }
-.pm-badge {
-  font-size: .6rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
-  padding: .18rem .55rem; border-radius: 99px; white-space: nowrap; line-height: 1.5;
+.plan-tile-name {
+  font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent);
 }
-.pm-badge-current { background: var(--teal);   color: #fff; }
-.pm-badge-best    { background: var(--purple);  color: #fff; }
+.plan-tile-pill {
+  font-size: .58rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: #fff; padding: .18rem .55rem; border-radius: 99px; white-space: nowrap;
+}
 
-/* Prix */
-.pm-price-row { display: flex; align-items: baseline; gap: .3rem; line-height: 1; }
-.pm-price {
+.plan-tile-price-row {
+  display: flex; align-items: flex-end; gap: .4rem; line-height: 1;
+}
+.plan-tile-price {
   font-family: 'Cormorant Garamond', serif;
-  font-size: 2rem; font-weight: 600; color: var(--text);
+  font-size: 2.4rem; font-weight: 600; color: var(--text); line-height: 1;
 }
-.pm-period { font-size: .72rem; color: var(--muted); }
-.pm-desc   { font-size: .75rem; color: var(--muted); margin: 0; margin-top: -.25rem; }
-
-/* Jetons */
-.pm-jetons {
-  display: flex; align-items: center; gap: .35rem;
-  font-size: .78rem; font-weight: 600;
-  padding: .35rem .6rem; border-radius: 6px;
-  border: 1px solid var(--border);
+.plan-tile-currency {
+  font-size: .68rem; color: var(--muted); line-height: 1.3; padding-bottom: .3rem;
 }
-.pm-jetons strong { font-size: .9rem; font-weight: 700; }
-.pm-jetons-teal   { color: var(--teal); }
-.pm-jetons-gold   { color: #d97706; }
-.pm-jetons-purple { color: var(--purple); }
 
-/* Features */
-.pm-features {
+/* ── Corps de la carte ── */
+.plan-tile-body {
+  padding: 1rem 1.15rem 1.15rem;
+  display: flex; flex-direction: column; gap: .75rem; flex: 1;
+}
+
+.plan-tile-jetons {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .78rem; font-weight: 700;
+  padding: .3rem .65rem;
+  border-radius: 6px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  align-self: flex-start;
+}
+.plan-tile-jetons strong { font-size: .92rem; }
+
+.plan-tile-sep {
+  height: 1px; opacity: .2; margin: -.1rem 0;
+}
+
+.plan-tile-features {
   list-style: none; margin: 0; padding: 0;
-  display: flex; flex-direction: column; gap: .42rem; flex: 1;
+  display: flex; flex-direction: column; gap: .45rem; flex: 1;
 }
-.pm-features li {
+.plan-tile-features li {
   display: flex; align-items: flex-start; gap: .45rem;
-  font-size: .78rem; color: var(--text); line-height: 1.4;
+  font-size: .8rem; color: var(--text); line-height: 1.4;
 }
-.pm-card-teal   .pm-features li svg { color: var(--teal); }
-.pm-card-gold   .pm-features li svg { color: #d97706; }
-.pm-card-purple .pm-features li svg { color: var(--purple); }
 
-/* CTA */
-.pm-cta {
-  width: 100% !important; justify-content: center;
-  font-size: .8rem !important; padding: .55rem 1rem !important;
+.plan-tile-cta {
+  width: 100%; padding: .6rem 1rem;
+  border-radius: 8px; font-size: .82rem; font-weight: 600;
+  border: 1.5px solid var(--accent); background: transparent; color: var(--accent);
+  cursor: pointer; transition: background .15s, color .15s;
   margin-top: auto;
 }
-.pm-cta:disabled { opacity: .45; cursor: default; pointer-events: none; }
-
-/* Footer */
-.pm-footer {
-  text-align: center; font-size: .73rem; color: var(--muted);
-  margin: 1rem 0 0; padding-top: .85rem;
-  border-top: 1px solid var(--border);
+.plan-tile-cta:hover:not(:disabled) { background: var(--accent); color: #fff; }
+.plan-tile-cta:disabled {
+  opacity: .4; cursor: default; pointer-events: none;
+  border-color: var(--border); color: var(--muted);
 }
