@@ -1,6 +1,4 @@
-import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
 import Logo from '../components/Logo';
 import './Login.css';
 
@@ -16,51 +14,15 @@ function GoogleIcon() {
 }
 
 export default function Login() {
-  const { login, register } = useAuth();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState('login');
-  const [error, setError] = useState(() => {
-    const e = searchParams.get('error');
-    if (e === 'beta_full')    return 'L\'accès est limité pendant la bêta. Revenez bientôt !';
-    if (e === 'google_denied') return 'Connexion Google annulée.';
-    if (e === 'invalid_token') return 'Lien de vérification invalide.';
-    if (e === 'token_expired') return 'Lien expiré. Reconnectez-vous pour en recevoir un nouveau.';
-    if (e) return 'Une erreur est survenue. Réessayez.';
-    return '';
-  });
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const errorParam = searchParams.get('error');
 
-  function onChange(e) {
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-  }
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    try {
-      await login(form.email, form.password);
-      navigate('/app');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleRegister(e) {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    try {
-      await register(form.name, form.email, form.password);
-      navigate('/app');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  let error = '';
+  if (errorParam === 'beta_full')    error = 'L\'accès est limité pendant la bêta. Revenez bientôt !';
+  if (errorParam === 'google_denied') error = 'Connexion Google annulée.';
+  if (errorParam === 'invalid_token') error = 'Lien de vérification invalide.';
+  if (errorParam === 'token_expired') error = 'Lien expiré. Reconnectez-vous pour en recevoir un nouveau.';
+  if (errorParam) error = 'Une erreur est survenue lors de l\'authentification.';
 
   return (
     <div className="auth-layout">
@@ -119,57 +81,56 @@ export default function Login() {
       </div>
 
       <div className="auth-side">
-        <div className="auth-card">
-          <div className="auth-logo">
-            <h1><Logo size={36} /></h1>
-            <p>Plateforme IA pour vos cours</p>
+        <div className="auth-card" style={{ padding: '50px 30px', display: 'flex', flexDirection: 'column', justifyContent: 'center', minHeight: '380px' }}>
+          <div className="auth-logo" style={{ marginBottom: '40px' }}>
+            <h1><Logo size={42} /></h1>
+            <p style={{ fontSize: '15px', color: '#94a3b8', marginTop: '10px' }}>Plateforme d&apos;apprentissage IA ultra-rapide pour vos cours</p>
           </div>
 
-          <div className="auth-tabs">
-            <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); }}>Connexion</button>
-            <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); }}>Inscription</button>
-          </div>
+          {error && <div className="auth-error show" style={{ marginBottom: '24px' }}>{error}</div>}
 
-          {error && <div className="auth-error show">{error}</div>}
-
-          <a href="/api/auth/google" className="google-btn">
-            <GoogleIcon /> Continuer avec Google
+          <a href="/api/auth/google" className="google-btn" style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            background: '#ffffff',
+            color: '#0f172a',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '14px',
+            padding: '16px 24px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.15)',
+            textDecoration: 'none',
+            transition: 'all 0.2s ease-in-out',
+            margin: '10px 0 20px 0'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.background = '#f8fafc';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.background = '#ffffff';
+          }}
+          >
+            <GoogleIcon /> S&apos;inscrire ou se connecter avec Google
           </a>
 
-          <div className="auth-divider">ou</div>
-
-          {tab === 'login' ? (
-            <form className="auth-form" onSubmit={handleLogin}>
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="vous@email.com" required autoComplete="email" value={form.email} onChange={onChange} />
-              </div>
-              <div className="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" placeholder="••••••••" required autoComplete="current-password" value={form.password} onChange={onChange} />
-              </div>
-              <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
-              <p className="forgot-link"><Link to="/forgot-password">Mot de passe oublié ?</Link></p>
-            </form>
-          ) : (
-            <form className="auth-form" onSubmit={handleRegister}>
-              <div className="form-group">
-                <label>Prénom / Nom</label>
-                <input type="text" name="name" placeholder="Votre nom complet" required autoComplete="off" value={form.name} onChange={onChange} />
-              </div>
-              <div className="form-group">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="vous@email.com" required autoComplete="email" value={form.email} onChange={onChange} />
-              </div>
-              <div className="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" placeholder="8 caractères minimum" required autoComplete="new-password" minLength="8" value={form.password} onChange={onChange} />
-              </div>
-              <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Création…' : 'Créer mon compte'}</button>
-            </form>
-          )}
+          <p style={{
+            fontSize: '13px',
+            color: '#64748b',
+            lineHeight: '1.6',
+            marginTop: '20px',
+            textAlign: 'center'
+          }}>
+            🔐 Authentification 100% sécurisée via Google.<br/>
+            Aucun mot de passe à retenir. Compte créé instantanément.
+          </p>
         </div>
-        <p className="landing-link">Découvrir la plateforme → <Link to="/">En savoir plus</Link></p>
+        <p className="landing-link" style={{ marginTop: '20px' }}>Découvrir la plateforme → <Link to="/">En savoir plus</Link></p>
       </div>
     </div>
   );

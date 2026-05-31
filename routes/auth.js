@@ -35,57 +35,14 @@ async function getTokenUser(req) {
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
-// ── POST /api/auth/register ───────────────────────────────────────────────────
-router.post('/register', async (req, res) => {
-  const { email, password, name } = req.body || {};
-  if (!email || !password || !name)
-    return res.status(400).json({ error: 'Tous les champs sont requis.' });
-  if (!EMAIL_RE.test(email))
-    return res.status(400).json({ error: 'Email invalide.' });
-  if (password.length < 8)
-    return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum).' });
-
-  try {
-    const { n: userCount } = await db.prepare('SELECT COUNT(*) AS n FROM users').get();
-    if (userCount >= 12)
-      return res.status(403).json({ error: 'L\'accès est limité pendant la bêta. Revenez bientôt !' });
-
-    const hash        = await bcrypt.hash(password, 12);
-    const verifyToken = genToken();
-    const verifyExp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    const info = await db.prepare(
-      'INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, ?, 40, ?)'
-    ).run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp, currentMonth);
-    const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
-
-    sendVerifyEmail(user.email, verifyToken).catch(err => logger.error('sendVerifyEmail failed', { email: user.email, message: err.message }));
-    setToken(res, user.id, req);
-    res.json({ user });
-  } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
-    throw err;
-  }
+// ── POST /api/auth/register (DÉSACTIVÉ — Google OAuth uniquement) ─────────────
+router.post('/register', (req, res) => {
+  return res.status(400).json({ error: 'La plateforme utilise désormais exclusivement Google pour s\'inscrire et se connecter.' });
 });
 
-// ── POST /api/auth/login ──────────────────────────────────────────────────────
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
-  if (!email || !password)
-    return res.status(400).json({ error: 'Email et mot de passe requis.' });
-
-  const row = await db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
-  if (!row) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
-
-  if (row.google_id && !row.password)
-    return res.status(401).json({ error: 'Ce compte utilise Google pour se connecter.' });
-
-  const match = await bcrypt.compare(password, row.password);
-  if (!match) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
-
-  setToken(res, row.id, req);
-  res.json({ user: { id: row.id, email: row.email, name: row.name, plan: row.plan, email_verified: row.email_verified, created_at: row.created_at } });
+// ── POST /api/auth/login (DÉSACTIVÉ — Google OAuth uniquement) ────────────────
+router.post('/login', (req, res) => {
+  return res.status(400).json({ error: 'La plateforme utilise désormais exclusivement Google pour s\'inscrire et se connecter.' });
 });
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
