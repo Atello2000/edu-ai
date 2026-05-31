@@ -118,7 +118,7 @@ publicRouter.post('/', async (req, res) => {
 
   // 2. Traitement de la commande et crédit de l'utilisateur
   // Référence attendue : PAYTECH_sub_{userId}_{plan}_{timestamp}
-  const parts = refCommand.split('_');
+  const parts = ref_command.split('_');
   if (parts.length < 4 || parts[0] !== 'PAYTECH' || parts[1] !== 'sub') {
     logger.error('Format de ref_command PayTech invalide', { ref_command });
     return res.status(400).send('Invalid Reference');
