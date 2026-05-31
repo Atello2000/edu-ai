@@ -560,9 +560,10 @@ export default function AppPage() {
             background: 'var(--surface, #111827)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '24px',
-            padding: '40px 30px',
+            padding: '40px 24px',
             maxWidth: '440px',
             width: '90%',
+            boxSizing: 'border-box',
             textAlign: 'center',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15)',
             position: 'relative',
@@ -602,7 +603,7 @@ export default function AppPage() {
 
             {/* Title */}
             <h2 style={{
-              fontSize: '28px',
+              fontSize: 'clamp(20px, 6.5vw, 28px)',
               fontWeight: '800',
               margin: '0 0 10px 0',
               background: congratsPlan === 'max' ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : 'linear-gradient(135deg, #f5a623 0%, #f76b1c 100%)',
