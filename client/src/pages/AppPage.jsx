@@ -501,6 +501,7 @@ export default function AppPage() {
         {/* ACTIONS */}
         <div className={`panel${activePanel !== 'actions-section' ? ' hidden' : ''}`} id="actions-section">
           <ActionsPanel
+            user={user}
             jetonCosts={jetonCosts}
             hasFiles={hasFiles}
             uploadedFiles={uploadedFiles}

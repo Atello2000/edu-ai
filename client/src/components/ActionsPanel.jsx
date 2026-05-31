@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
+import PlansModal from './PlansModal';
 
 // Coûts par défaut (fallback si les coûts dynamiques ne sont pas encore chargés)
 const DEFAULT_COSTS = {
@@ -46,6 +47,7 @@ function JetonBadge({ action, costs }) {
 }
 
 export default function ActionsPanel({
+  user,
   jetonCosts,
   hasFiles,
   uploadedFiles = [],
@@ -94,7 +96,9 @@ export default function ActionsPanel({
   // ── Loader mindmap (piloté par React state dans AppPage) ──────────────────
   onMindmapLoading,         // (loading: boolean) => void
 }) {
-  const [showMore, setShowMore] = useState(false);
+  const [showMore,  setShowMore]  = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
+  const isPro = user?.plan === 'pro' || user?.plan === 'max';
 
   // ── Sélection de fichiers ─────────────────────────────────────────────────
   const allSelected = uploadedFiles.length > 0 && (
@@ -395,8 +399,37 @@ export default function ActionsPanel({
       </div>
 
       {/* ════════════════ Outils avancés — section séparée ════════════════ */}
-      <div className="act-advanced-section">
-        <div className="act-section-label">Outils avancés</div>
+      {showPlans && (
+        <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlans(false)} />
+      )}
+      <div className={`act-advanced-section${!isPro ? ' act-advanced-locked' : ''}`}>
+        <div className="act-section-label">
+          Outils avancés
+          {!isPro && (
+            <span className="act-pro-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 1L9 9H1l6.5 5-2.5 8L12 17l7 5-2.5-8L23 9h-8z"/></svg>
+              Pro
+            </span>
+          )}
+        </div>
+
+        {/* Overlay de verrouillage */}
+        {!isPro && (
+          <div className="act-lock-overlay" onClick={() => setShowPlans(true)}>
+            <div className="act-lock-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <p className="act-lock-title">Disponible à partir du plan Pro</p>
+              <p className="act-lock-sub">Mode Socratique, Prédicteur, Plan de révision et Analyse d&apos;erreurs</p>
+              <button className="act-btn gold" onClick={e => { e.stopPropagation(); setShowPlans(true); }}>
+                Voir les plans
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="action-trio">
 
           <div className="act-card act-card-wide" data-color="blue">
