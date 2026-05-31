@@ -592,7 +592,7 @@ export default function AppPage() {
               border: congratsPlan === 'max' ? '1.5px solid rgba(168,85,247,0.3)' : '1.5px solid rgba(245,166,35,0.3)',
               display: 'flex',
               alignItems: 'center',
-              justify-content: 'center',
+              justifyContent: 'center',
               margin: '0 auto 24px auto',
               boxShadow: congratsPlan === 'max' ? '0 0 20px rgba(168,85,247,0.2)' : '0 0 20px rgba(245,166,35,0.2)',
               fontSize: '40px'
