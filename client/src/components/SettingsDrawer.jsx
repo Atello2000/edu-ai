@@ -173,8 +173,8 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
               <button className="settings-danger-btn" onClick={clearStats}>Réinitialiser</button>
             </div>
             <div className="settings-danger-row">
-              <div className="settings-row-label"><span>Tutoriel d'accueil</span><small>Réafficher le guide de démarrage</small></div>
-              <button className="settings-neutral-btn" onClick={resetOnboarding}>Réafficher</button>
+              <div className="settings-row-label"><span>Profil d'études</span><small>Modifier votre niveau, domaine et spécialité</small></div>
+              <button className="settings-neutral-btn" onClick={resetOnboarding}>Modifier</button>
             </div>
           </section>
 
