@@ -91,4 +91,15 @@ router.get('/summary', async (req, res) => {
   }
 });
 
+// ── DELETE /api/activity — efface tout l'historique de l'utilisateur ─────────
+router.delete('/', async (req, res) => {
+  try {
+    await prepare('DELETE FROM activity WHERE user_id = ?').run(req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('DELETE /activity error', { message: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

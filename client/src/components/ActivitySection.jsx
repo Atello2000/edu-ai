@@ -52,8 +52,10 @@ function ActivitySkeleton() {
 }
 
 export default function ActivitySection({ refreshKey }) {
-  const [summary, setSummary] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [summary,    setSummary]    = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [confirming, setConfirming] = useState(false);
+  const [resetting,  setResetting]  = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -66,6 +68,17 @@ export default function ActivitySection({ refreshKey }) {
       })
       .catch(() => setLoading(false));
   }, [refreshKey]);
+
+  async function handleReset() {
+    setResetting(true);
+    try {
+      const res = await fetch('/api/activity', { method: 'DELETE', credentials: 'include' });
+      if (res.ok) {
+        setSummary({ streak: 0, totalSessions: 0, recentActivity: [], topTopics: [], bestScores: [] });
+      }
+    } catch { /* silencieux */ }
+    finally { setConfirming(false); setResetting(false); }
+  }
 
   // Skeleton uniquement au premier chargement (summary encore inconnu)
   if (loading && !summary) return <ActivitySkeleton />;
@@ -99,7 +112,28 @@ export default function ActivitySection({ refreshKey }) {
       </div>
 
       <div className="act-recent">
-        <div className="act-recent-title">Révisions récentes</div>
+        <div className="act-recent-header">
+          <div className="act-recent-title">Révisions récentes</div>
+          {!confirming ? (
+            <button className="act-reset-btn" onClick={() => setConfirming(true)}>
+              Réinitialiser
+            </button>
+          ) : (
+            <span className="act-reset-confirm">
+              <span className="act-reset-question">Effacer tout ?</span>
+              <button
+                className="act-reset-yes"
+                disabled={resetting}
+                onClick={handleReset}
+              >{resetting ? '…' : 'Oui'}</button>
+              <button
+                className="act-reset-no"
+                disabled={resetting}
+                onClick={() => setConfirming(false)}
+              >Non</button>
+            </span>
+          )}
+        </div>
         <div className="act-recent-list">
           {recentActivity.map((a, i) => (
             <div key={i} className="act-item">
