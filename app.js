@@ -53,6 +53,103 @@ app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.send(content);
+// Route de succès de paiement avec détection intelligente (Mobile vs Desktop)
+// - Sur PC : redirection automatique instantanée vers l'application principale
+// - Sur Mobile : affichage d'une page de succès légère et ultra-rapide sans charger l'application React
+app.get('/payment-success', (req, res) => {
+  const plan = req.query.plan || 'pro';
+  const userAgent = req.headers['user-agent'] || '';
+  const isMobile = /mobile|android|iphone|ipad|phone/i.test(userAgent);
+
+  if (isMobile) {
+    res.send(`
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Paiement réussi - Jangalai</title>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+        <style>
+          body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            text-align: center;
+          }
+          .card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            padding: 40px 24px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+          }
+          .icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            display: inline-block;
+            animation: pop 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+          }
+          h1 {
+            font-size: 26px;
+            margin: 0 0 12px 0;
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+          p {
+            font-size: 15px;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin: 0 0 28px 0;
+          }
+          .btn-close {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            font-weight: 600;
+            border-radius: 14px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+            transition: all 0.2s ease;
+          }
+          .btn-close:active {
+            transform: scale(0.98);
+            opacity: 0.9;
+          }
+          @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="icon">🎉</div>
+          <h1>Paiement Réussi !</h1>
+          <p>Merci pour votre abonnement <strong>${plan.toUpperCase()}</strong>.<br><br>Vous pouvez maintenant fermer cet onglet en toute sécurité et continuer sur votre ordinateur.</p>
+          <button class="btn-close" onclick="window.close();">Fermer la fenêtre</button>
+        </div>
+      </body>
+      </html>
+    `);
+  } else {
+    res.redirect(`/app?payment=success&plan=${plan}`);
+  }
 });
 
 // En production, sert le build React en priorité

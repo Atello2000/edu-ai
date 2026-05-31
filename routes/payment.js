@@ -38,7 +38,7 @@ protectedRouter.post('/checkout', async (req, res) => {
   const refCommand = `PAYTECH_sub_${userId}_${plan}_${Date.now()}`;
 
   const ipnUrl = `${process.env.BACKEND_URL}/api/payment/ipn`;
-  const successUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/app?payment=success&plan=${plan}`;
+  const successUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?plan=${plan}`;
   const cancelUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/app?payment=cancel`;
 
   try {
