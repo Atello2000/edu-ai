@@ -27,7 +27,7 @@ app.use(helmet({
       'style-src':   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       'font-src':    ["'self'", 'https://fonts.gstatic.com', 'data:'],
       'img-src':     ["'self'", 'data:', 'blob:'],
-      'connect-src': ["'self'"],
+      'connect-src': ["'self'", 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
       'worker-src':  ["'self'", 'blob:'],
       'object-src':  ["'none'"],
     },
@@ -96,6 +96,7 @@ app.use('/api/auth/forgot-password', loginLimiter);
 
 // ── Routes publiques (pas de CSRF — pas de cookie d'auth non plus) ───────────
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/payment/ipn', require('./routes/payment').publicRouter);
 app.use('/api',      require('./routes/misc'));
 
 // ── CSRF sur les routes protégées (auth + token requis) ──────────────────────
@@ -105,6 +106,7 @@ const csrfAndAuth = [requireAuth, doubleCsrfProtection];
 
 app.use('/api',         csrfAndAuth, aiLimiter, require('./routes/ai'));
 app.use('/api',         csrfAndAuth, require('./routes/jetons'));
+app.use('/api/payment', csrfAndAuth, require('./routes/payment').protectedRouter);
 app.use('/api',         csrfAndAuth, require('./routes/srs'));
 app.use('/api/activity', csrfAndAuth, require('./routes/activity'));
 app.use('/api/folders', csrfAndAuth, require('./routes/folders'));
