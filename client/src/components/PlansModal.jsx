@@ -79,7 +79,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
         </div>
 
         {/* ── Cartes ── */}
-        <div className="plans-cards-row" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1rem', alignItems:'stretch' }}>
+        <div className="plans-cards-row">
           {PLANS.map(plan => {
             const isCurrent = plan.key === (currentPlan || 'free');
             return (
