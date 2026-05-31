@@ -12,7 +12,7 @@ const PLANS = [
       'Résumés, quiz, flashcards',
       'Chat avec le cours',
       'Carte mentale & fiche exam',
-      'Formats PDF, PPT, DOCX',
+      'Fichiers jusqu\'à 5 Mo · 10 sessions',
     ],
   },
   {
@@ -27,7 +27,7 @@ const PLANS = [
       'Outils avancés déverrouillés',
       'Prédicteur & plan de révision',
       'Mode socratique & analyse erreurs',
-      '3,75× plus de jetons',
+      'Fichiers jusqu\'à 10 Mo · 30 sessions',
     ],
   },
   {
@@ -39,9 +39,9 @@ const PLANS = [
     accentBg:'rgba(168,85,247,.1)',
     features:[
       'Tout le plan Pro inclus',
-      '10× plus de jetons',
+      '10× plus de jetons qu\'en gratuit',
       'Export PDF fiche d\'examen',
-      'Accès prioritaire aux features',
+      'Fichiers jusqu\'à 20 Mo · sessions illimitées',
     ],
   },
 ];

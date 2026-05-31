@@ -10,7 +10,7 @@ import { exportExamSheetToPDF } from '../utils/examSheetPdf';
  *   fileName  string      — nom de base pour le PDF
  *   onRegen   () => void  — callback régénérer
  */
-export default function ExamSheetSection({ md, streaming, fileName = 'fiche', onRegen }) {
+export default function ExamSheetSection({ md, streaming, fileName = 'fiche', onRegen, userPlan, onUpgrade }) {
   const [copying,    setCopying]    = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
 
@@ -43,14 +43,25 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
           <button className="ghost-btn" onClick={handleCopy} disabled={!current}>
             {copying ? 'Copié ✓' : 'Copier'}
           </button>
-          <button
-            className="ghost-btn"
-            id="exam-sheet-pdf-btn"
-            onClick={handlePdf}
-            disabled={!md || pdfLoading}
-          >
-            {pdfLoading ? '⏳' : 'Exporter PDF'}
-          </button>
+          {userPlan === 'max' ? (
+            <button
+              className="ghost-btn"
+              id="exam-sheet-pdf-btn"
+              onClick={handlePdf}
+              disabled={!md || pdfLoading}
+            >
+              {pdfLoading ? '⏳' : 'Exporter PDF'}
+            </button>
+          ) : (
+            <button
+              className="ghost-btn"
+              title="Disponible avec le plan Max"
+              onClick={onUpgrade}
+              style={{ opacity: .6 }}
+            >
+              🔒 PDF Max
+            </button>
+          )}
           <button className="ghost-btn" onClick={() => window.print()} disabled={!current}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
               <path d="M6 9V2h12v7M4 9h16v10H4V9zm3 10v2h10v-2H7z"/>

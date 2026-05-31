@@ -36,6 +36,7 @@ const StudyPlanSection     = lazy(() => import('../components/StudyPlanSection.j
 const PredictSection       = lazy(() => import('../components/PredictSection.jsx'));
 const ErrorAnalysisSection = lazy(() => import('../components/ErrorAnalysisSection.jsx'));
 import toast from '../utils/toast';
+import PlansModal from '../components/PlansModal';
 import eventBus from '../utils/eventBus';
 import { apiFetch } from '../utils/apiFetch';
 
@@ -50,6 +51,7 @@ export default function AppPage() {
   const { user } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
   const [activityKey,    setActivityKey]    = useState(0);
   const [showPomodoro,   setShowPomodoro]   = useState(false);
 
@@ -119,6 +121,7 @@ export default function AppPage() {
   const { saveSession, restoreSession } = useSessions({
     uploadedFiles, setUploadedFiles, setActivePanel,
     restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef,
+    userPlan: user?.plan,
   });
 
   // ── Hooks AI (agrégés dans useAiSuite) ──────────────────────────────────────
@@ -431,6 +434,7 @@ export default function AppPage() {
     <>
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
       {showGoalModal  && <GoalModal onSelect={handleGoalSelect} balance={balance} />}
+      {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} />}
       <SettingsDrawer
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -593,6 +597,8 @@ export default function AppPage() {
                 streaming={examStreaming}
                 fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
                 onRegen={examMd ? handleExamRegen : undefined}
+                userPlan={user?.plan}
+                onUpgrade={() => setShowPlansModal(true)}
               />
             </Suspense>
           </ErrorBoundary>

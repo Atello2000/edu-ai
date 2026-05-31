@@ -13,6 +13,13 @@ const MAX_TEXT_UPLOAD = 200000; // ~40 000 mots — couvre les cours très longs
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
 const coursesDir  = path.join(__dirname, '..', 'courses');
 
+// Limite upload par plan (en production)
+const PLAN_FILE_LIMITS = {
+  free: 5  * 1024 * 1024,
+  pro:  10 * 1024 * 1024,
+  max:  20 * 1024 * 1024,
+};
+
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
@@ -20,12 +27,11 @@ const upload = multer({
     if (['.pdf', '.ppt', '.pptx', '.docx'].includes(ext)) {
       cb(null, true);
     } else {
-      // cb(null, false) évite le ECONNRESET de multer ; on stocke l'erreur sur req
       req.fileTypeError = 'Seuls les fichiers PDF, PPT/PPTX et DOCX sont acceptés';
       cb(null, false);
     }
   },
-  limits: { fileSize: LIMITS.fileSize }
+  limits: { fileSize: LIMITS.fileSize }, // 20 Mo max global (= plan Max)
 });
 
 
@@ -38,6 +44,19 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
   });
 }, async (req, res) => {
   if (!req.files || !req.files.length) return res.status(400).json({ error: 'Aucun fichier reçu' });
+
+  // Vérification de la limite par plan (production uniquement)
+  if (process.env.NODE_ENV === 'production') {
+    const plan      = req.user?.plan || 'free';
+    const planLimit = PLAN_FILE_LIMITS[plan] ?? PLAN_FILE_LIMITS.free;
+    const tooLarge  = req.files.filter(f => f.size > planLimit);
+    if (tooLarge.length) {
+      const mb = Math.round(planLimit / 1024 / 1024);
+      return res.status(400).json({
+        error: `Fichier trop volumineux pour votre plan ${plan} (limite : ${mb} Mo). Passez à un plan supérieur pour uploader des fichiers plus grands.`,
+      });
+    }
+  }
   const files = await Promise.all(req.files.map(async f => {
     let text = '';
     let truncated = false;

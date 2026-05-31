@@ -3,7 +3,12 @@ import eventBus from '../utils/eventBus';
 import { idb } from '../utils/idb';
 
 const HISTORY_KEY  = 'jangalai-sessions'; // localStorage — gardé pour migration
-const MAX_SESSIONS = 10;
+
+function getMaxSessions(plan) {
+  if (plan === 'max') return 9999;
+  if (plan === 'pro') return 30;
+  return 10; // free
+}
 
 // ── Lecture synchrone depuis localStorage (fallback + migration) ──────────────
 export function getSessions() {
@@ -49,7 +54,9 @@ export function useSessions({
   restoreExamRef,
   restoreQuizRef,
   restoreFcRef,
+  userPlan,
 }) {
+  const maxSessions = getMaxSessions(userPlan);
   const filesRef = useRef(uploadedFiles);
   useEffect(() => { filesRef.current = uploadedFiles; }, [uploadedFiles]);
 
@@ -85,13 +92,13 @@ export function useSessions({
         // Écrire la session mise à jour dans IDB
         await idb.put('sessions', sessions[idx]);
 
-        // Garder au plus MAX_SESSIONS — supprimer les plus anciennes
+        // Garder au plus maxSessions — supprimer les plus anciennes
         const sorted = sessions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        const toDelete = sorted.slice(MAX_SESSIONS);
+        const toDelete = sorted.slice(maxSessions);
         await Promise.all(toDelete.map(s => idb.delete('sessions', s.id)));
 
         // Miroir localStorage pour getSessions() synchrone (HistoryPanel initial render)
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(sorted.slice(0, MAX_SESSIONS)));
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(sorted.slice(0, maxSessions)));
 
         eventBus.emit('history:refresh');
         eventBus.emit('dashboard:refresh');
@@ -108,7 +115,7 @@ export function useSessions({
         }
         const i = idx2 === -1 ? 0 : idx2;
         Object.assign(sessions[i], update, { timestamp: Date.now() });
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, MAX_SESSIONS)));
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, maxSessions)));
         eventBus.emit('history:refresh');
         eventBus.emit('dashboard:refresh');
       }
