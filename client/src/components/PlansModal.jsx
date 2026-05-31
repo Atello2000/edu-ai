@@ -174,15 +174,18 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                   {/* CTA */}
                   <button
                     className="plan-tile-cta"
-                    style={isCurrent ? {} : {
+                    style={isCurrent && plan.key === 'free' ? {} : {
                       background: plan.accent, color: '#fff', borderColor: plan.accent,
                     }}
-                    disabled={isCurrent}
+                    disabled={isCurrent && plan.key === 'free'}
                     onClick={() => {
                       handleInternalSelectPlan(plan.key);
                     }}
                   >
-                    {isCurrent ? '✓ Plan actuel' : `S'abonner au plan ${plan.name}`}
+                    {isCurrent 
+                      ? (plan.key === 'free' ? '✓ Plan actuel' : 'Renouveler le plan') 
+                      : `S'abonner au plan ${plan.name}`
+                    }
                   </button>
                 </div>
               </div>

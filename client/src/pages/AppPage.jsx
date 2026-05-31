@@ -52,6 +52,8 @@ export default function AppPage() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
+  const [showCongratsModal, setShowCongratsModal] = useState(false);
+  const [congratsPlan, setCongratsPlan] = useState('');
   const [activityKey,    setActivityKey]    = useState(0);
   const [showPomodoro,   setShowPomodoro]   = useState(false);
 
@@ -80,8 +82,9 @@ export default function AppPage() {
     const plan = params.get('plan');
 
     if (payment === 'success') {
-      const planName = plan === 'max' ? 'Max' : 'Pro';
-      toast.success(`Félicitations ! Votre abonnement ${planName} est activé avec succès 🎉`);
+      const selectedPlan = plan || 'pro';
+      setCongratsPlan(selectedPlan);
+      setShowCongratsModal(true);
       
       // Mettre à jour la session utilisateur et le quota de jetons
       if (typeof refreshSession === 'function') refreshSession();
@@ -291,13 +294,12 @@ export default function AppPage() {
                 // Le webhook IPN a validé la transaction !
                 clearInterval(pollingIntervalRef.current);
                 setIsWaitingPayment(false);
+                setCongratsPlan(checkData.user.plan);
+                setShowCongratsModal(true);
 
                 // Rafraîchir les informations
                 if (typeof refreshSession === 'function') refreshSession();
                 eventBus.emit('quota:refresh');
-
-                const planName = checkData.user.plan === 'max' ? 'Max' : 'Pro';
-                toast.success(`Félicitations ! Votre abonnement ${planName} est activé avec succès 🎉`);
               }
             }
           } catch (_) {}
@@ -552,6 +554,126 @@ export default function AppPage() {
       {showGoalModal  && <GoalModal onSelect={handleGoalSelect} balance={balance} />}
       {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} onSelectPlan={handleSelectPlan} />}
       
+      {showCongratsModal && (
+        <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={() => setShowCongratsModal(false)}>
+          <div className="congrats-modal-wrap" onClick={e => e.stopPropagation()} style={{
+            background: 'var(--surface, #111827)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRadius: '24px',
+            padding: '40px 30px',
+            maxWidth: '440px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15)',
+            position: 'relative',
+            animation: 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both'
+          }}>
+            {/* Glow Background Effect */}
+            <div style={{
+              position: 'absolute',
+              top: '-10%',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '180px',
+              height: '180px',
+              background: congratsPlan === 'max' ? 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, rgba(168,85,247,0) 70%)' : 'radial-gradient(circle, rgba(245,166,35,0.3) 0%, rgba(245,166,35,0) 70%)',
+              pointerEvents: 'none',
+              zIndex: 0
+            }} />
+
+            {/* Premium Icon */}
+            <div style={{
+              position: 'relative',
+              zIndex: 1,
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: congratsPlan === 'max' ? 'rgba(168,85,247,0.1)' : 'rgba(245,166,35,0.1)',
+              border: congratsPlan === 'max' ? '1.5px solid rgba(168,85,247,0.3)' : '1.5px solid rgba(245,166,35,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justify-content: 'center',
+              margin: '0 auto 24px auto',
+              boxShadow: congratsPlan === 'max' ? '0 0 20px rgba(168,85,247,0.2)' : '0 0 20px rgba(245,166,35,0.2)',
+              fontSize: '40px'
+            }}>
+              {congratsPlan === 'max' ? '👑' : '⭐'}
+            </div>
+
+            {/* Title */}
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: '800',
+              margin: '0 0 10px 0',
+              background: congratsPlan === 'max' ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : 'linear-gradient(135deg, #f5a623 0%, #f76b1c 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              letterSpacing: '-0.02em'
+            }}>
+              Abonnement Activé !
+            </h2>
+
+            <p style={{
+              color: 'var(--text-secondary, #9ca3af)',
+              fontSize: '15px',
+              lineHeight: '1.6',
+              margin: '0 0 28px 0',
+              padding: '0 10px'
+            }}>
+              Félicitations ! Votre compte a été mis à niveau vers le plan <strong>{congratsPlan === 'max' ? 'MAX' : 'PRO'}</strong> avec succès. Vos limites ont été instantanément rechargées.
+            </p>
+
+            {/* Benefits box */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '32px',
+              textAlign: 'left'
+            }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted, #6b7280)', letterSpacing: '0.05em', fontWeight: '700' }}>
+                Vos nouveaux avantages :
+              </h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#fff', marginBottom: '8px' }}>
+                  <span style={{ color: congratsPlan === 'max' ? '#a855f7' : '#f5a623' }}>✓</span>
+                  <strong>{congratsPlan === 'max' ? '400' : '150'} jetons</strong> alloués pour ce mois
+                </li>
+                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#fff', marginBottom: '8px' }}>
+                  <span style={{ color: congratsPlan === 'max' ? '#a855f7' : '#f5a623' }}>✓</span>
+                  Outils d&apos;intelligence artificielle avancés débloqués
+                </li>
+                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#fff' }}>
+                  <span style={{ color: congratsPlan === 'max' ? '#a855f7' : '#f5a623' }}>✓</span>
+                  Taille maximale des fichiers augmentée
+                </li>
+              </ul>
+            </div>
+
+            {/* CTA Button */}
+            <button
+              onClick={() => setShowCongratsModal(false)}
+              className="act-btn"
+              style={{
+                width: '100%',
+                background: congratsPlan === 'max' ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : 'linear-gradient(135deg, #f5a623 0%, #f76b1c 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '14px 28px',
+                borderRadius: '14px',
+                fontSize: '15px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: congratsPlan === 'max' ? '0 10px 20px -5px rgba(168,85,247,0.4)' : '0 10px 20px -5px rgba(245,166,35,0.4)',
+              }}
+            >
+              C&apos;est parti ! 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
       {isWaitingPayment && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
           <div className="payment-waiting-wrap" onClick={e => e.stopPropagation()}>
