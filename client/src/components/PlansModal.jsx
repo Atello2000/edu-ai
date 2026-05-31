@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { apiFetch } from '../utils/apiFetch';
+import toast from '../utils/toast';
 
 const PLANS = [
   {
@@ -60,6 +62,44 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
     window.addEventListener('keydown', fn);
     return () => window.removeEventListener('keydown', fn);
   }, [onClose]);
+
+  const handleInternalSelectPlan = async (planKey) => {
+    console.log("PlansModal - handleInternalSelectPlan called for plan:", planKey);
+    
+    // If a custom handler was provided in props, use it
+    if (onSelectPlan) {
+      console.log("PlansModal - Custom onSelectPlan handler found, delegating...");
+      onSelectPlan(planKey);
+      return;
+    }
+
+    // Default self-contained checkout logic
+    console.log("PlansModal - No custom handler, running self-contained checkout API call...");
+    try {
+      const res = await apiFetch('/api/payment/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey })
+      });
+      console.log("PlansModal - Response status:", res.status);
+      const data = await res.json();
+      console.log("PlansModal - Response data:", data);
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data.redirectUrl) {
+        console.log("PlansModal - Redirecting to PayTech:", data.redirectUrl);
+        window.location.href = data.redirectUrl;
+      } else {
+        console.error("PlansModal - No redirectUrl in response!");
+        toast.error("Impossible d'initier le paiement.");
+      }
+    } catch (err) {
+      console.error("PlansModal - Checkout error:", err);
+      toast.error('Erreur lors du lancement du paiement.');
+    }
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -135,12 +175,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                     }}
                     disabled={isCurrent}
                     onClick={() => {
-                      console.log("PlansModal - Button clicked for plan:", plan.key);
-                      if (onSelectPlan) {
-                        onSelectPlan(plan.key);
-                      } else {
-                        console.error("PlansModal - onSelectPlan is undefined in props!");
-                      }
+                      handleInternalSelectPlan(plan.key);
                     }}
                   >
                     {isCurrent ? '✓ Plan actuel' : `S'abonner au plan ${plan.name}`}
