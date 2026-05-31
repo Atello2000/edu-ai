@@ -13,6 +13,10 @@ const IcoRepeat  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="n
 /* ── Carte individuelle ───────────────────────────────────────────────────── */
 function FlashCard({ card, cardIdx, state, onMark }) {
   const [flipped, setFlipped] = useState(false);
+
+  // Garde contre les cartes malformées (front null/undefined = crash cardHash)
+  if (!card?.front) return null;
+
   const status = getSRSStatus(card.front);
   const label  = getSRSLabel(card.front);
 

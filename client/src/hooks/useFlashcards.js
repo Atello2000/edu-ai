@@ -54,6 +54,7 @@ export function getDueCount() {
 }
 
 export function getSRSStatus(front) {
+  if (!front) return null;               // garde : front null/undefined crashe cardHash
   const c = getSRSData()[cardHash(front)];
   if (!c) return null;
   if (c.nextReview <= Date.now()) return 'due';
@@ -61,6 +62,7 @@ export function getSRSStatus(front) {
 }
 
 export function getSRSLabel(front) {
+  if (!front) return '';                 // garde : front null/undefined crashe cardHash
   const c = getSRSData()[cardHash(front)];
   if (!c) return '';
   if (c.nextReview <= Date.now()) return '● dû';
