@@ -64,7 +64,8 @@ async function refillIfNeeded(userId, plan) {
  * Si null, utilise JETON_COSTS[action].
  */
 async function checkAndDeduct(userId, action, plan, costOverride = null) {
-  if (!IS_PROD) return { ok: true };
+  // Bypass uniquement si explicitement désactivé en dev local — jamais en prod
+  if (!IS_PROD && process.env.DISABLE_JETON_CHECK === 'true') return { ok: true };
 
   const cost = costOverride !== null ? Number(costOverride) : (JETON_COSTS[action] ?? 1);
 
