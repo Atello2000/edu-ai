@@ -92,11 +92,14 @@ protectedRouter.post('/checkout', async (req, res) => {
  * ── Routeur Public (Webhook IPN) ──────────────────────────────────────────────
  */
 publicRouter.post('/', async (req, res) => {
-  const { api_key_sha256, api_secret_sha256, ref_command, item_price, type_event } = req.body || {};
+  const payload = { ...(req.query || {}), ...(req.body || {}) };
+  const { api_key_sha256, api_secret_sha256, ref_command, item_price, type_event } = payload;
+
+  logger.info('IPN Payload parsed:', { payload });
 
   // 1. Validation de l'authenticité de la requête IPN (Hashes SHA256)
   if (!api_key_sha256 || !api_secret_sha256 || !ref_command) {
-    logger.warn('IPN suspect reçu sans paramètres obligatoires', { body: req.body });
+    logger.warn('IPN suspect reçu sans paramètres obligatoires', { payload });
     return res.status(400).send('Bad Request');
   }
 
