@@ -56,7 +56,7 @@ router.post('/register', async (req, res) => {
 
     const currentMonth = new Date().toISOString().slice(0, 7);
     const info = await db.prepare(
-      'INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, ?, 50, ?)'
+      'INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, ?, 40, ?)'
     ).run(email.toLowerCase().trim(), hash, name.trim(), verifyToken, verifyExp, currentMonth);
     const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
 
@@ -278,7 +278,7 @@ router.get('/google/callback', async (req, res) => {
 
         const currentMonth = new Date().toISOString().slice(0, 7);
         const r = await db.prepare(
-          'INSERT INTO users (email, password, name, google_id, email_verified, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, 1, 50, ?)'
+          'INSERT INTO users (email, password, name, google_id, email_verified, jetons, jetons_reset_date) VALUES (?, ?, ?, ?, 1, 40, ?)'
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id, currentMonth);
         user = await db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
       }

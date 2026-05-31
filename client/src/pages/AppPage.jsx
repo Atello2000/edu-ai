@@ -48,12 +48,34 @@ function getPrefs() {
 }
 
 export default function AppPage() {
-  const { user } = useAuth();
+  const { user, refreshSession } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [activityKey,    setActivityKey]    = useState(0);
   const [showPomodoro,   setShowPomodoro]   = useState(false);
+
+  // Intercepter les retours de paiement (PayTech success/cancel)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    const plan = params.get('plan');
+
+    if (payment === 'success') {
+      const planName = plan === 'max' ? 'Max' : 'Pro';
+      toast.success(`Félicitations ! Votre abonnement ${planName} est activé avec succès 🎉`);
+      
+      // Mettre à jour la session utilisateur et le quota de jetons
+      if (typeof refreshSession === 'function') refreshSession();
+      eventBus.emit('quota:refresh');
+
+      // Nettoyer l'URL propre sans recharger la page
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (payment === 'cancel') {
+      toast.warn('Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [refreshSession]);
 
   // ── État upload ────────────────────────────────────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -196,6 +218,26 @@ export default function AppPage() {
     restoreFcFrom([{ name: 'Révision du jour', flashcards: due }]);
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
+
+  const handleSelectPlan = useCallback(async (planKey) => {
+    try {
+      const res = await apiFetch('/api/payment/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planKey })
+      });
+      const data = await res.json();
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+      }
+    } catch (err) {
+      toast.error('Erreur lors du lancement du paiement.');
+    }
+  }, []);
 
   // ── Handlers features avancées (utilisent selectedFilesRef — pas de deps stales) ──
   const handleSocratic = useCallback(() => {
@@ -434,7 +476,7 @@ export default function AppPage() {
     <>
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
       {showGoalModal  && <GoalModal onSelect={handleGoalSelect} balance={balance} />}
-      {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} />}
+      {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} onSelectPlan={handleSelectPlan} />}
       <SettingsDrawer
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}

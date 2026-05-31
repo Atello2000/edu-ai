@@ -173,7 +173,7 @@ async function initSchema() {
     "UPDATE app_config SET value = 'mistral' WHERE key = 'ai_provider' AND value = 'groq'",
     "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'",
     // ── Système de jetons ─────────────────────────────────────────────────────
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 50",
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 40",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons_reset_date TEXT",
     `CREATE TABLE IF NOT EXISTS jeton_transactions (
       id            SERIAL PRIMARY KEY,
@@ -185,7 +185,7 @@ async function initSchema() {
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
     // Allocation initiale pour les utilisateurs existants sans jetons_reset_date
-    // Couvre tous les cas : jetons = 0 (anciens comptes) ET jetons = 50 (DEFAULT PostgreSQL)
+    // Couvre tous les cas : jetons = 0 (anciens comptes) ET jetons = 40 (DEFAULT PostgreSQL)
     `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 400 WHEN plan = 'pro' THEN 150 ELSE 40 END,
        jetons_reset_date = to_char(NOW(), 'YYYY-MM')
      WHERE jetons_reset_date IS NULL`,

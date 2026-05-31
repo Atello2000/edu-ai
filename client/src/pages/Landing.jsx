@@ -198,11 +198,11 @@ export default function Landing() {
         <div className="pricing-inner">
           <div className="section-label fade-up">Tarifs</div>
           <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '.75rem' }}>Simple et <em>transparent</em></h2>
-          <p className="fade-up fade-up-delay-2" style={{ color: 'var(--muted)', fontSize: '.95rem', marginBottom: '2.5rem' }}>Commencez gratuitement. Les offres Pro et Max arrivent bientôt.</p>
+          <p className="fade-up fade-up-delay-2" style={{ color: 'var(--muted)', fontSize: '.95rem', marginBottom: '2.5rem' }}>Commencez gratuitement et passez à la vitesse supérieure selon vos besoins.</p>
           <div className="pricing-grid">
             <div className="price-card fade-up fade-up-delay-1">
               <div className="plan-name">Gratuit</div>
-              <div className="plan-price">0€ <span>/ mois</span></div>
+              <div className="plan-price">0 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
               <div className="plan-features">
                 <div className="plan-feat">5 résumés / jour</div>
@@ -215,10 +215,9 @@ export default function Landing() {
               </div>
               <Link to="/login"><button className="plan-cta">Commencer gratuitement</button></Link>
             </div>
-            <div className="price-card featured locked fade-up fade-up-delay-2">
-              <div className="price-badge">Bientôt disponible</div>
+            <div className="price-card featured fade-up fade-up-delay-2">
               <div className="plan-name">Pro</div>
-              <div className="plan-price">4€ <span>/ mois</span></div>
+              <div className="plan-price">2 500 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour les étudiants en période d'examen</div>
               <div className="plan-features">
                 <div className="plan-feat">20 résumés / jour</div>
@@ -230,14 +229,11 @@ export default function Landing() {
                 <div className="plan-feat">Traitement prioritaire</div>
                 <div className="plan-feat">Historique illimité</div>
               </div>
-              <button className="plan-cta plan-cta-locked" type="button" disabled title="Les paiements ne sont pas encore disponibles">
-                Paiement bientôt disponible
-              </button>
+              <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
             </div>
-            <div className="price-card locked fade-up fade-up-delay-3">
-              <div className="price-badge muted">Bientôt disponible</div>
+            <div className="price-card fade-up fade-up-delay-3">
               <div className="plan-name">Max</div>
-              <div className="plan-price">9€ <span>/ mois</span></div>
+              <div className="plan-price">5 000 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour une révision intensive sans limites</div>
               <div className="plan-features">
                 <div className="plan-feat">Résumés illimités</div>
@@ -250,14 +246,12 @@ export default function Landing() {
                 <div className="plan-feat">Historique illimité</div>
                 <div className="plan-feat">Export PDF des fiches</div>
               </div>
-              <button className="plan-cta plan-cta-locked" type="button" disabled title="Les paiements ne sont pas encore disponibles">
-                Paiement bientôt disponible
-              </button>
+              <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
             </div>
           </div>
         </div>
       </div>
-
+ 
       <div className="section" id="faq">
         <div className="section-label fade-up">FAQ</div>
         <h2 className="fade-up fade-up-delay-1">Questions <em>fréquentes</em></h2>
@@ -270,7 +264,7 @@ export default function Landing() {
           <FaqItem q="Quels types de fichiers sont acceptés ?" a="PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers simultanément pour un résumé ou quiz multi-documents." />
           <FaqItem q="Comment fonctionne la révision espacée ?" a="L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées. Les cartes maîtrisées reviennent moins souvent, les difficiles plus fréquemment. Des notifications push vous rappellent quand des cartes sont à réviser." />
           <FaqItem q="Mes cours sont-ils stockés sur vos serveurs ?" a="Le contenu textuel est conservé lorsque vous classez un cours dans une matière, ce qui vous permet de le réutiliser sans le recharger. Les fichiers originaux (PDF, PPT) ne sont pas conservés." />
-          <FaqItem q="Les plans payants sont-ils disponibles ?" a="Pas encore. Vous pouvez utiliser le plan Gratuit dès maintenant. Les offres Pro et Max seront activées quand le paiement sera configuré." />
+          <FaqItem q="Les plans payants sont-ils disponibles ?" a="Oui ! Les abonnements Pro et Max sont maintenant ouverts. Vous pouvez vous abonner instantanément et en toute sécurité en payant avec Wave, Orange Money ou par carte bancaire." />
         </div>
       </div>
 

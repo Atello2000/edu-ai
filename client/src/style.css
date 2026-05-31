@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    Jangalai  —  Style v2.0
    Responsive · Animations · Design Premium
    ═══════════════════════════════════════════════════════════════════ */
@@ -4468,6 +4468,8 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 
 @media (max-width: 1100px) {
   .pomo-sidebar-container {
+    display: none;
+  }
 }
 
 /* ── STREAK BADGE HEADER ── */

@@ -10,8 +10,8 @@ describe('MONTHLY_JETONS', () => {
     expect(MONTHLY_JETONS.pro).toBeLessThan(MONTHLY_JETONS.max);
   });
 
-  it('correspond aux valeurs documentées (50 / 200 / 600)', () => {
-    expect(MONTHLY_JETONS).toMatchObject({ free: 50, pro: 200, max: 600 });
+  it('correspond aux valeurs documentées (40 / 150 / 400)', () => {
+    expect(MONTHLY_JETONS).toMatchObject({ free: 40, pro: 150, max: 400 });
   });
 });
 
