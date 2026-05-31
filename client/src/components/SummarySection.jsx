@@ -242,7 +242,7 @@ function SummaryCard({ result }) {
  *   onCopyAll ()                   bouton "Copier tout"
  *   onRegen   ()                   bouton "Régénérer"
  */
-export default function SummaryResults({ results = [], streaming, progress, onCopyAll, onRegen }) {
+export default function SummaryResults({ results = [], streaming, progress, onCopyAll, onRegen, onShare }) {
   const [activeTab, setActiveTab] = useState(0);
 
   // Cartes en cours = union des fichiers en streaming et en progression (passe 1),
@@ -267,6 +267,12 @@ export default function SummaryResults({ results = [], streaming, progress, onCo
         <div style={{ display: 'flex', gap: '.5rem', alignItems: 'center' }}>
           {allDone && onCopyAll && (
             <button className="ghost-btn" onClick={onCopyAll}>Copier tout</button>
+          )}
+          {allDone && onShare && (
+            <button className="ghost-btn" onClick={() => onShare(results)} title="Partager via lien (7 jours)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Partager
+            </button>
           )}
           {allDone && onRegen && (
             <button className="ghost-btn" onClick={onRegen}>

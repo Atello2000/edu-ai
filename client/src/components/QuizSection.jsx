@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
+import { exportQuizToPDF } from '../utils/quizPdf';
 
 /**
  * Props :
@@ -21,6 +22,7 @@ export default function QuizSection({
   examMode, examMins,
   onSelect, onGoTo, onSubmit,
   onRetryWrong, onErrorsToFlashcards,
+  onGenerateFromErrors, quizTitle,
 }) {
   const [timeLeft,    setTimeLeft]    = useState(null);
   const [timerWarn,   setTimerWarn]   = useState(false);
@@ -91,18 +93,34 @@ export default function QuizSection({
           <div className="score-number">{correct}/{tot}</div>
           <div className="score-label">{pct}% de bonnes réponses{timeStr}</div>
           <div className="score-msg">{msg}</div>
-          {wrongQs.length > 0 && (
-            <div className="score-actions">
-              <button className="act-btn blue" onClick={onRetryWrong}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
-                Revoir les {wrongQs.length} erreur{wrongQs.length > 1 ? 's' : ''}
-              </button>
-              <button className="act-btn teal" onClick={() => onErrorsToFlashcards?.(wrongQs)}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
-                Erreurs → Flashcards
-              </button>
-            </div>
-          )}
+          <div className="score-actions">
+            <button
+              className="ghost-btn"
+              onClick={() => exportQuizToPDF(quizTitle || 'Quiz', questions, answers, score)}
+              title="Exporter en PDF"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              PDF
+            </button>
+            {wrongQs.length > 0 && (
+              <>
+                <button className="act-btn blue" onClick={onRetryWrong}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+                  Revoir les {wrongQs.length} erreur{wrongQs.length > 1 ? 's' : ''}
+                </button>
+                <button className="act-btn teal" onClick={() => onErrorsToFlashcards?.(wrongQs)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg>
+                  Erreurs → Flashcards
+                </button>
+                {onGenerateFromErrors && (
+                  <button className="act-btn gold" onClick={() => onGenerateFromErrors(wrongQs)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5}}><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="3"/></svg>
+                    Nouveau quiz sur les erreurs
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
         <div id="quiz-container">
           {questions.map((q, i) => {

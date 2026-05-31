@@ -73,6 +73,7 @@ export default function ActionsPanel({
   onSocratic,
   onPredict,
   onStudyPlan,
+  onJMoins1,
   onErrorAnalysis,
   predictLoading,
   predictResults,
@@ -439,7 +440,12 @@ export default function ActionsPanel({
               <span>Planning jour par jour jusqu&apos;à votre examen, basé sur vos points faibles</span>
               <JetonBadge costs={jetonCosts} action="study-plan" />
             </div>
-            <button className="act-btn gold" onClick={onStudyPlan}>Planifier</button>
+            <div style={{ display: 'flex', gap: '.4rem' }}>
+              <button className="act-btn gold" onClick={onStudyPlan}>Planifier</button>
+              {onJMoins1 && hasFiles && (
+                <button className="act-btn rose" onClick={onJMoins1} title="Révision d'urgence — plan sur 1 jour">J-1</button>
+              )}
+            </div>
           </div>
 
           <div className="act-card act-card-wide" data-color="rose">

@@ -204,6 +204,16 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_srs_next_review ON srs_progress(user_id, next_review)`,
     "ALTER TABLE folder_files ADD COLUMN IF NOT EXISTS truncated INTEGER NOT NULL DEFAULT 0",
+    `CREATE TABLE IF NOT EXISTS shared_content (
+      token      TEXT PRIMARY KEY,
+      user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      type       TEXT NOT NULL DEFAULT 'summary',
+      title      TEXT NOT NULL DEFAULT '',
+      content    TEXT NOT NULL,
+      expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '7 days',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_shared_content_expires ON shared_content(expires_at)`,
   ];
   for (const sql of migrations) {
     try { await pool.query(sql); } catch (_) {}

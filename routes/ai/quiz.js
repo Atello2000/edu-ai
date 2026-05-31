@@ -17,11 +17,16 @@ router.post('/quiz', async (req, res) => {
   let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
 
   try {
-    const { files }  = req.body;
+    const { files, focus_topics }  = req.body;
     const lang       = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang     = langLabel(lang);
     const difficulty = VALID_DIFF.includes(req.body.difficulty) ? req.body.difficulty : 'moyen';
     const count      = Math.min(parseInt(req.body.count) || 5, LIMITS.quizMaxCount);
+
+    // Focus optionnel : si des topics sont fournis (prédicteur → quiz), on les met en avant
+    const focusPart = Array.isArray(focus_topics) && focus_topics.length
+      ? `\nFocus OBLIGATOIRE sur ces concepts détectés comme probables à l'examen : ${focus_topics.slice(0, 8).join(', ')}.`
+      : '';
 
     // ── 1. Charger textes + calculer coût total ───────────────────────────
     const fileData  = [];
@@ -83,7 +88,7 @@ Varie obligatoirement les types de questions parmi :
 - Identification d'erreur (ex: "Laquelle de ces affirmations est incorrecte ?")
 N'utilise pas deux fois le même type de question consécutivement.`;
 
-        const prompt = `${userContext(req.user)}Génère ${perChunk} questions QCM de niveau ${difficulty} ${inLang} basées sur ce contenu de cours${chunkLabel}.
+        const prompt = `${userContext(req.user)}Génère ${perChunk} questions QCM de niveau ${difficulty} ${inLang} basées sur ce contenu de cours${chunkLabel}.${focusPart}
 ${difficultyGuide}
 ${questionTypes}
 
@@ -122,7 +127,26 @@ ${chunks[i]}`;
           streamModel = c.model;
         }
 
-        const parsed = parseJsonResponse(raw, { questions: [] });
+        let parsed = parseJsonResponse(raw, { questions: [] });
+
+        // Retry avec prompt simplifié si le parsing échoue (provider non conforme)
+        if (!parsed.questions?.length) {
+          logger.warn('Quiz: 0 questions parsed, retrying with simple prompt', { file: file.name });
+          const simplePrompt = `Génère ${perChunk} QCM ${inLang} sur ce cours.${focusPart}
+JSON strict, sans texte autour :
+{"questions":[{"question":"?","options":["A. ","B. ","C. ","D. "],"answer":"A","explanation":""}]}
+
+Cours :
+${chunks[i].slice(0, 12000)}`;
+          let rawRetry = '';
+          for await (const c of aiStream(simplePrompt, calcMaxTokens('quiz', 0, perChunk), aiCfg)) {
+            if (c.usage) continue;
+            rawRetry += c.text;
+            streamModel = c.model;
+          }
+          parsed = parseJsonResponse(rawRetry, { questions: [] });
+        }
+
         allQuestions.push(...(parsed.questions || []));
       }
 

@@ -110,6 +110,7 @@ app.use('/api/activity', csrfAndAuth, require('./routes/activity'));
 app.use('/api/folders', csrfAndAuth, require('./routes/folders'));
 app.use('/api/admin',    csrfAndAuth, require('./routes/admin'));
 app.use('/api/feedback', csrfAndAuth, require('./routes/feedback'));
+app.use('/api/share',   require('./routes/share')); // POST interne requireAuth+CSRF, GET public
 app.use('/api/push',    require('./routes/push'));
 
 // SPA fallback — toutes les routes non-API renvoient index.html

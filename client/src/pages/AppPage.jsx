@@ -37,6 +37,7 @@ const PredictSection       = lazy(() => import('../components/PredictSection.jsx
 const ErrorAnalysisSection = lazy(() => import('../components/ErrorAnalysisSection.jsx'));
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
+import { apiFetch } from '../utils/apiFetch';
 
 // ── Préférences utilisateur (localStorage) ───────────────────────────────────
 const PREFS_KEY = 'jangalai-prefs';
@@ -211,6 +212,34 @@ export default function AppPage() {
   const handleStudyPlan    = useCallback(() => setActivePanel('study-plan-section'), []);
   const handleErrorAnalysis = useCallback(() => setActivePanel('error-analysis-section'), []);
 
+  // ── Quiz ciblé depuis le prédicteur ──────────────────────────────────────
+  const handleQuizFromPredict = useCallback((focusTopics) => {
+    const files = selectedFilesRef.current;
+    if (!files.length) { toast.warn('Chargez un fichier pour générer le quiz ciblé.'); return; }
+    generateQuiz(files, { count: 8, difficulty: 'moyen', focus_topics: focusTopics });
+    setActivePanel('quiz-section');
+  }, [generateQuiz]);
+
+  // ── Nouveau quiz sur les erreurs d'un quiz précédent ─────────────────────
+  const handleGenerateFromErrors = useCallback((wrongQs) => {
+    const files = selectedFilesRef.current;
+    if (!files.length) { toast.warn('Rechargez le fichier pour générer le quiz.'); return; }
+    const concepts = [...new Set(wrongQs.map(q => q.sourceHint || q.question.slice(0, 40)).filter(Boolean))].slice(0, 8);
+    generateQuiz(files, { count: wrongQs.length, difficulty: 'difficile', focus_topics: concepts });
+    setActivePanel('quiz-section');
+  }, [generateQuiz]);
+
+  // ── Mode J-1 examen ───────────────────────────────────────────────────────
+  const handleJMoins1 = useCallback(() => {
+    const files = selectedFilesRef.current;
+    if (!files.length) { toast.warn('Chargez un fichier pour générer le plan J-1.'); return; }
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
+    generateStudyPlan(tomorrowStr, files);
+    setActivePanel('study-plan-section');
+  }, [generateStudyPlan]);
+
   const handleErrorsToFlashcardsFromAnalysis = useCallback((patterns) => {
     const cards = patterns.map(p => ({
       front: p.title,
@@ -296,6 +325,25 @@ export default function AppPage() {
     const files = selectedFilesRef.current;
     if (files.length) { setActivePanel('summary-section'); summarize(files); }
   }, [resetSummary, summarize]);
+
+  // ── Partager un résumé via lien ──────────────────────────────────────────
+  const handleShareSummary = useCallback(async (results) => {
+    try {
+      const title = results[0]?.name?.replace(/\.[^.]+$/, '') || 'Résumé';
+      const res = await apiFetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'summary', title, content: results }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur');
+      const link = `${window.location.origin}/share/${data.token}`;
+      await navigator.clipboard.writeText(link);
+      toast.success('Lien copié ! Valable 7 jours.');
+    } catch (err) {
+      toast.error('Impossible de créer le lien : ' + err.message);
+    }
+  }, []);
 
   const handleExamSheet = useCallback(() => {
     const files = selectedFilesRef.current;
@@ -453,6 +501,7 @@ export default function AppPage() {
             onSocratic={handleSocratic}
             onPredict={handlePredict}
             onStudyPlan={handleStudyPlan}
+            onJMoins1={handleJMoins1}
             onErrorAnalysis={handleErrorAnalysis}
             predictLoading={predictLoading}
             predictResults={predictResults}
@@ -493,6 +542,7 @@ export default function AppPage() {
                   navigator.clipboard.writeText(all);
                 }}
                 onRegen={handleSummaryRegen}
+                onShare={handleShareSummary}
               />
             </Suspense>
             <TTSBar />
@@ -554,6 +604,8 @@ export default function AppPage() {
                 onSubmit={submitQuiz}
                 onRetryWrong={retryWrong}
                 onErrorsToFlashcards={handleErrorsToFlashcards}
+                onGenerateFromErrors={handleGenerateFromErrors}
+                quizTitle={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'Quiz'}
               />
             </Suspense>
           </ErrorBoundary>
@@ -669,6 +721,7 @@ export default function AppPage() {
                 results={predictResults}
                 loading={predictLoading}
                 error={predictError}
+                onQuizFromPredict={handleQuizFromPredict}
               />
             </Suspense>
           </ErrorBoundary>

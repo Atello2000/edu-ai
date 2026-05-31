@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import { useAuth } from '../hooks/useAuth';
+import { sm2Update, cardHash } from '../hooks/useFlashcards.js';
 import './ForYouSection.css';
 
 const IconCards  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 2H8a2 2 0 0 0-2 2v2h12V4a2 2 0 0 0-2-2z"/></svg>;
@@ -301,6 +302,19 @@ export default function ForYouSection({ onActivity }) {
                   <span>{fcIdx + 1} / {result.flashcards.length}</span>
                   <button onClick={() => { setFcIdx(i => Math.min(result.flashcards.length - 1, i + 1)); setFlipped(false); }} disabled={fcIdx === result.flashcards.length - 1}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  </button>
+                  <button
+                    className="fy-srs-btn"
+                    title="Ajouter toutes les cartes au SRS (révision espacée)"
+                    onClick={() => {
+                      result.flashcards.forEach(c => {
+                        if (c.front) sm2Update(cardHash(c.front), 0, c);
+                      });
+                      toast.success(`${result.flashcards.length} carte${result.flashcards.length > 1 ? 's' : ''} ajoutée${result.flashcards.length > 1 ? 's' : ''} au SRS`);
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    SRS
                   </button>
                 </div>
               </div>

@@ -322,6 +322,18 @@
 }
 .fy-fc-nav button:hover:not(:disabled) { border-color: var(--blue); }
 .fy-fc-nav button:disabled { opacity: .35; cursor: default; }
+
+/* Bouton SRS dans nav flashcards ForYou */
+.fy-srs-btn {
+  display: flex; align-items: center; gap: .3rem;
+  font-size: .7rem; font-weight: 600;
+  color: var(--teal);
+  background: rgba(29,209,161,.08);
+  border-color: rgba(29,209,161,.3) !important;
+  width: auto !important;
+  padding: 0 .7rem;
+}
+.fy-srs-btn:hover { background: rgba(29,209,161,.16) !important; }
 .fy-fc-nav span {
   font-family: 'Outfit', sans-serif;
   font-size: .82rem;

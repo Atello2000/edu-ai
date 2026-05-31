@@ -2,16 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
 import { useConfirm } from './ConfirmModal';
 
-const QUIZ_STATS_KEY = 'jangalai-quiz-stats';
-const HISTORY_KEY    = 'jangalai-sessions';
-const SRS_KEY        = 'jangalai-srs';
+const QUIZ_STATS_KEY  = 'jangalai-quiz-stats';
+const HISTORY_KEY     = 'jangalai-sessions';
+const SRS_KEY         = 'jangalai-srs';
+const TOPIC_STATS_KEY = 'jangalai-topic-stats';
 
 function scoreClass(p) { return p >= 80 ? 'good' : p >= 60 ? 'mid' : 'low'; }
 
 function readData() {
-  const quizStats = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
-  const sessions  = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-  const srsCards  = Object.values(JSON.parse(localStorage.getItem(SRS_KEY) || '{}'));
+  const quizStats  = JSON.parse(localStorage.getItem(QUIZ_STATS_KEY) || '[]');
+  const sessions   = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  const srsCards   = Object.values(JSON.parse(localStorage.getItem(SRS_KEY) || '{}'));
+  const topicRaw   = JSON.parse(localStorage.getItem(TOPIC_STATS_KEY) || '{}');
+
+  const parCours = Object.entries(topicRaw).map(([name, { sessions: s }]) => {
+    const avg  = Math.round(s.reduce((acc, x) => acc + x.pct, 0) / s.length);
+    const best = Math.max(...s.map(x => x.pct));
+    return { name: name.replace(/\.[^.]+$/, ''), sessions: s.length, avg, best };
+  }).sort((a, b) => a.avg - b.avg);
+
   return {
     quiz: {
       done:    quizStats.length,
@@ -30,6 +39,7 @@ function readData() {
       quizzes:    sessions.filter(s => s.quiz).length,
       flashcards: sessions.filter(s => s.flashcards).length,
     },
+    parCours,
   };
 }
 
@@ -57,7 +67,7 @@ export default function StatsPanel() {
     eventBus.emit('dashboard:refresh');
   }
 
-  const { quiz, srs, sessions } = data;
+  const { quiz, srs, sessions, parCours } = data;
 
   return (
     <>
@@ -121,9 +131,32 @@ export default function StatsPanel() {
         </div>
       </div>
 
+      {parCours.length > 0 && (
+        <div className="stats-section">
+          <div className="stats-section-title">Progression par cours (quiz)</div>
+          <div className="mastery-list">
+            {parCours.map((c, i) => {
+              const cls = c.avg >= 80 ? 'good' : c.avg >= 60 ? 'mid' : 'low';
+              return (
+                <div key={i} className="mastery-row">
+                  <div className="mastery-topic" title={c.name}>{c.name}</div>
+                  <div className="mastery-track">
+                    <div className={`mastery-fill mastery-${cls}`} style={{ width: `${c.avg}%` }} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                    <div className={`mastery-pct mastery-pct-${cls}`}>{c.avg}%</div>
+                    <span style={{ fontSize: '.65rem', color: 'var(--muted)' }}>{c.sessions}×</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {mastery.length > 0 && (
         <div className="stats-section">
-          <div className="stats-section-title">Maîtrise par cours</div>
+          <div className="stats-section-title">Meilleur score par cours</div>
           <div className="mastery-list">
             {mastery.slice(0, 8).map((s, i) => {
               const pct = Math.round((parseFloat(s.best_pct) || 0) * 100);

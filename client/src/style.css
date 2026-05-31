@@ -3304,6 +3304,44 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   margin-bottom: .35rem;
   flex-wrap: wrap;
 }
+/* Indicateur de confiance (glossaire) */
+.glossary-conf {
+  all: unset;
+  cursor: pointer;
+  width: 20px; height: 20px;
+  border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 700;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+}
+.glossary-conf.conf-unknown  { background: var(--card);              color: var(--muted); }
+.glossary-conf.conf-learning { background: rgba(245,166,35,.12); color: var(--gold); border-color: rgba(212,169,76,.4); }
+.glossary-conf.conf-known    { background: rgba(29,209,161,.12); color: var(--teal); border-color: rgba(29,209,161,.4); }
+.glossary-conf:hover { filter: brightness(1.15); }
+
+.glossary-conf-bar {
+  display: flex;
+  gap: .35rem;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+.glossary-filter-btn {
+  all: unset;
+  cursor: pointer;
+  font-family: 'Outfit', sans-serif;
+  font-size: .7rem;
+  padding: .2rem .6rem;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: background .12s, color .12s, border-color .12s;
+}
+.glossary-filter-btn:hover  { background: var(--card); color: var(--text); }
+.glossary-filter-btn.active { background: var(--card); color: var(--text); border-color: var(--blue); }
+
 .glossary-term {
   font-weight: 600;
   color: var(--text);

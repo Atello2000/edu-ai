@@ -1,9 +1,39 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
+
+const CONF_KEY = 'jangalai-glossary-conf';
+
+function termKey(term) {
+  return term.toLowerCase().trim().replace(/\s+/g, '_');
+}
+function loadConf() {
+  try { return JSON.parse(localStorage.getItem(CONF_KEY) || '{}'); } catch { return {}; }
+}
+function saveConf(c) {
+  try { localStorage.setItem(CONF_KEY, JSON.stringify(c)); } catch { /* best-effort */ }
+}
+
+const CONF_STATES = [
+  { key: 'unknown',  label: '?',  title: 'À apprendre',   cls: 'conf-unknown'  },
+  { key: 'learning', label: '~',  title: 'En cours',       cls: 'conf-learning' },
+  { key: 'known',    label: '✓',  title: 'Maîtrisé',       cls: 'conf-known'    },
+];
+
+function ConfidenceBadge({ termStr, conf, onToggle }) {
+  const state = CONF_STATES.find(s => s.key === (conf[termKey(termStr)] || 'unknown')) || CONF_STATES[0];
+  return (
+    <button
+      type="button"
+      className={`glossary-conf ${state.cls}`}
+      title={state.title}
+      onClick={() => onToggle(termStr)}
+    >{state.label}</button>
+  );
+}
 
 function groupByLetter(terms) {
   const groups = {};
   for (const t of terms) {
-    const letter = t.term[0].toUpperCase();
+    const letter = t.term[0]?.toUpperCase() || '#';
     if (!groups[letter]) groups[letter] = [];
     groups[letter].push(t);
   }
@@ -11,24 +41,44 @@ function groupByLetter(terms) {
 }
 
 export default function GlossarySection({ terms = [], loading, error, onRegen }) {
-  const [search, setSearch] = useState('');
+  const [search,   setSearch]   = useState('');
+  const [conf,     setConf]     = useState(loadConf);
+  const [filterK,  setFilterK]  = useState('all'); // 'all' | 'unknown' | 'learning' | 'known'
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return terms;
     const q = search.trim().toLowerCase();
-    return terms.filter(t =>
-      t.term.toLowerCase().includes(q) ||
-      t.definition.toLowerCase().includes(q) ||
-      (t.category || '').toLowerCase().includes(q)
-    );
-  }, [terms, search]);
+    return terms.filter(t => {
+      const matchSearch = !q ||
+        t.term.toLowerCase().includes(q) ||
+        t.definition.toLowerCase().includes(q) ||
+        (t.category || '').toLowerCase().includes(q);
+      const matchFilter = filterK === 'all' || (conf[termKey(t.term)] || 'unknown') === filterK;
+      return matchSearch && matchFilter;
+    });
+  }, [terms, search, conf, filterK]);
 
   const groups = useMemo(() => groupByLetter(filtered), [filtered]);
+
+  function toggleConf(termStr) {
+    const key = termKey(termStr);
+    const cur = conf[key] || 'unknown';
+    const idx = CONF_STATES.findIndex(s => s.key === cur);
+    const next = CONF_STATES[(idx + 1) % CONF_STATES.length].key;
+    const updated = { ...conf, [key]: next };
+    setConf(updated);
+    saveConf(updated);
+  }
 
   function handleCopyAll() {
     const txt = terms.map(t => `${t.term}\n${t.definition}`).join('\n\n');
     navigator.clipboard.writeText(txt);
   }
+
+  const counts = useMemo(() => {
+    const c = { unknown: 0, learning: 0, known: 0 };
+    terms.forEach(t => { c[conf[termKey(t.term)] || 'unknown']++; });
+    return c;
+  }, [terms, conf]);
 
   return (
     <>
@@ -54,9 +104,7 @@ export default function GlossarySection({ terms = [], loading, error, onRegen })
         </div>
       )}
 
-      {error && (
-        <div className="error-banner">{error}</div>
-      )}
+      {error && <div className="error-banner">{error}</div>}
 
       {!loading && terms.length > 0 && (
         <>
@@ -71,8 +119,24 @@ export default function GlossarySection({ terms = [], loading, error, onRegen })
             />
           </div>
 
+          {/* Filtre par confiance */}
+          <div className="glossary-conf-bar">
+            {[
+              { k: 'all',      label: `Tous (${terms.length})` },
+              { k: 'unknown',  label: `? À apprendre (${counts.unknown})` },
+              { k: 'learning', label: `~ En cours (${counts.learning})` },
+              { k: 'known',    label: `✓ Maîtrisés (${counts.known})` },
+            ].map(f => (
+              <button
+                key={f.k}
+                className={`glossary-filter-btn${filterK === f.k ? ' active' : ''}`}
+                onClick={() => setFilterK(f.k)}
+              >{f.label}</button>
+            ))}
+          </div>
+
           {filtered.length === 0 ? (
-            <p className="glossary-empty">Aucun résultat pour «&nbsp;{search}&nbsp;»</p>
+            <p className="glossary-empty">Aucun résultat{search ? ` pour « ${search} »` : ''}</p>
           ) : (
             <div className="glossary-list">
               {groups.map(([letter, group]) => (
@@ -81,6 +145,7 @@ export default function GlossarySection({ terms = [], loading, error, onRegen })
                   {group.map((t, i) => (
                     <div key={i} className="glossary-item">
                       <div className="glossary-item-header">
+                        <ConfidenceBadge termStr={t.term} conf={conf} onToggle={toggleConf} />
                         <span className="glossary-term">{t.term}</span>
                         {t.category && (
                           <span className="glossary-category">{t.category}</span>

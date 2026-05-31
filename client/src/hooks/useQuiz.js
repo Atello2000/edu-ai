@@ -38,7 +38,7 @@ export function useQuiz({ saveSession } = {}) {
     if (qs.length) { setQuestions(qs); setAnswers({}); setIdx(0); setSubmitted(false); setScore(null); }
   }
 
-  const generate = useCallback(async (files, { count = 5, difficulty = 'moyen' } = {}) => {
+  const generate = useCallback(async (files, { count = 5, difficulty = 'moyen', focus_topics } = {}) => {
     if (!files.length) return;
     reset();
     setLoading(true);
@@ -46,7 +46,7 @@ export function useQuiz({ saveSession } = {}) {
       const res = await apiFetch('/api/quiz', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ files, count, difficulty, lang: getLang() }),
+        body:    JSON.stringify({ files, count, difficulty, lang: getLang(), focus_topics }),
       });
       if (!res.ok) throw new Error('Erreur serveur');
 
