@@ -143,8 +143,8 @@ app.get('/payment-success', (req, res) => {
         <div class="card">
           <div class="icon">🎉</div>
           <h1>Paiement Réussi !</h1>
-          <p>Merci pour votre abonnement <strong>${plan.toUpperCase()}</strong>.<br><br>Vous pouvez maintenant fermer cet onglet en toute sécurité et continuer sur votre ordinateur.</p>
-          <button class="btn-close" onclick="window.close();">Fermer la fenêtre</button>
+          <p>Merci pour votre abonnement <strong>${plan.toUpperCase()}</strong>.<br><br>Vous pouvez maintenant fermer cet onglet en toute sécurité pour continuer sur votre ordinateur, ou y accéder directement depuis votre mobile.</p>
+          <button class="btn-close" onclick="window.location.href='/app'">Accéder à l'application</button>
         </div>
       </body>
       </html>
