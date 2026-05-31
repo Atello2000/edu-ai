@@ -37,7 +37,7 @@ export default function AppHeader({
           const data = await res.json();
           setStreak(data.streak || 0);
         }
-      } catch (err) {
+      } catch {
         /* Silencieux en production */
       }
     }

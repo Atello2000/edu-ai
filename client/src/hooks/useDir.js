@@ -46,7 +46,7 @@ export function setLang(lang) {
   try {
     const prefs = JSON.parse(localStorage.getItem('jangalai-prefs') || '{}');
     localStorage.setItem('jangalai-prefs', JSON.stringify({ ...prefs, lang }));
-  } catch {}
+  } catch { /* localStorage indisponible (iframe sandboxé) */ }
   window.dispatchEvent(new CustomEvent('jangalai:lang', { detail: { lang } }));
   applyDir(lang);
 }

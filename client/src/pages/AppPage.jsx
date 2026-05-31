@@ -101,6 +101,7 @@ export default function AppPage() {
     () => new Set(['dashboard-panel', 'actions-section', 'upload-section'])
   );
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMountedPanels(prev => {
       if (prev.has(activePanel)) return prev;
       return new Set([...prev, activePanel]);

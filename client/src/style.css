@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════
    Jangalai  —  Style v2.0
    Responsive · Animations · Design Premium
    ═══════════════════════════════════════════════════════════════════ */
@@ -11,6 +11,19 @@
   outline: 2px solid var(--blue);
   outline-offset: 3px;
   border-radius: 3px;
+}
+
+/* ── Échelle z-index (toutes les couches de l'app) ── */
+:root {
+  --z-dropdown:  200;   /* menus déroulants */
+  --z-floatnav:  500;   /* barre de navigation flottante */
+  --z-overlay:   900;   /* fond sombre des modals */
+  --z-sidebar:   901;   /* tiroirs latéraux */
+  --z-sticky:    950;   /* éléments sticky (float-nav secondaire) */
+  --z-modal:    1000;   /* modals principales */
+  --z-modal-hi: 1100;   /* modals empilées (confirmation) */
+  --z-toast:    1200;   /* toasts / notifications */
+  --z-top:      9999;   /* loader global, debug */
 }
 
 /* ── DARK (default) ── */
@@ -190,7 +203,7 @@ body {
 header {
   position: sticky;
   top: 0;
-  z-index: 200;
+  z-index: var(--z-dropdown);
   height: 56px;
   display: flex;
   align-items: center;
@@ -1271,7 +1284,7 @@ main {
   position:fixed; inset:0;
   background:rgba(7,11,20,.8);
   display:flex; align-items:center; justify-content:center;
-  z-index:1000; backdrop-filter:blur(8px);
+  z-index:var(--z-modal); backdrop-filter:blur(8px);
   animation:fadeIn .2s ease;
 }
 .loader-box {
@@ -1298,7 +1311,7 @@ main {
   background:var(--glass); border:1px solid var(--glass-border);
   border-radius:999px; padding:.38rem .48rem;
   box-shadow:var(--shadow-lg);
-  z-index:500;
+  z-index:var(--z-floatnav);
   backdrop-filter:blur(20px);
   -webkit-backdrop-filter:blur(20px);
   animation:fadeUp .38s ease;
@@ -2360,7 +2373,7 @@ main {
   display: none; position: absolute; right: 0; top: calc(100% + .55rem);
   background: var(--card); border: 1px solid var(--border);
   border-radius: var(--radius-sm); padding: .4rem;
-  min-width: 210px; box-shadow: var(--shadow-md); z-index: 200;
+  min-width: 210px; box-shadow: var(--shadow-md); z-index: var(--z-dropdown);
 }
 .user-dropdown.open { display: block; animation: dropdown-in .15s ease; }
 @keyframes dropdown-in {
@@ -2483,14 +2496,14 @@ main {
 
 /* ── SETTINGS DRAWER ── */
 .drawer-overlay {
-  position: fixed; inset: 0; z-index: 900;
+  position: fixed; inset: 0; z-index: var(--z-overlay);
   background: rgba(0,0,0,.45); backdrop-filter: blur(3px);
   transition: opacity .25s;
 }
 .drawer-overlay.hidden { display: none; }
 
 .settings-drawer {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 901;
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: var(--z-sidebar);
   width: min(400px, 100vw);
   background: var(--card);
   border-left: 1px solid var(--border);
@@ -2634,7 +2647,7 @@ main {
 
 /* ── MODAL ── */
 .modal-overlay {
-  position: fixed; inset: 0; z-index: 1000;
+  position: fixed; inset: 0; z-index: var(--z-modal);
   background: rgba(0,0,0,.65); backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center; padding: 1.5rem;
 }
@@ -2671,7 +2684,7 @@ main {
 
 /* ── Mindmap modal ─────────────────────────────────────────────────────────── */
 .mindmap-overlay {
-  position: fixed; inset: 0; z-index: 1100;
+  position: fixed; inset: 0; z-index: var(--z-modal-hi);
   background: rgba(0,0,0,.72); backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center;
   padding: 1rem;
@@ -2776,7 +2789,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1200;
+  z-index: var(--z-toast);
   padding: 1rem;
   backdrop-filter: blur(4px);
 }
@@ -3024,7 +3037,7 @@ main {
   position: fixed;
   bottom: 5.5rem;
   right: 1.25rem;
-  z-index: 950;
+  z-index: var(--z-sticky);
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -3055,7 +3068,7 @@ main {
   position: fixed;
   bottom: 7rem;
   right: 1.25rem;
-  z-index: 949;
+  z-index: calc(var(--z-sticky) - 1);
   width: min(340px, calc(100vw - 2rem));
   background: var(--card);
   border: 1px solid var(--border);
@@ -3772,7 +3785,7 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   bottom: 1.25rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: var(--z-top);
   display: flex;
   align-items: center;
   gap: .5rem;

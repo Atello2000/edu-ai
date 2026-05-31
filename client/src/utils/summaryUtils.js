@@ -1,4 +1,4 @@
-/**
+﻿/**
  * summaryUtils.js — utilitaires partagés pour le rendu des résumés
  * (utilisés par SummarySection.jsx et summaryPdf.js)
  */
@@ -100,8 +100,9 @@ export function sanitizePdf(text) {
     .replace(/[""«»‹›]/g, '"').replace(/[''‚]/g, "'")
     .replace(/­/g, '')  // soft hyphen
     // Espaces spéciaux → espace normal
-    .replace(/[           ]/g, ' ')
+    .replace(/[\u00A0\u202F\u2009\u2007\u2006\u2005\u2004\u2003\u2002\u2001\u2000]/g, ' ')
     // Tout ce qui reste hors Latin-1 → supprimé
+    // eslint-disable-next-line no-control-regex
     .replace(/[^\x00-\xFF]/g, '');
 }
 

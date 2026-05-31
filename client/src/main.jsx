@@ -48,7 +48,8 @@ if ('serviceWorker' in navigator) {
 function applySwUpdate(sw) {
   const toast = document.createElement('div');
   toast.textContent = '✦ Mise à jour en cours…';
-  toast.style.cssText = 'position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);background:#1a2540;border:1px solid #3d7eff;color:#e8ecf6;padding:.6rem 1.2rem;border-radius:10px;z-index:9999;font-family:\'Outfit\',sans-serif;font-size:.85rem;box-shadow:0 8px 28px rgba(0,0,0,.4);pointer-events:none;';
+  const zTop = getComputedStyle(document.documentElement).getPropertyValue('--z-top').trim() || '9999';
+  toast.style.cssText = `position:fixed;bottom:5.5rem;left:50%;transform:translateX(-50%);background:#1a2540;border:1px solid #3d7eff;color:#e8ecf6;padding:.6rem 1.2rem;border-radius:10px;z-index:${zTop};font-family:'Outfit',sans-serif;font-size:.85rem;box-shadow:0 8px 28px rgba(0,0,0,.4);pointer-events:none;`;
   document.body.appendChild(toast);
   setTimeout(() => sw.postMessage({ type: 'SKIP_WAITING' }), 2000);
 }

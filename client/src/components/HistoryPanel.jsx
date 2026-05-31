@@ -26,6 +26,7 @@ export default function HistoryPanel({ onRestore }) {
   }, []);
 
   // Charger depuis IDB au montage + écouter les rafraîchissements
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => eventBus.on('history:refresh', refresh), [refresh]);
 

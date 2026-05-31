@@ -89,7 +89,7 @@ export function buildSummaryDoc(fileName, summaryMd) {
     const bodW = CW - 5;
 
     need(16);
-    const cleanTitle = sanitize(
+    const cleanTitle = sanitizePdf(
       section.title
         .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
         .replace(/[🎯📌📖🔑💡✦●▶→•◆■□▪★☆◉]/gu, '')

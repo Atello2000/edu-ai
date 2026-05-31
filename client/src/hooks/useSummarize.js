@@ -233,6 +233,7 @@ export function useSummarize({ saveSession } = {}) {
 
     xhr.withCredentials = true;
     xhr.send(JSON.stringify({ files, lang: getLang() }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveSession]);
 
   return { results, streaming, progress, loading, error, summarize, reset, restoreFrom };

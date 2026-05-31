@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 
@@ -15,7 +15,7 @@ export default function SaveFolderModal({ filesToSave, onClose }) {
   const [saving,   setSaving]   = useState(false);
 
   const visible = Boolean(filesToSave);
-  const files   = filesToSave || [];
+  const files   = useMemo(() => filesToSave || [], [filesToSave]);
 
   const close = useCallback(() => onClose?.(), [onClose]);
 
@@ -32,6 +32,7 @@ export default function SaveFolderModal({ filesToSave, onClose }) {
   // Charger les matières dès que la modal s'ouvre
   useEffect(() => {
     if (!visible) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setNewName('');
     fetchFolders();
   }, [visible, fetchFolders]);

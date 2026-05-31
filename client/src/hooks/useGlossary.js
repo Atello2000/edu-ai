@@ -55,7 +55,7 @@ export function useGlossary() {
             setProgress(null);
             setLoading(false);
           }
-        } catch {}
+        } catch { /* SSE malformé — on ignore */ }
       }
     }
 

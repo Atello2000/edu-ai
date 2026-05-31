@@ -75,7 +75,7 @@ export function useStudyPlan() {
             setProgress(null);
             setLoading(false);
           }
-        } catch {}
+        } catch { /* SSE malformé — on ignore */ }
       }
     }
 

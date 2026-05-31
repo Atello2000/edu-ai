@@ -1,7 +1,7 @@
 const PROB_COLORS = { haute: '#e53935', moyenne: '#f5a623', faible: '#9e9e9e' };
 const PROB_LABELS = { haute: '🔴 Haute', moyenne: '🟡 Moyenne', faible: '⚪ Faible' };
 
-export default function PredictSection({ results, loading, error, onGenerateQuiz }) {
+export default function PredictSection({ results, loading, error }) {
   return (
     <div className="predict-section">
       <div className="panel-header">

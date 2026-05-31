@@ -25,7 +25,7 @@ function getLocal() {
   try { return JSON.parse(localStorage.getItem(SRS_KEY) || '{}'); } catch { return {}; }
 }
 function setLocal(data) {
-  try { localStorage.setItem(SRS_KEY, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(SRS_KEY, JSON.stringify(data)); } catch { /* best-effort */ }
 }
 
 // ── Initialisation : DB → localStorage (au login) ────────────────────────────
