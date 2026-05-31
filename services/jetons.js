@@ -15,24 +15,24 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // ── Coûts par action (mêmes pour tous les plans) ──────────────────────────────
 const JETON_COSTS = {
   summarize:       3,
-  quiz:            1,
-  flashcards:      1,
+  quiz:            2,   // augmenté (coût API comparable à résumé court)
+  flashcards:      2,   // augmenté
   chat:            1,
   'exam-sheet':    3,
   glossary:        2,
   mindmap:         2,
   socratic:        1,   // per exchange (dynamic: 2 if history >= 6)
-  'study-plan':    1,   // light structured generation
-  predict:         2,   // per file, lighter than summarize
-  'error-analysis':1,   // light pattern detection
-  compare:         4,   // heavy multi-file analysis
+  'study-plan':    1,
+  predict:         2,
+  'error-analysis':1,
+  compare:         4,
 };
 
 // ── Allocation mensuelle par plan ─────────────────────────────────────────────
 const MONTHLY_JETONS = {
-  free: 50,   // ~6 sessions complètes/mois
-  pro:  200,  // ~50 quiz/mois
-  max:  600,  // ~150 quiz/mois
+  free: 40,   // ~8 quiz ou ~4 résumés/mois
+  pro:  150,  // ~75 quiz ou ~30 sessions complètes/mois
+  max:  400,  // ~200 quiz ou ~80 sessions complètes/mois
 };
 
 function getCurrentMonth() {

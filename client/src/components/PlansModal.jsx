@@ -4,36 +4,51 @@ const PLANS = [
   {
     key: 'free',
     name: 'Gratuit',
-    price: '0€',
+    price: '0 CFA',
     period: '/ mois',
-    jetons: 50,
+    jetons: 40,
     color: 'teal',
     desc: 'Pour découvrir sans engagement',
-    features: ['Résumés, quiz, flashcards', 'Chat avec le cours', 'Carte mentale & fiche exam', 'PDF, PPT, DOCX'],
+    features: [
+      'Résumés, quiz, flashcards',
+      'Chat avec le cours',
+      'Carte mentale & fiche exam',
+      'PDF, PPT, DOCX',
+    ],
     cta: 'Plan actuel',
     soon: false,
   },
   {
     key: 'pro',
     name: 'Pro',
-    price: '4€',
+    price: '2 500 CFA',
     period: '/ mois',
-    jetons: 200,
+    jetons: 150,
     color: 'gold',
     desc: 'Pour les périodes d\'examen',
-    features: ['4× plus de jetons', 'Traitement prioritaire', 'Historique illimité', 'Toutes les features'],
+    features: [
+      'Outils avancés déverrouillés',
+      'Prédicteur & plan de révision',
+      'Mode socratique & analyse erreurs',
+      '3,75× plus de jetons',
+    ],
     cta: 'Passer à Pro',
     soon: true,
   },
   {
     key: 'max',
     name: 'Max',
-    price: '9€',
+    price: '5 000 CFA',
     period: '/ mois',
-    jetons: 600,
+    jetons: 400,
     color: 'purple',
     desc: 'Pour réviser sans limites',
-    features: ['12× plus de jetons', 'Traitement prioritaire', 'Export PDF des fiches', 'Toutes les features'],
+    features: [
+      'Tout le plan Pro',
+      '10× plus de jetons qu\'en gratuit',
+      'Export PDF fiche d\'examen',
+      'Accès prioritaire aux nouvelles features',
+    ],
     cta: 'Passer à Max',
     soon: true,
   },
@@ -53,7 +68,7 @@ export default function PlansModal({ currentPlan = 'free', onClose }) {
         <div className="plans-modal-header">
           <div>
             <h2 className="plans-modal-title">Choisir un plan</h2>
-            <p className="plans-modal-sub">Plus de jetons = plus de résumés, quiz et flashcards chaque mois.</p>
+            <p className="plans-modal-sub">Plus de jetons = plus de résumés, quiz et flashcards. Prix en francs CFA.</p>
           </div>
           <button className="pomo-close" onClick={onClose} title="Fermer">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">

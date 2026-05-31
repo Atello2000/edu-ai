@@ -186,7 +186,7 @@ async function initSchema() {
     )`,
     // Allocation initiale pour les utilisateurs existants sans jetons_reset_date
     // Couvre tous les cas : jetons = 0 (anciens comptes) ET jetons = 50 (DEFAULT PostgreSQL)
-    `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 600 WHEN plan = 'pro' THEN 200 ELSE 50 END,
+    `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 400 WHEN plan = 'pro' THEN 150 ELSE 40 END,
        jetons_reset_date = to_char(NOW(), 'YYYY-MM')
      WHERE jetons_reset_date IS NULL`,
     // ── SRS / Flashcards — persistance PostgreSQL (Faille 2 audit) ──────────
