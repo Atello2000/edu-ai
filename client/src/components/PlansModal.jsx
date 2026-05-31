@@ -79,50 +79,74 @@ export default function PlansModal({ currentPlan = 'free', onClose }) {
 
         <div className="plans-grid">
           {PLANS.map(plan => {
-            const isCurrent = plan.key === (currentPlan || 'free');
+            const isCurrent  = plan.key === (currentPlan || 'free');
+            const isFeatured = plan.key === 'pro';
             return (
               <div
                 key={plan.key}
-                className={`plan-card plan-card-${plan.color}${isCurrent ? ' plan-card-current' : ''}`}
+                className={[
+                  'plan-card',
+                  `plan-card-${plan.color}`,
+                  isCurrent  ? 'plan-card-current'  : '',
+                  isFeatured ? 'plan-card-featured'  : '',
+                ].filter(Boolean).join(' ')}
               >
-                {isCurrent && <span className="plan-card-badge">Plan actuel</span>}
+                <div className="plan-card-inner">
 
-                <div className="plan-card-top">
-                  <span className={`plan-card-name color-${plan.color}`}>{plan.name}</span>
-                  <div className="plan-card-price">
-                    <strong>{plan.price}</strong>
-                    <span>{plan.period}</span>
+                  {/* En-tête */}
+                  <div className="plan-card-top">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span className={`plan-card-name color-${plan.color}`}>{plan.name}</span>
+                      {isCurrent && (
+                        <span className="plan-card-badge" style={{ position: 'static', transform: 'none', background: 'var(--teal)' }}>
+                          Actuel
+                        </span>
+                      )}
+                      {isFeatured && !isCurrent && (
+                        <span className="plan-card-badge" style={{ position: 'static', transform: 'none' }}>
+                          ⭐ Recommandé
+                        </span>
+                      )}
+                    </div>
+                    <div className="plan-card-price">
+                      <strong>{plan.price}</strong>
+                      <span>{plan.period}</span>
+                    </div>
+                    <p className="plan-card-desc">{plan.desc}</p>
                   </div>
-                  <p className="plan-card-desc">{plan.desc}</p>
+
+                  <hr className="plan-card-divider" />
+
+                  {/* Jetons */}
+                  <div className={`plan-card-jetons color-${plan.color}`}>
+                    <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+                      <path d="M7 1.4 L11.6 4 V10 L7 12.6 L2.4 10 V4 Z"
+                        fill="currentColor" fillOpacity="0.25"
+                        stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                      <circle cx="7" cy="7" r="1.4" fill="currentColor"/>
+                    </svg>
+                    <strong>{plan.jetons}</strong>&nbsp;jetons / mois
+                  </div>
+
+                  {/* Features */}
+                  <ul className="plan-card-features">
+                    {plan.features.map(f => (
+                      <li key={f}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA */}
+                  <button
+                    className={`plan-card-cta act-btn ${plan.color}${isCurrent || plan.soon ? ' disabled' : ''}`}
+                    disabled={isCurrent || plan.soon}
+                    title={plan.soon ? 'Paiement disponible bientôt' : ''}
+                  >
+                    {isCurrent ? '✓ Plan actuel' : plan.soon ? 'Bientôt disponible' : plan.cta}
+                  </button>
                 </div>
-
-                {/* Jauge jetons */}
-                <div className={`plan-card-jetons color-${plan.color}`}>
-                  <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
-                    <path d="M7 1.4 L11.6 4 V10 L7 12.6 L2.4 10 V4 Z"
-                      fill="currentColor" fillOpacity="0.25"
-                      stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
-                    <circle cx="7" cy="7" r="1.4" fill="currentColor"/>
-                  </svg>
-                  <strong>{plan.jetons}</strong> jetons / mois
-                </div>
-
-                <ul className="plan-card-features">
-                  {plan.features.map(f => (
-                    <li key={f}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  className={`plan-card-cta act-btn ${plan.color}${isCurrent || plan.soon ? ' disabled' : ''}`}
-                  disabled={isCurrent || plan.soon}
-                  title={plan.soon ? 'Disponible bientôt' : ''}
-                >
-                  {isCurrent ? 'Plan actuel' : plan.soon ? 'Bientôt disponible' : plan.cta}
-                </button>
               </div>
             );
           })}
