@@ -4047,13 +4047,13 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: 1.1rem 1.1rem 1rem;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  width: 240px;
+  gap: .75rem;
+  width: 258px;
   animation: scaleIn 0.28s cubic-bezier(.4,0,.2,1) both;
   transition: border-color 0.25s, box-shadow 0.25s;
 }
@@ -4076,15 +4076,29 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   font-size: .83rem;
   font-weight: 600;
   color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  flex-wrap: wrap;
 }
 .pomo-title em {
   font-style: normal;
   color: var(--gold);
 }
+.pomo-mode-break .pomo-title em { color: var(--teal); }
 
-.pomo-mode-break .pomo-title em {
-  color: var(--teal);
+.pomo-preset-label {
+  font-size: .65rem;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: .05rem .35rem;
 }
+
+/* Bouton settings actif */
+.pomo-close-active { color: var(--blue) !important; }
 
 /* Mini-pill collapsed */
 .pomo-pill {
@@ -4166,11 +4180,168 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   stroke: var(--teal);
 }
 
+.pomo-time-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+}
 .pomo-time {
   font-family: 'DM Mono', monospace;
   font-size: 1.55rem;
   font-weight: 500;
   color: var(--text);
+}
+.pomo-mode-badge {
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Durées focus/pause */
+.pomo-durations {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  font-size: .7rem;
+}
+.pomo-dur-chip {
+  color: var(--muted);
+  padding: .1rem .4rem;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.pomo-dur-chip.active {
+  color: var(--gold);
+  border-color: rgba(212,169,76,.3);
+  background: rgba(212,169,76,.07);
+}
+.pomo-mode-break .pomo-dur-chip.active {
+  color: var(--teal);
+  border-color: rgba(29,209,161,.3);
+  background: rgba(29,209,161,.07);
+}
+.pomo-dur-sep { color: var(--border); }
+
+/* Panneau réglages */
+.pomo-settings {
+  width: 100%;
+  padding: .75rem .85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+.pomo-settings-title {
+  font-size: .67rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+}
+
+/* Grille de presets */
+.pomo-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .35rem;
+}
+.pomo-preset-btn {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: .4rem .55rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  transition: border-color .15s, background .15s;
+}
+.pomo-preset-btn:hover   { border-color: var(--gold); background: var(--gold-bg); }
+.pomo-preset-btn.active  { border-color: var(--gold); background: var(--gold-bg); }
+.pomo-preset-name {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.pomo-preset-sub {
+  font-size: .65rem;
+  color: var(--muted);
+}
+
+/* Custom */
+.pomo-custom-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.pomo-custom-field {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  flex: 1;
+}
+.pomo-custom-label {
+  font-size: .7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pomo-custom-ctrl {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--card);
+}
+.pomo-adj-btn {
+  all: unset;
+  cursor: pointer;
+  width: 20px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .85rem;
+  color: var(--muted);
+  transition: background .1s, color .1s;
+}
+.pomo-adj-btn:hover { background: var(--border); color: var(--text); }
+.pomo-custom-input {
+  width: 32px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-size: .78rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--text);
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+.pomo-custom-input::-webkit-inner-spin-button,
+.pomo-custom-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.pomo-custom-unit {
+  font-size: .65rem;
+  color: var(--muted);
+}
+.pomo-custom-apply {
+  font-size: .72rem !important;
+  padding: .4rem .6rem !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pomo-settings-warn {
+  font-size: .68rem;
+  color: var(--gold);
+  margin: 0;
 }
 
 .pomo-controls {
