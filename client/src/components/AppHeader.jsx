@@ -85,7 +85,7 @@ export default function AppHeader({
             <path d="M12 10v4l2.5 2.5" />
           </svg>
         </button>
-        <JetonWidget />
+        <JetonWidget user={user} />
         <UserMenu user={user} onOpenSettings={onOpenSettings} />
       </div>
     </header>

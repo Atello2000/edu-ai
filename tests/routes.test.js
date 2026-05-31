@@ -5,6 +5,22 @@ const fs      = require('fs');
 // Désactive le vrai serveur listen pendant les tests
 process.env.PORT = '0';
 
+// ── Mocks middleware (hissés avant tout require par Jest) ─────────────────────
+// Les tests vérifient la logique métier (validation fichier, path traversal…)
+// — pas la protection auth/CSRF, qui est couverte séparément.
+jest.mock('../middleware/auth', () => ({
+  requireAuth: (req, res, next) => {
+    req.user = { id: 999, email: 'test@example.com', name: 'Test', plan: 'free', jetons: 50 };
+    next();
+  },
+  JWT_SECRET: 'test-secret',
+}));
+
+jest.mock('../middleware/csrf', () => ({
+  doubleCsrfProtection:    (req, res, next) => next(),
+  generateAndSetCsrfToken: ()               => 'mock-csrf-token',
+}));
+
 let app;
 
 beforeAll(() => {

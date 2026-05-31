@@ -45,8 +45,13 @@ function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false);
   return (
     <div className={`faq-item ${open ? 'open' : ''}`}>
-      <div className="faq-q" onClick={() => setOpen(o => !o)}>{q}</div>
-      <div className="faq-a">{a}</div>
+      <button
+        type="button"
+        className="faq-q"
+        aria-expanded={open}
+        onClick={() => setOpen(o => !o)}
+      >{q}</button>
+      <div className="faq-a" role="region" aria-hidden={!open}>{a}</div>
     </div>
   );
 }

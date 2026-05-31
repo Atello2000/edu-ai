@@ -55,6 +55,9 @@ export default function AppPage() {
   // ── État upload ────────────────────────────────────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
 
+  // ── Loader mindmap (React state — ne jamais toucher le DOM directement) ────
+  const [mindmapLoading, setMindmapLoading] = useState(false);
+
   // ── Sélection de fichiers (levé depuis ActionsPanel) ──────────────────────
   // null = tous sélectionnés, Set = sélection partielle
   const [selectedFileIds, setSelectedFileIds] = useState(null);
@@ -422,6 +425,7 @@ export default function AppPage() {
             hasFiles={hasFiles}
             uploadedFiles={uploadedFiles}
             onGoUpload={() => setActivePanel('upload-section')}
+            onMindmapLoading={setMindmapLoading}
             summaryResults={summaryResults}
             examMd={examMd}
             questions={questions}
@@ -687,14 +691,16 @@ export default function AppPage() {
 
       <Suspense fallback={null}><MindmapModal /></Suspense>
 
-      {/* Loader global (utilisé par handleMindmap dans ActionsPanel) */}
-      <div className="loader hidden" id="loader">
-        <div className="loader-box">
-          <div className="spinner"></div>
-          <p id="loader-text">Traitement en cours…</p>
-          <span className="loader-hint">Cela peut prendre quelques secondes</span>
+      {/* Loader global mindmap — piloté par état React (pas par DOM) */}
+      {mindmapLoading && (
+        <div className="loader">
+          <div className="loader-box">
+            <div className="spinner"></div>
+            <p>Génération du mindmap…</p>
+            <span className="loader-hint">Cela peut prendre quelques secondes</span>
+          </div>
         </div>
-      </div>
+      )}
 
       <SaveFolderModal filesToSave={filesToSave} onClose={() => setFilesToSave(null)} />
       <FeedbackButton />

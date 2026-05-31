@@ -5,6 +5,8 @@ const fs       = require('fs');
 const multer   = require('multer');
 const { LIMITS } = require('../middleware/quota');
 const { extractTextFromBuffer } = require('../services/text');
+const { requireAuth } = require('../middleware/auth');
+const { doubleCsrfProtection } = require('../middleware/csrf');
 
 const MAX_TEXT_UPLOAD = 200000; // ~40 000 mots — couvre les cours très longs
 
@@ -28,7 +30,7 @@ const upload = multer({
 
 
 // Upload multiple files
-router.post('/upload', (req, res, next) => {
+router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
   upload.array('files', LIMITS.maxFiles)(req, res, err => {
     if (err) return res.status(400).json({ error: err.message });
     if (req.fileTypeError) return res.status(400).json({ error: req.fileTypeError });
@@ -76,8 +78,12 @@ router.get('/users/count', (req, res) => {
 });
 
 // GET /api/health — diagnostic rapide (no auth)
+// En production, seul le statut est exposé pour éviter le fingerprinting.
 router.get('/health', async (req, res) => {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.json({ status: 'ok' });
+    }
     const { getAiConfig } = require('../services/aiConfig');
     const cfg = await getAiConfig().catch(e => ({ error: e.message }));
     res.json({

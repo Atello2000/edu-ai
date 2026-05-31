@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useJetons } from '../hooks/useJetons';
+import PlansModal from './PlansModal';
 
-
-/**
- * JetonWidget — arc SVG animé + icône pièce + compteur.
- * Affiché dans le header. Couleur réactive : teal > 55 % · gold 20–55 % · rose < 20 %
- */
-export default function JetonWidget() {
+export default function JetonWidget({ user }) {
   const { balance, monthly_allocation } = useJetons();
-  const [mounted, setMounted] = useState(false);
+  const [mounted,      setMounted]      = useState(false);
+  const [showPlans,    setShowPlans]    = useState(false);
 
   useEffect(() => {
     if (balance === null) return;
@@ -33,29 +30,36 @@ export default function JetonWidget() {
   const urgency = pct <= 20 ? ' jeton-urgent' : '';
 
   return (
-    <div
-      className={`jeton-widget${urgency}`}
-      title={`${balance} / ${total} jetons restants ce mois`}
-    >
-      {/* Jauge circulaire */}
-      <div className="jw-gauge">
-        <svg className="jw-arc" viewBox="0 0 32 32" width="32" height="32">
-          <circle className="jw-track" cx="16" cy="16" r={R} />
-          <circle
-            className="jw-fill"
-            cx="16" cy="16" r={R}
-            stroke={color}
-            strokeDasharray={`${fill} ${circ - fill}`}
-          />
-        </svg>
-        {/* Nombre centré dans l'arc */}
-        <div className="jw-coin-icon" style={{ color }}>
-          <span className="jw-inner-count">{balance}</span>
+    <>
+      <div
+        className={`jeton-widget${urgency}`}
+        title={`${balance} / ${total} jetons restants — voir les plans`}
+        onClick={() => setShowPlans(true)}
+        style={{ cursor: 'pointer' }}
+      >
+        <div className="jw-gauge">
+          <svg className="jw-arc" viewBox="0 0 32 32" width="32" height="32">
+            <circle className="jw-track" cx="16" cy="16" r={R} />
+            <circle
+              className="jw-fill"
+              cx="16" cy="16" r={R}
+              stroke={color}
+              strokeDasharray={`${fill} ${circ - fill}`}
+            />
+          </svg>
+          <div className="jw-coin-icon" style={{ color }}>
+            <span className="jw-inner-count">{balance}</span>
+          </div>
         </div>
+        <span className="jw-label">jetons</span>
       </div>
 
-      {/* Label texte */}
-      <span className="jw-label">jetons</span>
-    </div>
+      {showPlans && (
+        <PlansModal
+          currentPlan={user?.plan || 'free'}
+          onClose={() => setShowPlans(false)}
+        />
+      )}
+    </>
   );
 }

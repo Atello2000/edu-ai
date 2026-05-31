@@ -32,7 +32,15 @@ function FlashCard({ card, cardIdx, state, onMark }) {
   if (flipped)            cls += ' flipped';
 
   return (
-    <div className={cls} onClick={handleFlip}>
+    <div
+      className={cls}
+      role="button"
+      tabIndex={0}
+      aria-label={flipped ? 'Carte retournée — appuyez sur Entrée pour voir la question' : 'Appuyez sur Entrée pour voir la réponse'}
+      aria-pressed={flipped}
+      onClick={handleFlip}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleFlip(e); } }}
+    >
       {label && <div className={`fc-card-srs-badge ${status || ''}`}>{label}</div>}
       <div className="fc-card-inner">
         <div className="fc-card-front">

@@ -55,10 +55,14 @@ export default function UploadZone({ onUploaded, onError }) {
       {/* Drop zone */}
       <div
         className={`drop-zone${dragging ? ' drag-over' : ''}`}
+        role="button"
+        tabIndex={0}
+        aria-label="Zone de dépôt de fichiers — cliquez ou appuyez sur Entrée pour parcourir"
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={onZoneClick}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
       >
         <div className="drop-icon">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -96,7 +100,12 @@ export default function UploadZone({ onUploaded, onError }) {
                   <span className="file-item-name">{f.name}</span>
                   <span className="file-size">{formatSize(f.size)}</span>
                 </div>
-                <span className="remove" onClick={() => removeFile(i)}>✕</span>
+                <button
+                  type="button"
+                  className="remove"
+                  aria-label={`Retirer ${f.name}`}
+                  onClick={() => removeFile(i)}
+                >✕</button>
               </div>
             );
           })}

@@ -3,6 +3,7 @@ const router   = express.Router();
 const webpush  = require('web-push');
 const { prepare } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { doubleCsrfProtection } = require('../middleware/csrf');
 const logger   = require('../services/logger');
 
 const VAPID_PUBLIC  = process.env.VAPID_PUBLIC_KEY;
@@ -26,7 +27,7 @@ router.get('/vapid-public-key', (req, res) => {
 });
 
 // POST /api/push/subscribe
-router.post('/subscribe', requireAuth, async (req, res) => {
+router.post('/subscribe', requireAuth, doubleCsrfProtection, async (req, res) => {
   const { endpoint, keys } = req.body?.subscription || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth)
     return res.status(400).json({ error: 'Subscription invalide' });
@@ -41,7 +42,7 @@ router.post('/subscribe', requireAuth, async (req, res) => {
 });
 
 // DELETE /api/push/unsubscribe
-router.delete('/unsubscribe', requireAuth, async (req, res) => {
+router.delete('/unsubscribe', requireAuth, doubleCsrfProtection, async (req, res) => {
   const { endpoint } = req.body || {};
   if (endpoint) {
     await prepare('DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?')
@@ -53,7 +54,7 @@ router.delete('/unsubscribe', requireAuth, async (req, res) => {
 });
 
 // POST /api/push/notify-due — appelé par le client au login si cartes dues
-router.post('/notify-due', requireAuth, async (req, res) => {
+router.post('/notify-due', requireAuth, doubleCsrfProtection, async (req, res) => {
   if (!pushEnabled) return res.json({ sent: false });
   const { dueCount } = req.body || {};
   if (!dueCount || dueCount < 1) return res.json({ sent: false });

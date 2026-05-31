@@ -7,6 +7,7 @@ const db       = require('../db');
 const { JWT_SECRET } = require('../middleware/auth');
 const { generateAndSetCsrfToken } = require('../middleware/csrf');
 const { sendVerifyEmail, sendResetEmail } = require('../services/email');
+const { doubleCsrfProtection } = require('../middleware/csrf');
 const logger   = require('../services/logger');
 
 const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -88,7 +89,7 @@ router.post('/login', async (req, res) => {
 });
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
-router.post('/logout', (req, res) => {
+router.post('/logout', doubleCsrfProtection, (req, res) => {
   res.clearCookie('jangalai.token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
   res.json({ ok: true });
 });
@@ -104,7 +105,7 @@ router.get('/me', async (req, res) => {
 });
 
 // ── POST /api/auth/onboarding ─────────────────────────────────────────────────
-router.post('/onboarding', async (req, res) => {
+router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
   const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
@@ -135,7 +136,7 @@ router.post('/onboarding', async (req, res) => {
 });
 
 // ── PUT /api/auth/profile ─────────────────────────────────────────────────────
-router.put('/profile', async (req, res) => {
+router.put('/profile', doubleCsrfProtection, async (req, res) => {
   const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
@@ -173,7 +174,7 @@ router.get('/verify/:token', async (req, res) => {
 });
 
 // ── POST /api/auth/resend-verify ──────────────────────────────────────────────
-router.post('/resend-verify', async (req, res) => {
+router.post('/resend-verify', doubleCsrfProtection, async (req, res) => {
   const decoded = await getTokenUser(req);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);

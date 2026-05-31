@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 
 const ALLOWED_EXTS = ['pdf', 'ppt', 'pptx', 'docx'];
 
@@ -35,7 +36,7 @@ export function useUpload() {
     const form = new FormData();
     selectedFiles.forEach(f => form.append('files', f));
     try {
-      const res  = await fetch('/api/upload', { method: 'POST', body: form });
+      const res  = await apiFetch('/api/upload', { method: 'POST', body: form });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Erreur upload');
       setSelectedFiles([]);

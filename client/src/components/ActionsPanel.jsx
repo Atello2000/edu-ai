@@ -90,6 +90,8 @@ export default function ActionsPanel({
   onExamModeChange,
   examMins,
   onExamMinsChange,
+  // ── Loader mindmap (piloté par React state dans AppPage) ──────────────────
+  onMindmapLoading,         // (loading: boolean) => void
 }) {
   const [showMore, setShowMore] = useState(false);
 
@@ -118,10 +120,7 @@ export default function ActionsPanel({
 
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
 
-    const loader     = document.getElementById('loader');
-    const loaderText = document.getElementById('loader-text');
-    if (loaderText) loaderText.textContent = 'Génération du mindmap…';
-    loader?.classList.remove('hidden');
+    onMindmapLoading?.(true);
 
     try {
       const file = files[0];
@@ -133,7 +132,7 @@ export default function ActionsPanel({
       if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');
       eventBus.emit('mindmap:open', { name: file.name, markdown: data.markdown });
     } catch (err) { toast.error(err.message); }
-    finally { loader?.classList.add('hidden'); }
+    finally { onMindmapLoading?.(false); }
   }
 
   return (
