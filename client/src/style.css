@@ -4609,29 +4609,22 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 }
 .plans-close-btn:hover { color: var(--text); background: var(--hover); }
 
-/* ── Rangée de cartes — toujours 3 colonnes ── */
+/* ── Rangée de cartes — 3 colonnes via Grid (plus fiable que flex+overflow-x) ── */
 .plans-cards-row {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   align-items: stretch;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
   padding-bottom: 2px; /* évite que les box-shadow soient coupées */
 }
-.plans-cards-row::-webkit-scrollbar { display: none; }
 
 /* ── Carte individuelle ── */
 .plan-tile {
-  flex: 1;
-  min-width: 210px;
   display: flex; flex-direction: column;
   border-radius: 12px;
   border: 1.5px solid var(--border);
   background: var(--surface);
   overflow: hidden;
-  scroll-snap-align: start;
   transition: transform .15s, box-shadow .15s;
 }
 .plan-tile:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,.1); }
@@ -4714,4 +4707,10 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 .plan-tile-cta:disabled {
   opacity: .4; cursor: default; pointer-events: none;
   border-color: var(--border); color: var(--muted);
+}
+
+/* ── Plans modal — responsive mobile ── */
+@media (max-width: 600px) {
+  .plans-modal-wrap { padding: 1rem; }
+  .plans-cards-row { grid-template-columns: 1fr; }
 }
