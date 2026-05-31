@@ -20,16 +20,55 @@ function timeAgo(dateStr) {
   return `il y a ${days}j`;
 }
 
+/* ── Skeleton ─────────────────────────────────────────────────────────────── */
+function ActivitySkeleton() {
+  return (
+    <div className="activity-section activity-skeleton" aria-hidden="true">
+      <div className="act-stats-row">
+        {[0, 1].map(i => (
+          <div key={i} className="act-stat-card">
+            <div className="sk-box sk-icon" />
+            <div>
+              <div className="sk-box sk-val" />
+              <div className="sk-box sk-lbl" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="act-recent">
+        <div className="sk-box sk-title" />
+        <div className="act-recent-list">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="act-item">
+              <div className="sk-box sk-icon" />
+              <div className="sk-box sk-topic" />
+              <div className="sk-box sk-time" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ActivitySection({ refreshKey }) {
   const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoading(true);
     fetch('/api/activity/summary', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data && data.totalSessions !== undefined) setSummary(data); })
-      .catch(() => {});
+      .then(data => {
+        if (data && data.totalSessions !== undefined) setSummary(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, [refreshKey]);
 
+  // Skeleton uniquement au premier chargement (summary encore inconnu)
+  if (loading && !summary) return <ActivitySkeleton />;
   if (!summary) return null;
   if (summary.totalSessions === 0) return (
     <div className="activity-section activity-empty">

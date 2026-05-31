@@ -177,6 +177,41 @@
   margin-left: .25rem;
 }
 
+/* ── Skeleton loader ─────────────────────────────────────────────────────────
+   Remplace le vide (return null) pendant le fetch /api/activity/summary.
+   Chaque .sk-box pulse en fondu. Les dimensions calquent le contenu réel.        */
+@keyframes sk-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .3; }
+}
+
+.sk-box {
+  background: var(--border);
+  border-radius: 4px;
+  animation: sk-pulse 1.6s ease-in-out infinite;
+}
+
+/* Icône ronde (32×32, calque act-stat-icon / act-item-icon) */
+.activity-skeleton .sk-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+/* Valeur numérique (Cormorant Garamond ~1.4rem) */
+.sk-val  { width: 44px; height: 1.35rem; margin-bottom: .3rem; }
+/* Label sous la valeur */
+.sk-lbl  { width: 70px; height: .62rem; }
+/* Titre de section */
+.sk-title { width: 115px; height: .62rem; margin-bottom: .55rem; }
+/* Nom du sujet (flex:1) */
+.sk-topic { flex: 1; height: .78rem; }
+/* Horodatage à droite */
+.sk-time  { width: 46px; height: .62rem; }
+
+/* Décaler légèrement la fréquence de chaque ligne pour éviter le clignotement uniforme */
+.activity-skeleton .act-recent-list > :nth-child(2) .sk-box { animation-delay: .2s; }
+.activity-skeleton .act-recent-list > :nth-child(3) .sk-box { animation-delay: .4s; }
+
 @media (max-width: 480px) {
   .activity-section { padding: .9rem 1rem; }
   .act-stat-val { font-size: 1.35rem; }
