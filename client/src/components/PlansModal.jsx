@@ -54,7 +54,7 @@ const Check = ({ color }) => (
   </svg>
 );
 
-export default function PlansModal({ currentPlan = 'free', onClose }) {
+export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan }) {
   useEffect(() => {
     const fn = e => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', fn);
@@ -69,7 +69,7 @@ export default function PlansModal({ currentPlan = 'free', onClose }) {
         <div className="plans-modal-top">
           <div>
             <h2 className="plans-modal-h2">Choisir un plan</h2>
-            <p className="plans-modal-p">Prix en francs CFA · Paiement bientôt disponible</p>
+            <p className="plans-modal-p">Prix en francs CFA · Paiement instantané sécurisé par Wave & Orange Money</p>
           </div>
           <button className="plans-close-btn" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -79,20 +79,19 @@ export default function PlansModal({ currentPlan = 'free', onClose }) {
         </div>
 
         {/* ── Cartes ── */}
-        <div className="plans-cards-row">
+        <div className="plans-cards-row" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'1rem', alignItems:'stretch' }}>
           {PLANS.map(plan => {
             const isCurrent = plan.key === (currentPlan || 'free');
-            const soon = plan.key !== 'free';
             return (
               <div
                 key={plan.key}
                 className={`plan-tile${plan.best ? ' plan-tile-best' : ''}${isCurrent ? ' plan-tile-current' : ''}`}
-                style={{ '--accent': plan.accent, '--accent-bg': plan.accentBg }}
+                style={{ '--accent': plan.accent, '--accent-bg': plan.accentBg, display:'flex', flexDirection:'column', borderRadius:'12px', border: isCurrent ? '1.5px solid var(--accent)' : plan.best ? '2px solid var(--accent)' : '1.5px solid var(--border)', background:'var(--surface)', overflow:'hidden' }}
               >
                 {/* Header coloré */}
                 <div className="plan-tile-head">
                   <div className="plan-tile-name-row">
-                    <span className="plan-tile-name">{plan.name}</span>
+                     <span className="plan-tile-name">{plan.name}</span>
                     {isCurrent && <span className="plan-tile-pill" style={{ background: plan.accent }}>Actuel</span>}
                     {plan.best && !isCurrent && <span className="plan-tile-pill" style={{ background: plan.accent }}>Meilleure valeur</span>}
                   </div>
@@ -131,12 +130,13 @@ export default function PlansModal({ currentPlan = 'free', onClose }) {
                   {/* CTA */}
                   <button
                     className="plan-tile-cta"
-                    style={isCurrent || soon ? {} : {
+                    style={isCurrent ? {} : {
                       background: plan.accent, color: '#fff', borderColor: plan.accent,
                     }}
-                    disabled={isCurrent || soon}
+                    disabled={isCurrent}
+                    onClick={() => onSelectPlan && onSelectPlan(plan.key)}
                   >
-                    {isCurrent ? '✓ Plan actuel' : soon ? 'Bientôt disponible' : `Passer à ${plan.name}`}
+                    {isCurrent ? '✓ Plan actuel' : `S'abonner au plan ${plan.name}`}
                   </button>
                 </div>
               </div>
