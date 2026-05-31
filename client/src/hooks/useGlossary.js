@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import eventBus from '../utils/eventBus';
 
 /**
  * useGlossary — extraction de termes via SSE (streaming progressif).
@@ -45,10 +46,10 @@ export function useGlossary() {
             // Affichage progressif — on ajoute les termes au fur et à mesure
             setTerms(prev => [...prev, ...ev.terms]);
           } else if (ev.type === 'end') {
-            // Remplacer par la liste finale dédupliquée et triée
             if (Array.isArray(ev.terms)) setTerms(ev.terms);
             setProgress(null);
             setLoading(false);
+            eventBus.emit('quota:refresh');
           } else if (ev.type === 'error') {
             setError(ev.message || 'Erreur lors de l\'extraction');
             setProgress(null);

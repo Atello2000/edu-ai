@@ -1,23 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useJetons } from '../hooks/useJetons';
 
-/**
- * Icône jauge — étoile 4 branches (✦) dans un disque double-anneau.
- * Symbolise la "valeur / solde" — adapté pour un indicateur de crédit.
- */
-function GaugeCenterSvg() {
-  return (
-    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"
-      width="13" height="13">
-      <path
-        d="M7 1.4 L11.6 4 V10 L7 12.6 L2.4 10 V4 Z"
-        fill="currentColor" fillOpacity="0.2"
-        stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"
-      />
-      <circle cx="7" cy="7" r="1.4" fill="currentColor" />
-    </svg>
-  );
-}
 
 /**
  * JetonWidget — arc SVG animé + icône pièce + compteur.

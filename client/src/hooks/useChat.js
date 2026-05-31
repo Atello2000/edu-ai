@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { apiFetch } from '../utils/apiFetch';
+import eventBus from '../utils/eventBus';
 
 /**
  * Gère l'historique et l'envoi des messages du chat.
@@ -74,6 +75,7 @@ export function useChat() {
               m.id === aiMsgId ? { ...m, text: fullText, model: chatModel, streaming: false } : m
             ));
             setHistory(prev => [...prev, { role: 'assistant', content: fullText }]);
+            eventBus.emit('quota:refresh');
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }
