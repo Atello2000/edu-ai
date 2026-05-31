@@ -65,17 +65,14 @@ export default function JetonWidget() {
             strokeDasharray={`${fill} ${circ - fill}`}
           />
         </svg>
-        {/* Icône centrée dans l'arc */}
+        {/* Nombre centré dans l'arc */}
         <div className="jw-coin-icon" style={{ color }}>
-          <GaugeCenterSvg />
+          <span className="jw-inner-count">{balance}</span>
         </div>
       </div>
 
-      {/* Compteur texte */}
-      <div className="jw-text">
-        <span className="jw-count">{balance}</span>
-        <span className="jw-label">jetons</span>
-      </div>
+      {/* Label texte */}
+      <span className="jw-label">jetons</span>
     </div>
   );
 }
