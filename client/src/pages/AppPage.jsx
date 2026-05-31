@@ -210,6 +210,34 @@ export default function AppPage() {
   }, [predictResults, generatePredict]);
 
   const handleStudyPlan    = useCallback(() => setActivePanel('study-plan-section'), []);
+
+  // ── Exécuter une tâche du plan de révision ────────────────────────────────
+  const handlePlanLaunch = useCallback((action, task) => {
+    const files = selectedFilesRef.current;
+    const topic = task?.topic;
+    const focusTopics = topic ? [topic] : undefined;
+
+    switch (action) {
+      case 'quiz': {
+        if (!files.length) { toast.warn('Chargez un fichier pour lancer le quiz.'); return; }
+        const diff = task?.type === 'weak_topic' ? 'difficile' : 'moyen';
+        generateQuiz(files, { count: 8, difficulty: diff, focus_topics: focusTopics });
+        setActivePanel('quiz-section');
+        break;
+      }
+      case 'summarize': {
+        if (!files.length) { toast.warn('Chargez un fichier pour générer le résumé.'); return; }
+        setActivePanel('summary-section');
+        if (!summaryResults.length) summarize(files);
+        break;
+      }
+      case 'srs': {
+        handleSRSReview();
+        break;
+      }
+      default: break;
+    }
+  }, [generateQuiz, summarize, summaryResults, handleSRSReview]);
   const handleErrorAnalysis = useCallback(() => setActivePanel('error-analysis-section'), []);
 
   // ── Quiz ciblé depuis le prédicteur ──────────────────────────────────────
@@ -708,6 +736,7 @@ export default function AppPage() {
                 files={uploadedFiles}
                 onGenerate={generateStudyPlan}
                 onReset={resetStudyPlan}
+                onLaunch={handlePlanLaunch}
               />
             </Suspense>
           </ErrorBoundary>

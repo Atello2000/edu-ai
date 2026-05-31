@@ -56,8 +56,22 @@ function saveDone(d) {
   try { localStorage.setItem(DONE_KEY, JSON.stringify(d)); } catch { /* best-effort */ }
 }
 
+/* ── Mapping type → action ───────────────────────────────────────────────── */
+const IcoPlay = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+
+// Retourne null si le type n'est pas exécutable
+function getLaunchConfig(taskType) {
+  switch (taskType) {
+    case 'quiz':       return { label: 'Quiz',    action: 'quiz',     color: 'gold'  };
+    case 'weak_topic': return { label: 'Quiz',    action: 'quiz',     color: 'rose'  };
+    case 'review':     return { label: 'Résumé',  action: 'summarize',color: 'teal'  };
+    case 'srs':        return { label: 'SRS',     action: 'srs',      color: 'blue'  };
+    default:           return null;
+  }
+}
+
 /* ── Composant jour ──────────────────────────────────────────────────────── */
-function DayCard({ day, dayIdx, done, onToggle, isToday, isPast }) {
+function DayCard({ day, dayIdx, done, onToggle, isToday, isPast, onLaunch, hasFiles }) {
   const [open, setOpen] = useState(!isPast);
   const tasks = day.tasks || [];
   const completedCount = tasks.filter((_, j) => done[`${dayIdx}-${j}`]).length;
@@ -92,10 +106,11 @@ function DayCard({ day, dayIdx, done, onToggle, isToday, isPast }) {
             <p className="sp-no-tasks">Aucune tâche</p>
           ) : (
             tasks.map((task, j) => {
-              const key = `${dayIdx}-${j}`;
-              const isDone = !!done[key];
-              const meta = TYPE_META[task.type] || { Icon: IcoReview, label: task.type, color: 'muted' };
-              const { Icon } = meta;
+              const key       = `${dayIdx}-${j}`;
+              const isDone    = !!done[key];
+              const meta      = TYPE_META[task.type] || { Icon: IcoReview, label: task.type, color: 'muted' };
+              const launch    = getLaunchConfig(task.type);
+              const { Icon }  = meta;
               return (
                 <div
                   key={j}
@@ -116,9 +131,25 @@ function DayCard({ day, dayIdx, done, onToggle, isToday, isPast }) {
                     {task.topic && <strong className="sp-task-topic">{task.topic}</strong>}
                     {task.action && <span className="sp-task-action">{task.action}</span>}
                   </span>
-                  {task.duration > 0 && (
-                    <span className="sp-task-dur">{task.duration} min</span>
-                  )}
+                  <span className="sp-task-right">
+                    {task.duration > 0 && (
+                      <span className="sp-task-dur">{task.duration} min</span>
+                    )}
+                    {launch && (
+                      <button
+                        className={`sp-launch-btn sp-launch-${launch.color}`}
+                        title={`Lancer : ${launch.label}${task.topic ? ` — ${task.topic}` : ''}`}
+                        disabled={launch.action !== 'srs' && !hasFiles}
+                        onClick={e => {
+                          e.stopPropagation();
+                          onLaunch?.(launch.action, task);
+                          onToggle(key);
+                        }}
+                      >
+                        <IcoPlay /> {launch.label}
+                      </button>
+                    )}
+                  </span>
                 </div>
               );
             })
@@ -130,7 +161,7 @@ function DayCard({ day, dayIdx, done, onToggle, isToday, isPast }) {
 }
 
 /* ── Composant principal ─────────────────────────────────────────────────── */
-export default function StudyPlanSection({ plan, loading, progress, error, files = [], onGenerate, onReset }) {
+export default function StudyPlanSection({ plan, loading, progress, error, files = [], onGenerate, onReset, onLaunch }) {
   const [examDate, setExamDate] = useState('');
   const [done, setDone] = useState(loadDone);
 
@@ -344,6 +375,8 @@ export default function StudyPlanSection({ plan, loading, progress, error, files
                   onToggle={toggleTask}
                   isToday={isToday}
                   isPast={isPast}
+                  onLaunch={onLaunch}
+                  hasFiles={files.length > 0}
                 />
               );
             })}
