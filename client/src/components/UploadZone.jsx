@@ -8,7 +8,9 @@ import { useUpload } from '../hooks/useUpload';
  *   onUploaded(files)  — appelé quand l'upload serveur réussit
  *   onError(msg)       — appelé en cas d'erreur
  */
-export default function UploadZone({ onUploaded, onError }) {
+const PLAN_MB = { free: 5, pro: 10, max: 20 };
+
+export default function UploadZone({ onUploaded, onError, userPlan }) {
   const { selectedFiles, uploading, addFiles, removeFile, upload } = useUpload();
   const inputRef   = useRef(null);
   const [dragging, setDragging] = useState(false);
@@ -43,13 +45,14 @@ export default function UploadZone({ onUploaded, onError }) {
   }
 
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  const maxMb   = isLocal ? 50 : (PLAN_MB[userPlan] ?? 20);
 
   return (
     <>
       <h2 className="panel-title">Charger vos <em>fichiers</em></h2>
       <p className="panel-desc">
         Importez vos cours en PDF, PPT, PPTX ou DOCX —{' '}
-        jusqu&apos;à <span>{isLocal ? '50 Mo' : '20 Mo'}</span> par fichier
+        jusqu&apos;à <span>{maxMb} Mo</span> par fichier
       </p>
 
       {/* Drop zone */}

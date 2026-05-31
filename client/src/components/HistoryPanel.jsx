@@ -12,7 +12,9 @@ const TAG_LABELS = [
   { key: 'examSheet',  label: 'Fiche',       cls: 'he' },
 ];
 
-export default function HistoryPanel({ onRestore }) {
+const MAX_SESSIONS = { free: 10, pro: 30, max: Infinity };
+
+export default function HistoryPanel({ onRestore, userPlan }) {
   // Init synchrone depuis localStorage (rendu immédiat), puis IDB prend le relai
   const [sessions, setSessions] = useState(() => getSessions());
 
@@ -53,6 +55,11 @@ export default function HistoryPanel({ onRestore }) {
     eventBus.emit('dashboard:refresh');
   }
 
+  const limit    = MAX_SESSIONS[userPlan] ?? 10;
+  const count    = sessions.length;
+  const atLimit  = limit !== Infinity && count >= limit;
+  const nearLimit= limit !== Infinity && count >= Math.floor(limit * 0.8);
+
   return (
     <>
       <div className="panel-header">
@@ -61,6 +68,21 @@ export default function HistoryPanel({ onRestore }) {
           <h2 className="panel-title">Mes <em>cours</em></h2>
         </div>
         <button className="ghost-btn" onClick={clearAll}>Tout effacer</button>
+      </div>
+
+      {/* Compteur de sessions par plan */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '.5rem',
+        marginBottom: '.75rem', fontSize: '.78rem',
+        color: atLimit ? 'var(--danger, #ef4444)' : nearLimit ? 'var(--warning, #f59e0b)' : 'var(--muted)',
+      }}>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M12 12v4"/>
+        </svg>
+        {limit === Infinity
+          ? <span>{count} session{count !== 1 ? 's' : ''} sauvegardée{count !== 1 ? 's' : ''}</span>
+          : <span>{count} / {limit} sessions{atLimit ? ' — limite atteinte' : nearLimit ? ' — presque plein' : ''}</span>
+        }
       </div>
 
       <div id="history-list">

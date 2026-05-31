@@ -479,7 +479,7 @@ export default function AppPage() {
         {/* HISTORIQUE */}
         <div className={`panel${activePanel !== 'history-panel' ? ' hidden' : ''}`} id="history-panel">
           <ErrorBoundary>
-            <HistoryPanel onRestore={restoreSession} />
+            <HistoryPanel onRestore={restoreSession} userPlan={user?.plan} />
           </ErrorBoundary>
         </div>
 
@@ -499,7 +499,7 @@ export default function AppPage() {
 
         {/* UPLOAD */}
         <div className={`panel${activePanel !== 'upload-section' ? ' hidden' : ''}`} id="upload-section">
-          <ErrorBoundary><UploadZone onUploaded={handleUploaded} /></ErrorBoundary>
+          <ErrorBoundary><UploadZone onUploaded={handleUploaded} userPlan={user?.plan} /></ErrorBoundary>
         </div>
 
         {/* ACTIONS */}
