@@ -46,11 +46,11 @@ export function getDueCards() {
     .map(c => ({ front: c.front, back: c.back || '' }));
 }
 
-/** Nombre de cartes dues (sans charger le contenu). */
+/** Nombre de cartes dues ET dont le contenu est disponible (cohérent avec getDueCards). */
 export function getDueCount() {
   const data = getSRSData();
   const now  = Date.now();
-  return Object.values(data).filter(c => c.nextReview <= now).length;
+  return Object.values(data).filter(c => c.nextReview <= now && c.front).length;
 }
 
 export function getSRSStatus(front) {

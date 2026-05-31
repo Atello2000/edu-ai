@@ -185,7 +185,10 @@ export default function AppPage() {
   // ── Révision SRS depuis le dashboard ──────────────────────────────────────
   const handleSRSReview = useCallback(() => {
     const due = getDueCards();
-    if (!due.length) return;
+    if (!due.length) {
+      toast.warn('Aucune carte SRS disponible. Générez d\'abord des flashcards depuis vos cours.');
+      return;
+    }
     restoreFcFrom([{ name: 'Révision du jour', flashcards: due }]);
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
