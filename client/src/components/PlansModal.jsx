@@ -63,6 +63,10 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
     return () => window.removeEventListener('keydown', fn);
   }, [onClose]);
 
+  const displayedPlans = currentPlan && currentPlan !== 'free'
+    ? PLANS.filter(plan => plan.key !== 'free')
+    : PLANS;
+
   const handleInternalSelectPlan = async (planKey) => {
     console.log("PlansModal - handleInternalSelectPlan called for plan:", planKey);
     
@@ -120,7 +124,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
 
         {/* ── Cartes ── */}
         <div className="plans-cards-row">
-          {PLANS.map(plan => {
+          {displayedPlans.map(plan => {
             const isCurrent = plan.key === (currentPlan || 'free');
             return (
               <div

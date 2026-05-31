@@ -53,6 +53,8 @@ app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.send(content);
+});
+
 // Route de succès de paiement avec détection intelligente (Mobile vs Desktop)
 // - Sur PC : redirection automatique instantanée vers l'application principale
 // - Sur Mobile : affichage d'une page de succès légère et ultra-rapide sans charger l'application React
