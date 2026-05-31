@@ -705,6 +705,56 @@ export default function AppPage() {
         onResetOnboarding={() => setShowOnboarding(true)}
       />
 
+      {user && user.email_verified === 0 && (
+        <div className="verify-email-banner" style={{
+          background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
+          borderBottom: '1px solid rgba(239, 68, 68, 0.25)',
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '15px',
+          color: '#fca5a5',
+          fontSize: '14px',
+          fontWeight: '500',
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 99
+        }}>
+          <span>📧 <strong>Action requise :</strong> Veuillez valider votre adresse e-mail pour débloquer votre compte.</span>
+          <button
+            onClick={async (e) => {
+              e.preventDefault();
+              try {
+                const res = await apiFetch('/api/auth/resend-verify', { method: 'POST' });
+                if (res.ok) {
+                  toast.success("E-mail de validation renvoyé avec succès ! Vérifiez vos spams.");
+                } else {
+                  toast.error("Impossible de renvoyer l'e-mail.");
+                }
+              } catch (_) {
+                toast.error("Une erreur est survenue.");
+              }
+            }}
+            style={{
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#fff',
+              padding: '4px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.3)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}
+          >
+            Renvoyer le lien
+          </button>
+        </div>
+      )}
+
       <AppHeader
         activePanel={activePanel}
         user={user}
