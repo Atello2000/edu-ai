@@ -650,6 +650,7 @@ export default function AppPage() {
                 loading={studyPlanLoading}
                 progress={studyPlanProgress}
                 error={studyPlanError}
+                files={uploadedFiles}
                 onGenerate={generateStudyPlan}
                 onReset={resetStudyPlan}
               />

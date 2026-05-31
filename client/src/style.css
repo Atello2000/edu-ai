@@ -3529,9 +3529,11 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   flex-shrink: 0;
   margin-top: .05rem;
 }
-.sp-ctx-weak { background: rgba(229,57,53,.1); color: #e53935; }
-.sp-ctx-srs  { background: rgba(61,126,255,.1); color: var(--blue); }
-.sp-ctx-item em { color: var(--muted); font-style: normal; }
+.sp-ctx-files { background: rgba(29,209,161,.1); color: var(--teal); }
+.sp-ctx-weak  { background: rgba(229,57,53,.1);  color: #e53935; }
+.sp-ctx-srs   { background: rgba(61,126,255,.1); color: var(--blue); }
+.sp-ctx-item em   { color: var(--muted); font-style: normal; }
+.sp-ctx-warn { color: var(--gold); font-size: .82rem; }
 
 .sp-generate-btn { margin-top: .25rem; display: inline-flex; align-items: center; gap: .45rem; }
 

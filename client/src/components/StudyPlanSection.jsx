@@ -130,13 +130,34 @@ function DayCard({ day, dayIdx, done, onToggle, isToday, isPast }) {
 }
 
 /* ── Composant principal ─────────────────────────────────────────────────── */
-export default function StudyPlanSection({ plan, loading, progress, error, onGenerate, onReset }) {
+export default function StudyPlanSection({ plan, loading, progress, error, files = [], onGenerate, onReset }) {
   const [examDate, setExamDate] = useState('');
   const [done, setDone] = useState(loadDone);
 
-  const dLeft   = daysUntil(examDate);
-  const weakTopics = useMemo(() => loadTopicsPreview(), []);
-  const srsCount   = useMemo(() => loadSrsPreview(),    []);
+  const dLeft = daysUntil(examDate);
+
+  // Filtrer les topics par fichiers chargés
+  const weakTopics = useMemo(() => {
+    if (!files.length) return loadTopicsPreview();
+    try {
+      const raw = JSON.parse(localStorage.getItem('jangalai-topic-stats') || '{}');
+      const fileKeys = files.map(f => f.name.replace(/\.[^.]+$/, '').toLowerCase());
+      return Object.entries(raw)
+        .filter(([name]) => {
+          const k = name.replace(/\.[^.]+$/, '').toLowerCase();
+          return fileKeys.some(fk => k === fk || k.includes(fk) || fk.includes(k));
+        })
+        .map(([name, { sessions }]) => ({
+          name: name.replace(/\.[^.]+$/, ''),
+          avg:  Math.round(sessions.reduce((s, x) => s + x.pct, 0) / sessions.length),
+        }))
+        .filter(t => t.avg < 70)
+        .sort((a, b) => a.avg - b.avg)
+        .slice(0, 3);
+    } catch { return []; }
+  }, [files]);
+
+  const srsCount = useMemo(() => loadSrsPreview(), []);
 
   function toggleTask(key) {
     const next = { ...done, [key]: !done[key] };
@@ -175,7 +196,8 @@ export default function StudyPlanSection({ plan, loading, progress, error, onGen
       {!plan && !loading && (
         <div className="study-plan-form">
           <p className="sp-form-intro">
-            Jangalai génère un planning jour par jour basé sur vos points faibles et vos révisions SRS.
+            Jangalai génère un planning jour par jour <strong>basé sur les cours que vous avez chargés</strong>.
+            Les points faibles (quiz) et les révisions SRS liés à ces cours sont automatiquement intégrés.
           </p>
 
           <div className="sp-form-row">
@@ -197,25 +219,51 @@ export default function StudyPlanSection({ plan, loading, progress, error, onGen
 
           {/* Contexte pris en compte */}
           <div className="sp-context">
+            {/* Fichiers chargés (source principale) */}
+            <div className="sp-ctx-item">
+              <span className="sp-ctx-icon sp-ctx-files">
+                <IcoReview />
+              </span>
+              {files.length > 0 ? (
+                <span>
+                  <strong>{files.length}</strong> cours chargé{files.length > 1 ? 's' : ''}{' '}
+                  <em>({files.map(f => f.name.replace(/\.[^.]+$/, '')).join(', ')})</em>
+                </span>
+              ) : (
+                <span className="sp-ctx-warn">
+                  ⚠ Aucun cours chargé — chargez un fichier d&apos;abord pour un plan personnalisé
+                </span>
+              )}
+            </div>
+
+            {/* Points faibles filtrés */}
             <div className="sp-ctx-item">
               <span className="sp-ctx-icon sp-ctx-weak">
                 <IcoWeak />
               </span>
               <span>
                 {weakTopics.length > 0
-                  ? <><strong>{weakTopics.length}</strong> sujet{weakTopics.length > 1 ? 's' : ''} faible{weakTopics.length > 1 ? 's' : ''}{' '}
-                    <em>({weakTopics.map(t => t.name).join(', ')})</em></>
-                  : <span style={{ color: 'var(--muted)' }}>Aucun sujet analysé (faites des quiz d&apos;abord)</span>
+                  ? <><strong>{weakTopics.length}</strong> point{weakTopics.length > 1 ? 's' : ''} faible{weakTopics.length > 1 ? 's' : ''}{' '}
+                    détecté{weakTopics.length > 1 ? 's' : ''}{' '}
+                    <em>({weakTopics.map(t => `${t.name} ${t.avg}%`).join(', ')})</em></>
+                  : <span style={{ color: 'var(--muted)' }}>
+                    {files.length > 0
+                      ? 'Aucun quiz fait sur ces cours — le plan utilisera le contenu directement'
+                      : 'Aucun point faible détecté'}
+                  </span>
                 }
               </span>
             </div>
+
+            {/* SRS */}
             <div className="sp-ctx-item">
               <span className="sp-ctx-icon sp-ctx-srs">
                 <IcoSRS />
               </span>
               <span>
                 {srsCount > 0
-                  ? <><strong>{srsCount}</strong> carte{srsCount > 1 ? 's' : ''} SRS à réviser</>
+                  ? <><strong>{srsCount}</strong> carte{srsCount > 1 ? 's' : ''} SRS due{srsCount > 1 ? 's' : ''} —{' '}
+                    <em>seules celles liées aux cours chargés seront planifiées</em></>
                   : <span style={{ color: 'var(--muted)' }}>Aucune carte SRS en attente</span>
                 }
               </span>
@@ -225,7 +273,7 @@ export default function StudyPlanSection({ plan, loading, progress, error, onGen
           <button
             className="act-btn blue sp-generate-btn"
             disabled={!examDate}
-            onClick={() => onGenerate(examDate)}
+            onClick={() => onGenerate(examDate, files)}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Générer mon plan

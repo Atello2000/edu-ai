@@ -13,7 +13,7 @@ router.post('/study-plan', async (req, res) => {
   let deducted = 0;
 
   try {
-    const { exam_date, topics, srs_count, lang } = req.body;
+    const { exam_date, files = [], topics = [], srs_due_fronts = [], lang } = req.body;
 
     const jeton = await checkAndDeduct(req.user?.id, 'study-plan', req.user?.plan || 'free');
     if (!jeton.ok) {
@@ -24,52 +24,85 @@ router.post('/study-plan', async (req, res) => {
 
     send({ type: 'progress', message: 'Génération du plan de révision…' });
 
-    // Calculer le nombre de jours disponibles (cap à 14)
+    // Nombre de jours disponibles (cap à 14)
     const examDateObj    = new Date(exam_date);
     const days_available = !isNaN(examDateObj)
       ? Math.min(14, Math.max(1, Math.ceil((examDateObj - Date.now()) / 86400000)))
       : 7;
 
-    const inLang     = langLabel(lang || 'fr');
-    const topicsText = Array.isArray(topics)
-      ? topics.map(t => `- ${t.name} (moyenne: ${t.avg}%, sessions: ${t.sessions})`).join('\n')
-      : 'Aucun sujet fourni';
+    const inLang = langLabel(lang || 'fr');
 
-    const prompt = `Tu es un expert en planification de révisions. Génère un plan jour par jour pour un étudiant.
+    // ── Cours chargés ──────────────────────────────────────────────────────────
+    const filesSection = files.length > 0
+      ? files.map(f =>
+          `• ${f.name}${f.excerpt ? `\n  Extrait : "${f.excerpt}"` : ''}`
+        ).join('\n')
+      : 'Aucun cours chargé (plan générique)';
 
-Données:
-- Date d'examen: ${exam_date}
-- Jours disponibles: ${days_available}
-- Points faibles (triés du plus faible):
-${topicsText}
-- Cartes SRS dues: ${srs_count ?? 0}
-- Langue: ${inLang}
+    // ── Stats quiz filtrées par cours ─────────────────────────────────────────
+    const topicsSection = topics.length > 0
+      ? topics.map(t =>
+          `• ${t.name} — moyenne ${t.avg}% (${t.sessions} session${t.sessions > 1 ? 's' : ''})`
+        ).join('\n')
+      : 'Aucune donnée de quiz disponible pour ces cours';
 
-Retourne UNIQUEMENT ce JSON (sans markdown):
+    // ── Cartes SRS dues ───────────────────────────────────────────────────────
+    // L'IA doit filtrer et ne garder que les cartes en rapport avec les cours chargés.
+    const srsSection = srs_due_fronts.length > 0
+      ? srs_due_fronts.map((f, i) => `  ${i + 1}. "${f}"`).join('\n')
+      : null;
+
+    const srsPart = srsSection
+      ? `\nCartes SRS dues (${srs_due_fronts.length} cartes) :\n${srsSection}\n\nIMPORTANT : N'inclure des tâches SRS que pour les cartes clairement en rapport avec les cours chargés ci-dessus. Ignorer les cartes d'autres matières.`
+      : '\nAucune carte SRS due.';
+
+    const prompt = `Tu es un expert en planification de révisions. Génère un plan jour par jour CENTRÉ sur les cours chargés par l'étudiant.
+
+=== COURS CHARGÉS (priorité absolue) ===
+${filesSection}
+
+=== STATISTIQUES QUIZ (pour ces cours) ===
+${topicsSection}
+${srsPart}
+
+=== PARAMÈTRES ===
+- Date d'examen : ${exam_date}
+- Jours disponibles : ${days_available}
+- Langue : ${inLang}
+
+=== INSTRUCTIONS ===
+- Chaque tâche doit être DIRECTEMENT liée au contenu des cours chargés
+- Les tâches "weak_topic" ciblent les sujets avec une moyenne quiz < 60%
+- Les tâches "review" couvrent le contenu des cours chargés (titre, thèmes clés vus dans l'extrait)
+- Les tâches "quiz" proposent de tester la compréhension sur les cours chargés
+- Les tâches "srs" uniquement si des cartes dues concernent ces cours
+- Max 2h de travail par jour (120 min)
+- Laisse 1 jour de repos si > 5 jours disponibles
+- Dernier jour avant l'examen : révision légère uniquement
+
+Retourne UNIQUEMENT ce JSON (sans markdown, sans explication) :
 {
   "days": [
     {
       "date": "YYYY-MM-DD",
       "label": "Lundi 3 juin",
       "tasks": [
-        { "type": "weak_topic|srs|quiz|review|rest", "topic": "nom du sujet ou null", "duration": 30, "action": "description courte de l'action" }
+        {
+          "type": "weak_topic|srs|quiz|review|rest",
+          "topic": "nom du sujet ou null",
+          "duration": 30,
+          "action": "description courte et actionnable de la tâche"
+        }
       ],
       "total_minutes": 60
     }
   ],
-  "advice": "Conseil général en 1-2 phrases ${inLang}"
-}
-
-Règles:
-- Max 2h de travail par jour
-- Prioritise les points faibles (avg < 60%)
-- Intègre les révisions SRS si srs_count > 0
-- Laisse au moins 1 jour de repos si plus de 5 jours
-- Jour avant l'examen: uniquement révision légère et SRS`;
+  "advice": "Conseil personnalisé en 1-2 phrases basé sur les cours chargés (${inLang})"
+}`;
 
     const aiCfg = await getAiConfigForAction('study-plan');
     let raw = '';
-    for await (const chunk of aiStream(prompt, 2000, aiCfg)) {
+    for await (const chunk of aiStream(prompt, 2500, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'study-plan', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;

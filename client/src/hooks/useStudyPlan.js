@@ -6,22 +6,63 @@ function getLang() {
   catch { return 'fr'; }
 }
 
-function loadTopics() {
+/**
+ * Retourne les stats de quiz FILTRÉES par les fichiers chargés.
+ * Si aucun fichier, retourne tout l'historique (comportement ancien).
+ */
+function loadTopicsForFiles(files = []) {
   try {
     const raw = JSON.parse(localStorage.getItem('jangalai-topic-stats') || '{}');
-    return Object.entries(raw).map(([name, { sessions }]) => ({
-      name: name.replace(/\.[^.]+$/, ''),
-      avg: Math.round(sessions.reduce((s, x) => s + x.pct, 0) / sessions.length),
+    const all = Object.entries(raw).map(([name, { sessions }]) => ({
+      name:     name.replace(/\.[^.]+$/, ''),
+      raw_name: name,
+      avg:      Math.round(sessions.reduce((s, x) => s + x.pct, 0) / sessions.length),
       sessions: sessions.length,
     })).sort((a, b) => a.avg - b.avg);
+
+    if (!files.length) return all;
+
+    // Noms de base des fichiers chargés (sans extension, minuscule)
+    const fileKeys = files.map(f => f.name.replace(/\.[^.]+$/, '').toLowerCase());
+
+    const filtered = all.filter(t => {
+      const tKey = t.raw_name.replace(/\.[^.]+$/, '').toLowerCase();
+      return fileKeys.some(fk =>
+        tKey === fk ||
+        tKey.includes(fk) ||
+        fk.includes(tKey)
+      );
+    });
+
+    // Si aucun match (jamais fait de quiz sur ces fichiers) → retourner vide plutôt que tout
+    return filtered;
   } catch { return []; }
 }
 
-function loadSrsCount() {
+/**
+ * Retourne les fronts des cartes SRS dues (pas juste un compte).
+ * Max 40 cartes pour limiter les tokens.
+ */
+function loadSrsDueFronts() {
   try {
     const data = JSON.parse(localStorage.getItem('jangalai-srs') || '{}');
-    return Object.values(data).filter(c => c.nextReview <= Date.now()).length;
-  } catch { return 0; }
+    const now  = Date.now();
+    return Object.values(data)
+      .filter(c => c.nextReview <= now && c.front)
+      .map(c => c.front.slice(0, 120))   // tronquer les fronts trop longs
+      .slice(0, 40);
+  } catch { return []; }
+}
+
+/**
+ * Prépare un résumé court de chaque fichier chargé :
+ * nom + premier extrait (600 chars max) — suffit pour que l'IA comprenne le sujet.
+ */
+function buildFilesSummary(files = []) {
+  return files.map(f => ({
+    name:    f.name,
+    excerpt: (f.text || '').slice(0, 600).replace(/\s+/g, ' ').trim(),
+  }));
 }
 
 export function useStudyPlan() {
@@ -39,7 +80,11 @@ export function useStudyPlan() {
     setProgress(null);
   }
 
-  const generate = useCallback((examDate) => {
+  /**
+   * @param {string} examDate  — date YYYY-MM-DD
+   * @param {Array}  files     — uploadedFiles depuis AppPage [{id, name, text, ...}]
+   */
+  const generate = useCallback((examDate, files = []) => {
     xhrRef.current?.abort();
     setLoading(true);
     setError(null);
@@ -53,7 +98,6 @@ export function useStudyPlan() {
     xhr.open('POST', '/api/study-plan', true);
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Accept', 'text/event-stream');
-
 
     function parseEvents(chunk) {
       buf += chunk;
@@ -85,21 +129,20 @@ export function useStudyPlan() {
       lastLen = xhr.responseText.length;
       if (newText) parseEvents(newText);
     };
-
     xhr.onload = () => {
       if (xhr.responseText.length > lastLen) parseEvents(xhr.responseText.slice(lastLen));
       setLoading(false);
       setProgress(null);
     };
-
     xhr.onerror = () => { setError('Erreur réseau'); setLoading(false); setProgress(null); };
     xhr.onabort = () => { setLoading(false); setProgress(null); };
 
     xhr.send(JSON.stringify({
-      exam_date: examDate,
-      topics:    loadTopics(),
-      srs_count: loadSrsCount(),
-      lang:      getLang(),
+      exam_date:      examDate,
+      files:          buildFilesSummary(files),        // ← NOUVEAU: cours chargés
+      topics:         loadTopicsForFiles(files),        // ← filtré par fichiers chargés
+      srs_due_fronts: loadSrsDueFronts(),              // ← fronts des cartes dues
+      lang:           getLang(),
     }));
   }, []);
 
