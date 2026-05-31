@@ -141,7 +141,7 @@ export default function AppPage() {
     socraticHistory, socraticStreaming, socraticLoading, socraticError, socraticStarted,
     sendSocratic, resetSocratic,
     // plan de révision
-    studyPlan, studyPlanLoading, studyPlanError, generateStudyPlan, resetStudyPlan,
+    studyPlan, studyPlanLoading, studyPlanProgress, studyPlanError, generateStudyPlan, resetStudyPlan,
     // prédicteur
     predictResults, predictLoading, predictError, generatePredict,
     // analyse d'erreurs
@@ -648,6 +648,7 @@ export default function AppPage() {
               <StudyPlanSection
                 plan={studyPlan}
                 loading={studyPlanLoading}
+                progress={studyPlanProgress}
                 error={studyPlanError}
                 onGenerate={generateStudyPlan}
                 onReset={resetStudyPlan}

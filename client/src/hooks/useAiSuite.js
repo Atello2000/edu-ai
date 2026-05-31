@@ -70,8 +70,8 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
   const { history: socraticHistory, streaming: socraticStreaming, loading: socraticLoading,
           error: socraticError, started: socraticStarted, send: sendSocratic, reset: resetSocratic } = useSocratic();
 
-  const { plan: studyPlan, loading: studyPlanLoading, error: studyPlanError,
-          generate: generateStudyPlan, reset: resetStudyPlan } = useStudyPlan();
+  const { plan: studyPlan, loading: studyPlanLoading, progress: studyPlanProgress,
+          error: studyPlanError, generate: generateStudyPlan, reset: resetStudyPlan } = useStudyPlan();
 
   const { results: predictResults, loading: predictLoading, error: predictError,
           generate: generatePredict, reset: resetPredict } = usePredict();
@@ -100,7 +100,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
     socraticHistory, socraticStreaming, socraticLoading, socraticError, socraticStarted,
     sendSocratic, resetSocratic,
     // plan de révision
-    studyPlan, studyPlanLoading, studyPlanError, generateStudyPlan, resetStudyPlan,
+    studyPlan, studyPlanLoading, studyPlanProgress, studyPlanError, generateStudyPlan, resetStudyPlan,
     // prédicteur
     predictResults, predictLoading, predictError, generatePredict, resetPredict,
     // analyse d'erreurs
