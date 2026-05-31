@@ -319,45 +319,119 @@ function toOpenAIMessages(messages) {
 async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false, config = null) {
   const { provider, model } = config || await getAiConfig();
 
-  if (provider === 'anthropic' || hasImage) {
-    if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
+  // Requêtes avec image : Anthropic uniquement, pas de fallback possible
+  if (hasImage) {
+    if (!anthropicClient) throw new Error('Clé Anthropic non configurée (image requise)');
     const r = await anthropicClient.messages.create({
-      model: provider === 'anthropic' ? model : 'claude-haiku-4-5-20251001',
+      model: 'claude-haiku-4-5-20251001',
       system: systemPrompt, max_tokens: maxTokens, messages,
     });
-    return { text: r.content[0].text, model: anthropicLabel(model), usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens } };
+    return { text: r.content[0].text, model: anthropicLabel('claude-haiku-4-5-20251001'), usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens } };
   }
 
   const oaiMsgs = [{ role: 'system', content: systemPrompt }, ...toOpenAIMessages(messages)];
-  if (provider === 'deepseek') {
-    if (!deepseek) throw new Error('Clé DeepSeek non configurée');
-    const r = await deepseek.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
-    return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: { provider: 'DeepSeek', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+
+  async function tryGroqChat() {
+    const r = await groqComplete({ model: 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages: oaiMsgs });
+    return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
   }
-  if (provider === 'mistral') {
-    if (!mistral) throw new Error('Clé Mistral non configurée (MISTRAL_API_KEY)');
-    const mistralLabel = model.includes('large') ? 'Mistral Large' : model.includes('small') ? 'Mistral Small' : 'Mistral 7B';
-    const r = await mistral.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
-    return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+
+  try {
+    if (provider === 'anthropic') {
+      if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
+      const r = await anthropicClient.messages.create({
+        model, system: systemPrompt, max_tokens: maxTokens, messages,
+      });
+      return { text: r.content[0].text, model: anthropicLabel(model), usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens } };
+    }
+    if (provider === 'deepseek') {
+      if (!deepseek) throw new Error('Clé DeepSeek non configurée');
+      const r = await deepseek.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
+      return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: { provider: 'DeepSeek', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+    }
+    if (provider === 'mistral') {
+      if (!mistral) throw new Error('Clé Mistral non configurée (MISTRAL_API_KEY)');
+      const mistralLabel = model.includes('large') ? 'Mistral Large' : model.includes('small') ? 'Mistral Small' : 'Mistral 7B';
+      const r = await mistral.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
+      return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+    }
+    // groq (défaut)
+    const r = await groqComplete({ model, max_tokens: maxTokens, messages: oaiMsgs });
+    const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
+    return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+
+  } catch (err) {
+    const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);
+
+    if (isGroqQuota) {
+      logger.warn(`Groq ${err.status} (chat), fallback cascade`);
+      if (gemini) {
+        try {
+          const r = await gemini.chat.completions.create({ model: 'gemini-2.0-flash', max_tokens: maxTokens, messages: oaiMsgs });
+          return { text: r.choices[0].message.content, model: 'Gemini 2.0 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+        } catch (e) { logger.warn(`Gemini chat fallback failed (${e.message}), trying Mistral`); }
+      }
+      if (mistral) {
+        try {
+          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages: oaiMsgs });
+          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+        } catch (e) { logger.warn(`Mistral chat fallback failed (${e.message})`); }
+      }
+      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
+    }
+
+    // Autre provider échoue → Groq
+    if (provider !== 'groq' && groqClients.length) {
+      logger.warn(`Provider ${provider} failed (chat, ${err.message}), fallback → Groq`);
+      return tryGroqChat();
+    }
+    throw err;
   }
-  const r = await groqComplete({ model, max_tokens: maxTokens, messages: oaiMsgs });
-  const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
-  return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
 }
 
 async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage = false, config = null) {
   const { provider, model } = config || await getAiConfig();
 
-  if (provider === 'anthropic' || hasImage) {
-    const m = provider === 'anthropic' ? model : 'claude-haiku-4-5-20251001';
-    yield* streamAnthropic(m, messages, maxTokens, systemPrompt);
+  // Requêtes avec image : Anthropic uniquement, pas de fallback possible
+  if (hasImage) {
+    yield* streamAnthropic('claude-haiku-4-5-20251001', messages, maxTokens, systemPrompt);
     return;
   }
 
   const oaiMsgs = [{ role: 'system', content: systemPrompt }, ...toOpenAIMessages(messages)];
-  if (provider === 'deepseek') { yield* streamDeepSeek(model, oaiMsgs, maxTokens); return; }
-  if (provider === 'mistral')  { yield* streamMistral(model, oaiMsgs, maxTokens); return; }
-  yield* streamGroq(model, oaiMsgs, maxTokens);
+
+  try {
+    if (provider === 'anthropic') {
+      yield* streamAnthropic(model, messages, maxTokens, systemPrompt);
+      return;
+    }
+    if (provider === 'deepseek') { yield* streamDeepSeek(model, oaiMsgs, maxTokens); return; }
+    if (provider === 'mistral')  { yield* streamMistral(model, oaiMsgs, maxTokens); return; }
+    yield* streamGroq(model, oaiMsgs, maxTokens);
+  } catch (err) {
+    const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);
+
+    if (isGroqQuota) {
+      logger.warn(`Groq ${err.status} (chat stream), fallback cascade`);
+      if (gemini) {
+        try { yield* streamGemini('gemini-2.0-flash', oaiMsgs, maxTokens); return; }
+        catch (e) { logger.warn(`Gemini chat-stream fallback failed (${e.message}), trying Mistral`); }
+      }
+      if (mistral) {
+        try { yield* streamMistral('mistral-small-latest', oaiMsgs, maxTokens); return; }
+        catch (e) { logger.warn(`Mistral chat-stream fallback failed (${e.message})`); }
+      }
+      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
+    }
+
+    // Autre provider échoue → Groq
+    if (provider !== 'groq' && groqClients.length) {
+      logger.warn(`Provider ${provider} failed (chat stream, ${err.message}), fallback → Groq`);
+      yield* streamGroq('llama-3.3-70b-versatile', oaiMsgs, maxTokens);
+      return;
+    }
+    throw err;
+  }
 }
 
 function calcMaxTokens(type, textLen, count = 0) {
