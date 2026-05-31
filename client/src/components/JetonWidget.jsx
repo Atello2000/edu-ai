@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useJetons } from '../hooks/useJetons';
-import PlansModal from './PlansModal';
+import eventBus from '../utils/eventBus';
 
 export default function JetonWidget({ user }) {
   const { balance, monthly_allocation } = useJetons();
   const [mounted,      setMounted]      = useState(false);
-  const [showPlans,    setShowPlans]    = useState(false);
 
   useEffect(() => {
     if (balance === null) return;
@@ -34,7 +33,7 @@ export default function JetonWidget({ user }) {
       <div
         className={`jeton-widget${urgency}`}
         title={`${balance} / ${total} jetons restants — voir les plans`}
-        onClick={() => setShowPlans(true)}
+        onClick={() => eventBus.emit('plans:open')}
         style={{ cursor: 'pointer' }}
       >
         <div className="jw-gauge">
@@ -53,13 +52,6 @@ export default function JetonWidget({ user }) {
         </div>
         <span className="jw-label">jetons</span>
       </div>
-
-      {showPlans && (
-        <PlansModal
-          currentPlan={user?.plan || 'free'}
-          onClose={() => setShowPlans(false)}
-        />
-      )}
     </>
   );
 }

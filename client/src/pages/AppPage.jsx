@@ -55,6 +55,24 @@ export default function AppPage() {
   const [activityKey,    setActivityKey]    = useState(0);
   const [showPomodoro,   setShowPomodoro]   = useState(false);
 
+  const [isWaitingPayment, setIsWaitingPayment] = useState(false);
+  const [waitingPlan, setWaitingPlan] = useState('');
+  const pollingIntervalRef = useRef(null);
+
+  // Écouter l'ouverture des plans depuis n'importe quel widget
+  useEffect(() => {
+    const showPlansFn = () => setShowPlansModal(true);
+    eventBus.on('plans:open', showPlansFn);
+    return () => eventBus.off('plans:open', showPlansFn);
+  }, []);
+
+  // Nettoyage du poller sur démontage
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    };
+  }, []);
+
   // Intercepter les retours de paiement (PayTech success/cancel)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -219,6 +237,14 @@ export default function AppPage() {
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
 
+  const handleCancelWaiting = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+    setIsWaitingPayment(false);
+    toast.info("Attente du paiement annulée.");
+  }, []);
+
   const handleSelectPlan = useCallback(async (planKey) => {
     console.log("AppPage - handleSelectPlan called for plan:", planKey);
     try {
@@ -236,16 +262,56 @@ export default function AppPage() {
         return;
       }
       if (data.redirectUrl) {
-        console.log("AppPage - Redirecting to:", data.redirectUrl);
+        // 1. Fermer le modal de choix de plan
+        setShowPlansModal(false);
+
+        // 2. Rediriger vers le guichet de paiement dans le même onglet
+        // Évite les bloqueurs de popups sur mobile et assure que le PC soit redirigé directement vers l'app après le paiement.
+        console.log("AppPage - Redirecting to payment gateway in same tab:", data.redirectUrl);
         window.location.href = data.redirectUrl;
+
+        // 4. Lancer le poller en tâche de fond (toutes les 3 secondes)
+        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+        const start = Date.now();
+        
+        pollingIntervalRef.current = setInterval(async () => {
+          // Timeout de sécurité après 15 minutes
+          if (Date.now() - start > 15 * 60 * 1000) {
+            clearInterval(pollingIntervalRef.current);
+            setIsWaitingPayment(false);
+            toast.warn("Délai de paiement dépassé. Vous pouvez réessayer.");
+            return;
+          }
+
+          try {
+            const checkRes = await fetch('/api/auth/me');
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              if (checkData.user && checkData.user.plan !== 'free') {
+                // Le webhook IPN a validé la transaction !
+                clearInterval(pollingIntervalRef.current);
+                setIsWaitingPayment(false);
+
+                // Rafraîchir les informations
+                if (typeof refreshSession === 'function') refreshSession();
+                eventBus.emit('quota:refresh');
+
+                const planName = checkData.user.plan === 'max' ? 'Max' : 'Pro';
+                toast.success(`Félicitations ! Votre abonnement ${planName} est activé avec succès 🎉`);
+              }
+            }
+          } catch (_) {}
+        }, 3000);
+
       } else {
         console.error("AppPage - No redirectUrl returned by backend!");
+        toast.error("Impossible d'initier le paiement.");
       }
     } catch (err) {
       console.error("AppPage - Error during checkout request:", err);
       toast.error('Erreur lors du lancement du paiement.');
     }
-  }, []);
+  }, [refreshSession]);
 
   // ── Handlers features avancées (utilisent selectedFilesRef — pas de deps stales) ──
   const handleSocratic = useCallback(() => {
@@ -485,6 +551,32 @@ export default function AppPage() {
       {showOnboarding && <Onboarding onDone={() => setShowOnboarding(false)} />}
       {showGoalModal  && <GoalModal onSelect={handleGoalSelect} balance={balance} />}
       {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} onSelectPlan={handleSelectPlan} />}
+      
+      {isWaitingPayment && (
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="payment-waiting-wrap" onClick={e => e.stopPropagation()}>
+            <div className="payment-waiting-icon">
+              <svg viewBox="0 0 100 100" width="80" height="80">
+                <circle cx="50" cy="50" r="40" stroke="rgba(61, 126, 255, 0.15)" strokeWidth="6" fill="none" />
+                <circle cx="50" cy="50" r="40" stroke="var(--blue, #3d7eff)" strokeWidth="6" fill="none"
+                  strokeDasharray="250" strokeDashoffset="180" className="payment-waiting-spinner" />
+              </svg>
+              <div className="payment-waiting-pulse"></div>
+            </div>
+            <h3 className="payment-waiting-h3">Attente du paiement...</h3>
+            <p className="payment-waiting-p">
+              Votre lien de paiement sécurisé PayTech a été ouvert dans un nouvel onglet.<br/>
+              Si vous utilisez votre téléphone pour valider (Wave, Orange Money), complétez simplement la transaction sur votre mobile.
+            </p>
+            <span className="payment-waiting-hint">
+              Cette fenêtre s&apos;actualisera automatiquement dès la validation de la transaction.
+            </span>
+            <button className="act-btn rose" style={{ marginTop: '1.2rem', padding: '.5rem 1.8rem', fontSize: '.85rem' }} onClick={handleCancelWaiting}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
       <SettingsDrawer
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}

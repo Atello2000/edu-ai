@@ -4716,3 +4716,87 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   .plans-modal-wrap { padding: 1rem; }
   .plans-cards-row { grid-template-columns: 1fr; }
 }
+
+/* ── PAYMENT WAITING MODAL ── */
+.payment-waiting-wrap {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.2rem 2rem 2rem;
+  width: min(480px, 92vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  animation: scaleIn 0.3s cubic-bezier(.4,0,.2,1) both;
+}
+
+.payment-waiting-icon {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 0.5rem;
+}
+
+.payment-waiting-spinner {
+  transform-origin: center;
+  animation: pomo-dash 2s ease-in-out infinite, pomo-rotate 2s linear infinite;
+}
+
+@keyframes pomo-rotate {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pomo-dash {
+  0% { stroke-dashoffset: 250; }
+  50% { stroke-dashoffset: 60; transform: rotate(120deg); }
+  100% { stroke-dashoffset: 250; transform: rotate(360deg); }
+}
+
+.payment-waiting-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--blue, #3d7eff);
+  animation: jw-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes jw-pulse {
+  0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }
+}
+
+.payment-waiting-h3 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.6rem;
+  font-weight: 300;
+  margin: 0;
+  color: var(--text);
+}
+
+.payment-waiting-p {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.payment-waiting-hint {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--blue, #3d7eff);
+  background: rgba(61, 126, 255, 0.08);
+  border: 1px dashed rgba(61, 126, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}

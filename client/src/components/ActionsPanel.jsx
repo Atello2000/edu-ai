@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
-import PlansModal from './PlansModal';
-
 // Coûts par défaut (fallback si les coûts dynamiques ne sont pas encore chargés)
 const DEFAULT_COSTS = {
   summarize: 3, quiz: 2, flashcards: 2, chat: 1,
@@ -97,7 +95,6 @@ export default function ActionsPanel({
   onMindmapLoading,         // (loading: boolean) => void
 }) {
   const [showMore,  setShowMore]  = useState(false);
-  const [showPlans, setShowPlans] = useState(false);
   const isPro = user?.plan === 'pro' || user?.plan === 'max';
 
   // ── Sélection de fichiers ─────────────────────────────────────────────────
@@ -399,9 +396,6 @@ export default function ActionsPanel({
       </div>
 
       {/* ════════════════ Outils avancés — section séparée ════════════════ */}
-      {showPlans && (
-        <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlans(false)} />
-      )}
       <div className={`act-advanced-section${!isPro ? ' act-advanced-locked' : ''}`}>
         <div className="act-section-label">
           Outils avancés
@@ -415,7 +409,7 @@ export default function ActionsPanel({
 
         {/* Overlay de verrouillage */}
         {!isPro && (
-          <div className="act-lock-overlay" onClick={() => setShowPlans(true)}>
+          <div className="act-lock-overlay" onClick={() => eventBus.emit('plans:open')}>
             <div className="act-lock-box">
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
@@ -423,7 +417,7 @@ export default function ActionsPanel({
               </svg>
               <p className="act-lock-title">Disponible à partir du plan Pro</p>
               <p className="act-lock-sub">Mode Socratique, Prédicteur, Plan de révision et Analyse d&apos;erreurs</p>
-              <button className="act-btn gold" onClick={e => { e.stopPropagation(); setShowPlans(true); }}>
+              <button className="act-btn gold" onClick={e => { e.stopPropagation(); eventBus.emit('plans:open'); }}>
                 Voir les plans
               </button>
             </div>
