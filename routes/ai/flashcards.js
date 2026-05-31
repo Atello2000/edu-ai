@@ -100,6 +100,12 @@ ${chunks[i]}`;
       send({ type: 'done', name: file.name, cards });
     }
 
+    // Vérifier qu'au moins une carte a été générée (comme quiz.js)
+    const totalGenerated = allResults.reduce((n, r) => n + r.flashcards.length, 0);
+    if (totalGenerated === 0) {
+      throw new Error('Aucune flashcard n\'a pu être générée. Vérifiez le contenu du fichier et réessayez.');
+    }
+
     send({ type: 'end', model: streamModel, results: allResults });
 
   } catch (err) {

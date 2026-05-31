@@ -58,11 +58,9 @@ Retourne UNIQUEMENT ce JSON:
 Cours "${file.name}":
 ${trimmed}`;
 
-      const { text: raw, usage } = await aiComplete(prompt, 1200, aiCfg);
-      if (usage) {
-        logTokens(req.user?.id, 'predict', usage.provider, usage.input, usage.output);
-        if (usage.model) lastModel = usage.model;
-      }
+      const { text: raw, model: callModel, usage } = await aiComplete(prompt, 1200, aiCfg);
+      if (usage) logTokens(req.user?.id, 'predict', usage.provider, usage.input, usage.output);
+      if (callModel) lastModel = callModel;
 
       const parsed = parseJsonResponse(raw, { predictions: [] });
       send({ type: 'file_done', name: file.name, predictions: parsed.predictions ?? [] });

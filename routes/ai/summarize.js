@@ -31,11 +31,17 @@ router.post('/summarize', async (req, res) => {
     let   totalCost = 0;
 
     for (const file of files) {
-      const text   = await getFileText(file);
+      const text = await getFileText(file);
+      if (!text.trim()) {
+        send({ type: 'file_error', name: file.name, message: `Contenu de "${file.name}" vide ou indisponible.` });
+        continue;
+      }
       const chunks = splitIntoChunks(text, cSize);
       totalCost += chunkCost(JETON_COSTS.summarize, chunks.length);
       fileData.push({ file, chunks });
     }
+
+    if (!fileData.length) { send({ type: 'end' }); return res.end(); }
 
     // ── 2. Vérifier et déduire les jetons ─────────────────────────────────
     const jeton = await checkAndDeduct(req.user?.id, 'summarize', req.user?.plan || 'free', totalCost);

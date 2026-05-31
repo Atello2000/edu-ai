@@ -15,6 +15,13 @@ router.post('/socratic', async (req, res) => {
   try {
     const { files, history, lang } = req.body;
 
+    // Validation : fichier obligatoire
+    const fileItem = Array.isArray(files) ? files[0] : files;
+    if (!fileItem) {
+      send({ type: 'error', message: 'Aucun fichier sélectionné pour le mode socratique.' });
+      return res.end();
+    }
+
     // Coût dynamique : conversation longue (>= 6 échanges) = 2 jetons
     const historyLen   = Array.isArray(history) ? history.length : 0;
     const socraticCost = historyLen >= 6 ? 2 : 1;
@@ -26,9 +33,8 @@ router.post('/socratic', async (req, res) => {
     }
     deducted = jeton.cost || 0;
 
-    // Lire le texte du cours (premier fichier)
-    const file     = Array.isArray(files) ? files[0] : files;
-    const fullText = await getFileText(file);
+    // Lire le texte du cours (premier fichier — déjà validé ci-dessus)
+    const fullText = await getFileText(fileItem);
 
     let systemPrompt;
 

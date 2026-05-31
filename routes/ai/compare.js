@@ -35,11 +35,11 @@ router.post('/compare', async (req, res) => {
 
     const inLang = langLabel(lang || 'fr');
 
-    // Charger et tronquer chaque fichier à 3000 chars
+    // Charger et tronquer chaque fichier (8000 chars = ~1400 mots, suffisant pour une comparaison dense)
     const sources = [];
     for (const file of files) {
       const text = await getFileText(file);
-      sources.push({ name: file.name, text: text.slice(0, 3000) });
+      sources.push({ name: file.name, text: text.slice(0, 8000) });
     }
 
     const sourcesText = sources
