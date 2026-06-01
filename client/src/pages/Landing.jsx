@@ -205,10 +205,10 @@ export default function Landing() {
               <div className="plan-price">0 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
               <div className="plan-features">
-                <div className="plan-feat">5 résumés / jour</div>
-                <div className="plan-feat">8 quiz / jour</div>
-                <div className="plan-feat">8 flashcards / jour</div>
-                <div className="plan-feat">3 messages chat / jour</div>
+                <div className="plan-feat"><strong>40 jetons</strong> crédités / mois</div>
+                <div className="plan-feat">Accès complet aux outils IA</div>
+                <div className="plan-feat">Résumé (3 jetons) & Quiz (2 jetons)</div>
+                <div className="plan-feat">Flashcards (2 jetons) & Chat (1 jeton)</div>
                 <div className="plan-feat">Préparer ma session inclus</div>
                 <div className="plan-feat">Carte mentale & objectif de session</div>
                 <div className="plan-feat">PDF, PPT, DOCX</div>
@@ -220,14 +220,13 @@ export default function Landing() {
               <div className="plan-price">2 500 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour les étudiants en période d'examen</div>
               <div className="plan-features">
-                <div className="plan-feat">20 résumés / jour</div>
-                <div className="plan-feat">40 quiz / jour</div>
-                <div className="plan-feat">40 flashcards / jour</div>
-                <div className="plan-feat">20 messages chat / jour</div>
-                <div className="plan-feat">Préparer ma session inclus</div>
-                <div className="plan-feat">Carte mentale & objectif de session</div>
-                <div className="plan-feat">Traitement prioritaire</div>
-                <div className="plan-feat">Historique illimité</div>
+                <div className="plan-feat"><strong>150 jetons</strong> crédités / mois</div>
+                <div className="plan-feat">Toutes les fonctionnalités IA débloquées</div>
+                <div className="plan-feat">Historique de révision illimité</div>
+                <div className="plan-feat">Répétitions espacées (SM-2)</div>
+                <div className="plan-feat">Traitement accéléré des fichiers</div>
+                <div className="plan-feat">Rechargement instantané à l'abonnement</div>
+                <div className="plan-feat">Paiement local Wave / Orange Money</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
             </div>
@@ -236,15 +235,13 @@ export default function Landing() {
               <div className="plan-price">5 000 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour une révision intensive sans limites</div>
               <div className="plan-features">
-                <div className="plan-feat">Résumés illimités</div>
-                <div className="plan-feat">Quiz illimités</div>
-                <div className="plan-feat">Flashcards illimitées</div>
-                <div className="plan-feat">60 messages chat / jour</div>
-                <div className="plan-feat">Préparer ma session illimité</div>
-                <div className="plan-feat">Carte mentale & objectif de session</div>
-                <div className="plan-feat">Traitement prioritaire</div>
-                <div className="plan-feat">Historique illimité</div>
-                <div className="plan-feat">Export PDF des fiches</div>
+                <div className="plan-feat"><strong>400 jetons</strong> crédités / mois</div>
+                <div className="plan-feat">Toutes les fonctionnalités IA débloquées</div>
+                <div className="plan-feat">Export PDF des fiches d'examen</div>
+                <div className="plan-feat">Traitement ultra-prioritaire</div>
+                <div className="plan-feat">Stockage de cours étendu</div>
+                <div className="plan-feat">Rechargement instantané à l'abonnement</div>
+                <div className="plan-feat">Paiement local Wave / Orange Money</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
             </div>
@@ -256,8 +253,9 @@ export default function Landing() {
         <div className="section-label fade-up">FAQ</div>
         <h2 className="fade-up fade-up-delay-1">Questions <em>fréquentes</em></h2>
         <div className="faq fade-up fade-up-delay-2">
+          <FaqItem q="Comment fonctionne le système de jetons (crédits) ?" a="Jangalai utilise un système de jetons transparent. Chaque action IA consomme un nombre de jetons précis (ex. Résumé : 3 jetons, Quiz QCM : 2 jetons, Flashcards : 2 jetons, Message Chat : 1 jeton, Fiche d'examen : 3 jetons). Votre solde mensuel (40 jetons en Gratuit, 150 en Pro, 400 en Max) se recharge automatiquement chaque mois et à chaque abonnement. Vous pouvez suivre votre historique complet de jetons directement dans votre profil." />
           <FaqItem q="Qu'est-ce que « Préparer ma session » ?" a="C'est le moyen le plus rapide de démarrer une révision complète. En un clic, Jangalai génère simultanément un résumé, un quiz et des flashcards à partir de vos cours — le tout adapté à l'objectif que vous avez défini (examen demain, comprendre, mémoriser ou s'entraîner). Parfait la veille d'une évaluation." />
-          <FaqItem q="Comment fonctionne l'objectif de session ?" a="Juste après avoir chargé votre cours, Jangalai vous demande votre objectif du moment. « Examen demain » génère un quiz difficile court et des cartes essentielles. « Mémoriser » maximise le nombre de flashcards. « S'entraîner » crée beaucoup de questions variées. Vous pouvez toujours passer cette étape et régler les paramètres manuellement." />
+          <FaqItem q="Comment fonctionne l'objectif de session ?" a="Juste après avoir chargé votre cours, Jangalai vous demande votre objectif du moment. « Examen demain » génère un quiz difficile court et des fiches essentielles. « Mémoriser » maximise le nombre de flashcards. « S'entraîner » crée beaucoup de questions variées. Vous pouvez toujours passer cette étape et régler les paramètres manuellement." />
           <FaqItem q="Comment fonctionne « Revoir mes erreurs » ?" a="Après avoir soumis un quiz, le score affiche un bouton « Revoir les erreurs » qui relance un quiz avec uniquement les questions manquées. Vous pouvez aussi cliquer « Erreurs → Flashcards » pour transformer ces questions en cartes de révision instantanément, sans appel à l'IA." />
           <FaqItem q="Comment l'IA s'adapte-t-elle à mon profil ?" a="Lors de l'inscription, vous renseignez votre niveau (Licence, Master, Doctorat…) et votre domaine. Ces informations sont injectées dans chaque génération — vocabulaire, exemples, niveau de détail et complexité des questions sont calibrés à votre filière. L'objectif de session affine encore davantage le contenu généré." />
           <FaqItem q="Puis-je réviser sans charger de fichier ?" a="Oui. La section « Pour vous » de votre tableau de bord propose des sujets clés de votre domaine. En un clic, vous générez des flashcards ou un quiz sur n'importe quel sujet, sans rien importer." />
