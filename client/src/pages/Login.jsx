@@ -157,10 +157,6 @@ export default function Login() {
           ) : (
             <form className="auth-form" onSubmit={handleRegister}>
               <div className="form-group">
-                <label>Prénom / Nom</label>
-                <input type="text" name="name" placeholder="Votre nom complet" required autoComplete="off" value={form.name} onChange={onChange} />
-              </div>
-              <div className="form-group">
                 <label>Email</label>
                 <input type="email" name="email" placeholder="votre.email@domaine.com" required autoComplete="email" value={form.email} onChange={onChange} />
               </div>

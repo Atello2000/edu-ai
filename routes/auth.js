@@ -56,8 +56,8 @@ function genToken() { return crypto.randomBytes(32).toString('hex'); }
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   const { email, password, name } = req.body || {};
-  if (!email || !password || !name)
-    return res.status(400).json({ error: 'Tous les champs sont requis.' });
+  if (!email || !password)
+    return res.status(400).json({ error: 'Email et mot de passe requis.' });
   if (!EMAIL_RE.test(email))
     return res.status(400).json({ error: 'Email invalide.' });
 
@@ -76,7 +76,7 @@ router.post('/register', async (req, res) => {
       `INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date)
        SELECT $1, $2, $3, $4, $5, 40, $6
        WHERE (SELECT COUNT(*) FROM users) < 100`
-    ).run(emailLower, hash, name.trim(), verifyToken, verifyExp, currentMonth);
+    ).run(emailLower, hash, (name || '').trim(), verifyToken, verifyExp, currentMonth);
     if (!info.changes) {
       return res.status(403).json({ error: 'L\'accès est limité pendant la bêta. Revenez bientôt !' });
     }
@@ -134,7 +134,7 @@ router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
   const PRESET_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
   const PRESET_DOMAINS = ['santé','informatique','droit','économie','sciences','langues','ingénierie','histoire','autre'];
 
-  const { level, domains, specialty } = req.body || {};
+  const { level, domains, specialty, name } = req.body || {};
   const lvl = (typeof level === 'string' && level.trim())
     ? level.trim().slice(0, 60)
     : null;
@@ -149,9 +149,17 @@ router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
   const spec = (typeof specialty === 'string' && specialty.trim())
     ? specialty.trim().slice(0, 80)
     : null;
+  const userName = (typeof name === 'string' && name.trim())
+    ? name.trim().slice(0, 80)
+    : null;
 
-  await db.prepare('UPDATE users SET level = ?, domains = ?, specialty = ?, onboarding_done = 1 WHERE id = ?')
-    .run(lvl, doms, spec, decoded.userId);
+  if (userName) {
+    await db.prepare('UPDATE users SET level = ?, domains = ?, specialty = ?, name = ?, onboarding_done = 1 WHERE id = ?')
+      .run(lvl, doms, spec, userName, decoded.userId);
+  } else {
+    await db.prepare('UPDATE users SET level = ?, domains = ?, specialty = ?, onboarding_done = 1 WHERE id = ?')
+      .run(lvl, doms, spec, decoded.userId);
+  }
 
   const user = await db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   res.json({ user: withAdminFlag(user) });

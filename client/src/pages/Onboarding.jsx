@@ -34,8 +34,9 @@ const SPECIALTY_SUGGESTIONS = {
 };
 
 export default function Onboarding({ onDone }) {
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [step, setStep]               = useState(1);
+  const [name, setName]               = useState(user?.name || '');
   const [level, setLevel]             = useState('');
   const [levelCustom, setLevelCustom] = useState('');
   const [domain, setDomain]           = useState('');
@@ -64,8 +65,8 @@ export default function Onboarding({ onDone }) {
     return specialty === '__autre__' ? (specCustom.trim() || null) : specialty;
   }
 
-  const canProceedStep1 = level && (level !== 'autre' || levelCustom.trim());
-  const canProceedStep2 = domain && (domain !== 'autre' || domainCustom.trim());
+  const canProceedStep2 = level && (level !== 'autre' || levelCustom.trim());
+  const canProceedStep3 = domain && (domain !== 'autre' || domainCustom.trim());
 
   const suggestions = SPECIALTY_SUGGESTIONS[domain] || [];
 
@@ -76,10 +77,11 @@ export default function Onboarding({ onDone }) {
       const r = await fetch('/api/auth/onboarding', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(skip ? { level: null, domains: [], specialty: null } : {
+        body: JSON.stringify(skip ? { level: null, domains: [], specialty: null, name: null } : {
           level:     getFinalLevel(),
           domains:   finalDomain ? [finalDomain] : [],
           specialty: getFinalSpecialty(),
+          name:      name.trim() || null,
         }),
       });
       const data = await r.json();
@@ -95,14 +97,43 @@ export default function Onboarding({ onDone }) {
         <div className="ob-progress">
           <div className={`ob-dot ${step >= 1 ? 'active' : ''}`} />
           <div className={`ob-dot ${step >= 2 ? 'active' : ''}`} />
+          <div className={`ob-dot ${step >= 3 ? 'active' : ''}`} />
         </div>
 
-        {/* ── Step 1 : Niveau ── */}
+        {/* ── Step 1 : Nom et Prénom ── */}
         {step === 1 && (
           <>
             <div className="ob-header">
-              <h2>Quel est votre <em>niveau</em> ?</h2>
-              <p>Jangalai adaptera le contenu généré à votre profil.</p>
+              <h2>Comment devrions-nous vous <em>appeler</em> ?</h2>
+              <p>Entrez votre prénom et nom pour personnaliser votre espace Jangalai.</p>
+            </div>
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '.5rem', margin: '2rem 0' }}>
+              <input
+                className="ob-custom-input"
+                type="text"
+                placeholder="Ex : Aminata Diop"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                autoFocus
+                maxLength={60}
+                style={{ width: '100%', margin: 0 }}
+              />
+            </div>
+            <div className="ob-actions">
+              <button className="ob-btn-skip" onClick={() => submit(true)}>Passer</button>
+              <button className="ob-btn-primary" disabled={!name.trim()} onClick={() => setStep(2)}>
+                Continuer <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 2 : Niveau ── */}
+        {step === 2 && (
+          <>
+            <div className="ob-header">
+              <h2>Quel est votre <em>niveau</em> d&apos;études ?</h2>
+              <p>Jangalai adaptera le contenu généré à votre profil académique.</p>
             </div>
             <div className="ob-grid">
               {LEVELS.map(l => (
@@ -129,20 +160,22 @@ export default function Onboarding({ onDone }) {
               />
             )}
             <div className="ob-actions">
-              <button className="ob-btn-skip" onClick={() => submit(true)}>Passer</button>
-              <button className="ob-btn-primary" disabled={!canProceedStep1} onClick={() => setStep(2)}>
+              <button className="ob-btn-back" onClick={() => setStep(1)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Retour
+              </button>
+              <button className="ob-btn-primary" disabled={!canProceedStep2} onClick={() => setStep(3)}>
                 Continuer <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </button>
             </div>
           </>
         )}
 
-        {/* ── Step 2 : Domaine principal + Spécialité ── */}
-        {step === 2 && (
+        {/* ── Step 3 : Domaine principal + Spécialité ── */}
+        {step === 3 && (
           <>
             <div className="ob-header">
-              <h2>Votre <em>domaine</em> principal ?</h2>
-              <p>Choisissez celui qui correspond le mieux à vos études.</p>
+              <h2>Votre <em>domaine</em> d&apos;études ?</h2>
+              <p>Choisissez celui qui correspond le mieux à votre filière.</p>
             </div>
 
             <div className="ob-grid ob-grid-3">
@@ -208,12 +241,12 @@ export default function Onboarding({ onDone }) {
             )}
 
             <div className="ob-actions">
-              <button className="ob-btn-back" onClick={() => setStep(1)}>
+              <button className="ob-btn-back" onClick={() => setStep(2)}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg> Retour
               </button>
               <button
                 className="ob-btn-primary"
-                disabled={!canProceedStep2 || loading}
+                disabled={!canProceedStep3 || loading}
                 onClick={() => submit(false)}
               >
                 {loading ? 'Enregistrement…' : <>Commencer <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></>}
