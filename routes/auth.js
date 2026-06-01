@@ -19,6 +19,15 @@ const COOKIE_OPTS = {
 };
 const APP_URL = process.env.APP_URL || 'http://localhost:3001';
 
+function withAdminFlag(user) {
+  if (!user) return null;
+  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  return {
+    ...user,
+    is_admin: !!(adminEmail && user.email.toLowerCase().trim() === adminEmail),
+  };
+}
+
 function setToken(res, userId, req) {
   const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
   res.cookie('jangalai.token', token, COOKIE_OPTS);
@@ -70,7 +79,7 @@ router.post('/register', async (req, res) => {
 
     sendVerifyEmail(user.email, verifyToken).catch(err => logger.error('sendVerifyEmail failed', { email: user.email, message: err.message }));
     setToken(res, user.id, req);
-    res.json({ user });
+    res.json({ user: withAdminFlag(user) });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
     throw err;
@@ -94,7 +103,7 @@ router.post('/login', async (req, res) => {
   if (!match) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
 
   setToken(res, row.id, req);
-  res.json({ user: { id: row.id, email: row.email, name: row.name, plan: row.plan, email_verified: row.email_verified, created_at: row.created_at } });
+  res.json({ user: withAdminFlag({ id: row.id, email: row.email, name: row.name, plan: row.plan, email_verified: row.email_verified, created_at: row.created_at }) });
 });
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
@@ -109,8 +118,7 @@ router.get('/me', async (req, res) => {
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
   const user = await db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   if (!user) return res.status(401).json({ error: 'Session invalide.' });
-  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
-  res.json({ user: { ...user, is_admin: !!(adminEmail && user.email.toLowerCase().trim() === adminEmail) } });
+  res.json({ user: withAdminFlag(user) });
 });
 
 // ── POST /api/auth/onboarding ─────────────────────────────────────────────────
@@ -141,7 +149,7 @@ router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
     .run(lvl, doms, spec, decoded.userId);
 
   const user = await db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
-  res.json({ user });
+  res.json({ user: withAdminFlag(user) });
 });
 
 // ── PUT /api/auth/profile ─────────────────────────────────────────────────────
@@ -167,7 +175,7 @@ router.put('/profile', doubleCsrfProtection, async (req, res) => {
   }
 
   const updated = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(user.id);
-  res.json({ user: updated });
+  res.json({ user: withAdminFlag(updated) });
 });
 
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────

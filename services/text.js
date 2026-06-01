@@ -138,7 +138,13 @@ async function extractText(filePath, originalName) {
   if (ext === '.pdf') {
     const buffer = fs.readFileSync(resolved);
     const data   = await pdfParse(buffer);
-    text = data.text;
+    const rawText = data.text?.trim() || '';
+    if (rawText.length < OCR_THRESHOLD && process.env.MISTRAL_API_KEY) {
+      const ocrText = await ocrWithMistral(buffer, originalName);
+      text = ocrText || rawText;
+    } else {
+      text = rawText;
+    }
   } else {
     text = await new Promise((resolve, reject) => {
       officeParser.parseOffice(resolved, (data, err) => {

@@ -26,6 +26,14 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading) return <PageLoader />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.is_admin) return <Navigate to="/app" replace />;
+  return children;
+}
+
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <PageLoader />;
@@ -46,7 +54,7 @@ export default function App() {
         <Route path="/reset-password"  element={<ResetPassword />} />
         <Route path="/app"             element={<ProtectedRoute><AppPage /></ProtectedRoute>} />
         <Route path="/profile"         element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/admin"           element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        <Route path="/admin"           element={<AdminRoute><Admin /></AdminRoute>} />
         <Route path="*"                element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
