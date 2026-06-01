@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import { initSrsSync } from '../utils/srsSync';
 
@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  async function refreshSession() {
+  const refreshSession = useCallback(async () => {
     try {
       const res = await fetch('/api/auth/me');
       if (res.ok) {
@@ -58,7 +58,7 @@ export function AuthProvider({ children }) {
       }
     } catch { /* session check failed */ }
     return null;
-  }
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, setUser, loading, login, register, logout, refreshSession }}>
