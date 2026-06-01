@@ -29,7 +29,7 @@ function withAdminFlag(user) {
 }
 
 function getAppUrl(req) {
-  let url = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  let url = process.env.CLIENT_URL || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
   url = url.trim();
   url = url.replace(/^ttps:\/\//i, 'https://');
   url = url.replace(/^tps:\/\//i, 'https://');
