@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
       .then(r => r.json())
       .then(d => {
         setUser(d.user || null);
-        if (d.user) initSrsSync(); // Charger + fusionner le SRS depuis le DB
+        if (d.user && d.user.email_verified !== 0) initSrsSync(); // Charger + fusionner le SRS uniquement si vérifié
       })
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
