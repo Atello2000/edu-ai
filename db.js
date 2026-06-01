@@ -214,6 +214,15 @@ async function initSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
     `CREATE INDEX IF NOT EXISTS idx_shared_content_expires ON shared_content(expires_at)`,
+    // IPN idempotency — une ref_command ne peut créditer qu'une seule fois
+    `CREATE TABLE IF NOT EXISTS payments (
+      id          SERIAL PRIMARY KEY,
+      ref_command TEXT    NOT NULL UNIQUE,
+      user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      plan        TEXT    NOT NULL,
+      amount      INTEGER NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
   ];
   // MED-01 : Loguer les erreurs de migration au lieu de les avaler silencieusement.
   // Les codes 42701 (column already exists) et 42P07 (relation already exists) sont attendus.

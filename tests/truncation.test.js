@@ -27,7 +27,7 @@ jest.mock('../services/text', () => {
   const originalModule = jest.requireActual('../services/text');
   return {
     ...originalModule,
-    extractTextFromBuffer: jest.fn(),
+    extractText: jest.fn(),
   };
 });
 
@@ -41,7 +41,7 @@ describe('Troncation de fichier volumineux', () => {
   it('signale correctement un fichier comme tronqué si son texte dépasse MAX_TEXT_UPLOAD', async () => {
     // Renvoyer un texte très long (220 000 caractères)
     const longText = 'A'.repeat(220000);
-    textService.extractTextFromBuffer.mockResolvedValue(longText);
+    textService.extractText.mockResolvedValue(longText);
 
     // Fichier PDF minimal fictif
     const minPdf = Buffer.from(
@@ -75,7 +75,7 @@ describe('Troncation de fichier volumineux', () => {
 
   it('ne tronque pas les fichiers dont la taille de texte est inférieure à MAX_TEXT_UPLOAD', async () => {
     const normalText = 'A'.repeat(150000);
-    textService.extractTextFromBuffer.mockResolvedValue(normalText);
+    textService.extractText.mockResolvedValue(normalText);
 
     const minPdf = Buffer.from(
       '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj ' +

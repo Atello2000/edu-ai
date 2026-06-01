@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useJetons } from '../hooks/useJetons';
 import eventBus from '../utils/eventBus';
 
-export default function JetonWidget({ user }) {
+export default function JetonWidget() {
   const { balance, monthly_allocation } = useJetons();
   const [mounted,      setMounted]      = useState(false);
 

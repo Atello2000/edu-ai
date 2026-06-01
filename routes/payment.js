@@ -146,6 +146,19 @@ publicRouter.post('/', async (req, res) => {
   }
 
   try {
+    // Idempotency — si ref_command déjà traitée, ignorer silencieusement
+    try {
+      await db.prepare(
+        'INSERT INTO payments (ref_command, user_id, plan, amount) VALUES (?, ?, ?, ?)'
+      ).run(ref_command, userId, plan, config.price);
+    } catch (err) {
+      if (err.code === '23505') {
+        logger.warn('IPN duplicate ignoré', { ref_command });
+        return res.status(200).send('OK');
+      }
+      throw err;
+    }
+
     // Vérifier si l'utilisateur existe
     const user = await db.prepare('SELECT id, plan FROM users WHERE id = ?').get(userId);
     if (!user) {

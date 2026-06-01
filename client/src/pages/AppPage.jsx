@@ -58,7 +58,6 @@ export default function AppPage() {
   const [showPomodoro,   setShowPomodoro]   = useState(false);
 
   const [isWaitingPayment, setIsWaitingPayment] = useState(false);
-  const [waitingPlan, setWaitingPlan] = useState('');
   const pollingIntervalRef = useRef(null);
 
   // Écouter l'ouverture des plans depuis n'importe quel widget
@@ -83,8 +82,10 @@ export default function AppPage() {
 
     if (payment === 'success') {
       const selectedPlan = plan || 'pro';
-      setCongratsPlan(selectedPlan);
-      setShowCongratsModal(true);
+      setTimeout(() => {
+        setCongratsPlan(selectedPlan);
+        setShowCongratsModal(true);
+      }, 0);
       
       // Mettre à jour la session utilisateur et le quota de jetons
       if (typeof refreshSession === 'function') refreshSession();
@@ -249,29 +250,20 @@ export default function AppPage() {
   }, []);
 
   const handleSelectPlan = useCallback(async (planKey) => {
-    console.log("AppPage - handleSelectPlan called for plan:", planKey);
     try {
-      console.log("AppPage - Sending POST request to /api/payment/checkout...");
       const res = await apiFetch('/api/payment/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planKey })
       });
-      console.log("AppPage - Response received status:", res.status);
       const data = await res.json();
-      console.log("AppPage - Response data parsed:", data);
       if (data.error) {
         toast.error(data.error);
         return;
       }
       if (data.redirectUrl) {
-        // 1. Fermer le modal de choix de plan
         setShowPlansModal(false);
-
-        // 2. Rediriger vers le guichet de paiement dans le même onglet
-        // Évite les bloqueurs de popups sur mobile et assure que le PC soit redirigé directement vers l'app après le paiement.
-        console.log("AppPage - Redirecting to payment gateway in same tab:", data.redirectUrl);
-        window.location.href = data.redirectUrl;
+        window.location.assign(data.redirectUrl);
 
         // 4. Lancer le poller en tâche de fond (toutes les 3 secondes)
         if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
@@ -302,15 +294,13 @@ export default function AppPage() {
                 eventBus.emit('quota:refresh');
               }
             }
-          } catch (_) {}
+          } catch { /* polling silencieux */ }
         }, 3000);
 
       } else {
-        console.error("AppPage - No redirectUrl returned by backend!");
         toast.error("Impossible d'initier le paiement.");
       }
-    } catch (err) {
-      console.error("AppPage - Error during checkout request:", err);
+    } catch {
       toast.error('Erreur lors du lancement du paiement.');
     }
   }, [refreshSession]);
@@ -733,7 +723,7 @@ export default function AppPage() {
                 } else {
                   toast.error("Impossible de renvoyer l'e-mail.");
                 }
-              } catch (_) {
+              } catch {
                 toast.error("Une erreur est survenue.");
               }
             }}

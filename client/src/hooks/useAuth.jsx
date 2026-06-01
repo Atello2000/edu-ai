@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
         setUser(d.user || null);
         return d.user;
       }
-    } catch (_) {}
+    } catch { /* session check failed */ }
     return null;
   }
 

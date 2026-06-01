@@ -57,6 +57,8 @@ export function useSessions({
   userPlan,
 }) {
   const maxSessions = getMaxSessions(userPlan);
+  const maxSessionsRef = useRef(maxSessions);
+  useEffect(() => { maxSessionsRef.current = maxSessions; }, [maxSessions]);
   const filesRef = useRef(uploadedFiles);
   useEffect(() => { filesRef.current = uploadedFiles; }, [uploadedFiles]);
 
@@ -94,11 +96,11 @@ export function useSessions({
 
         // Garder au plus maxSessions — supprimer les plus anciennes
         const sorted = sessions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-        const toDelete = sorted.slice(maxSessions);
+        const toDelete = sorted.slice(maxSessionsRef.current);
         await Promise.all(toDelete.map(s => idb.delete('sessions', s.id)));
 
         // Miroir localStorage pour getSessions() synchrone (HistoryPanel initial render)
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(sorted.slice(0, maxSessions)));
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(sorted.slice(0, maxSessionsRef.current)));
 
         eventBus.emit('history:refresh');
         eventBus.emit('dashboard:refresh');
