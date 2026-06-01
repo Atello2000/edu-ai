@@ -22,9 +22,18 @@ function PageLoader() {
 }
 
 function VerifyEmailScreen({ user }) {
-  const { logout } = useAuth();
+  const { logout, refreshSession } = useAuth();
   const [sending, setSending] = useState(false);
   const [sent,    setSent]    = useState(false);
+
+  useEffect(() => {
+    // Poll the user status every 4 seconds to detect when they confirm on mobile
+    const timer = setInterval(async () => {
+      await refreshSession();
+    }, 4000);
+
+    return () => clearInterval(timer);
+  }, [refreshSession]);
 
   async function resend() {
     if (sending) return;
