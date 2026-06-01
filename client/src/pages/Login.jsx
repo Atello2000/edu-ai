@@ -53,13 +53,7 @@ export default function Login() {
     e.preventDefault();
     setError(''); setLoading(true);
     
-    const emailLower = form.email.toLowerCase().trim();
-    const isGmail = emailLower.endsWith('@gmail.com') || emailLower.endsWith('@googlemail.com');
-    if (!isGmail) {
-      setError('Seuls les comptes e-mail Google (@gmail.com) sont autorisés pour l\'inscription.');
-      setLoading(false);
-      return;
-    }
+
 
     try {
       await register(form.name, form.email, form.password);
@@ -151,7 +145,7 @@ export default function Login() {
             <form className="auth-form" onSubmit={handleLogin}>
               <div className="form-group">
                 <label>Email</label>
-                <input type="email" name="email" placeholder="vous@gmail.com" required autoComplete="email" value={form.email} onChange={onChange} />
+                <input type="email" name="email" placeholder="votre.email@domaine.com" required autoComplete="email" value={form.email} onChange={onChange} />
               </div>
               <div className="form-group">
                 <label>Mot de passe</label>
@@ -167,8 +161,8 @@ export default function Login() {
                 <input type="text" name="name" placeholder="Votre nom complet" required autoComplete="off" value={form.name} onChange={onChange} />
               </div>
               <div className="form-group">
-                <label>Email (uniquement Gmail)</label>
-                <input type="email" name="email" placeholder="votre.nom@gmail.com" required autoComplete="email" value={form.email} onChange={onChange} />
+                <label>Email</label>
+                <input type="email" name="email" placeholder="votre.email@domaine.com" required autoComplete="email" value={form.email} onChange={onChange} />
               </div>
               <div className="form-group">
                 <label>Mot de passe</label>
