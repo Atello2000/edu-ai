@@ -28,6 +28,10 @@ function withAdminFlag(user) {
   };
 }
 
+function getAppUrl(req) {
+  return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+}
+
 function setToken(res, userId, req) {
   const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
   res.cookie('jangalai.token', token, COOKIE_OPTS);
@@ -177,13 +181,13 @@ router.put('/profile', doubleCsrfProtection, async (req, res) => {
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────
 router.get('/verify/:token', async (req, res) => {
   const user = await db.prepare('SELECT * FROM users WHERE verify_token = ?').get(req.params.token);
-  if (!user) return res.redirect(`${APP_URL}/login?error=invalid_token`);
+  if (!user) return res.redirect(`${getAppUrl(req)}/login?error=invalid_token`);
   if (new Date(user.verify_expires) < new Date())
-    return res.redirect(`${APP_URL}/login?error=token_expired`);
+    return res.redirect(`${getAppUrl(req)}/login?error=token_expired`);
 
   await db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
   setToken(res, user.id, req);
-  res.redirect(`${APP_URL}/app?verified=1`);
+  res.redirect(`${getAppUrl(req)}/app?verified=1`);
 });
 
 // ── POST /api/auth/resend-verify ──────────────────────────────────────────────
@@ -249,11 +253,11 @@ router.get('/google', (req, res) => {
 
 router.get('/google/callback', async (req, res) => {
   const { code, state, error } = req.query;
-  if (error) return res.redirect(`${APP_URL}/login?error=google_denied`);
+  if (error) return res.redirect(`${getAppUrl(req)}/login?error=google_denied`);
 
   const savedState = req.cookies?.oauth_state;
   res.clearCookie('oauth_state');
-  if (!state || state !== savedState) return res.redirect(`${APP_URL}/login?error=oauth_state`);
+  if (!state || state !== savedState) return res.redirect(`${getAppUrl(req)}/login?error=oauth_state`);
 
   try {
     // Exchange code for access token
@@ -269,7 +273,7 @@ router.get('/google/callback', async (req, res) => {
       }),
     });
     const tokens = await tokenRes.json();
-    if (!tokens.access_token) return res.redirect(`${APP_URL}/login?error=google_token`);
+    if (!tokens.access_token) return res.redirect(`${getAppUrl(req)}/login?error=google_token`);
 
     // Get user profile
     const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -292,16 +296,16 @@ router.get('/google/callback', async (req, res) => {
            SELECT $1, $2, $3, $4, 1, 40, $5
            WHERE (SELECT COUNT(*) FROM users) < 100`
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id, currentMonth);
-        if (!r.changes) return res.redirect(`${APP_URL}/login?error=beta_full`);
+        if (!r.changes) return res.redirect(`${getAppUrl(req)}/login?error=beta_full`);
         user = await db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
       }
     }
 
     setToken(res, user.id, req);
-    res.redirect(`${APP_URL}/app`);
+    res.redirect(`${getAppUrl(req)}/app`);
   } catch (err) {
     logger.error('Google OAuth error', { message: err.message, stack: err.stack });
-    res.redirect(`${APP_URL}/login?error=google_error`);
+    res.redirect(`${getAppUrl(req)}/login?error=google_error`);
   }
 });
 
