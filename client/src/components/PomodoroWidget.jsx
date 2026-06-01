@@ -54,6 +54,8 @@ function useDrag(initialPos) {
   const [pos, setPos]   = useState(initialPos);
   const dragging        = useRef(false);
   const offset          = useRef({ x: 0, y: 0 });
+  const startPos        = useRef({ x: 0, y: 0 });
+  const hasMoved        = useRef(false);
   const widgetRef       = useRef(null);
 
   const clamp = useCallback((x, y) => {
@@ -66,15 +68,36 @@ function useDrag(initialPos) {
   }, []);
 
   const onMove = useCallback((cx, cy) => {
-    if (!dragging.current) return;
-    setPos(clamp(cx - offset.current.x, cy - offset.current.y));
+    if (!dragging.current) return false;
+    const dx = cx - startPos.current.x;
+    const dy = cy - startPos.current.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // threshold: 6 pixels to account for finger tremors
+    if (!hasMoved.current && dist > 6) {
+      hasMoved.current = true;
+    }
+    
+    if (hasMoved.current) {
+      setPos(clamp(cx - offset.current.x, cy - offset.current.y));
+      return true; // actively dragging
+    }
+    return false;
   }, [clamp]);
 
-  const onUp = useCallback(() => { dragging.current = false; }, []);
+  const onUp = useCallback(() => {
+    dragging.current = false;
+  }, []);
 
   useEffect(() => {
     const mm = e => onMove(e.clientX, e.clientY);
-    const tm = e => onMove(e.touches[0].clientX, e.touches[0].clientY);
+    const tm = e => {
+      if (onMove(e.touches[0].clientX, e.touches[0].clientY)) {
+        // Prevent scrolling if we are actively dragging
+        if (e.cancelable) e.preventDefault();
+      }
+    };
+    
     window.addEventListener('mousemove', mm);
     window.addEventListener('mouseup',  onUp);
     window.addEventListener('touchmove', tm, { passive: false });
@@ -87,18 +110,37 @@ function useDrag(initialPos) {
     };
   }, [onMove, onUp]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setPos(prev => clamp(prev.x, prev.y));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [clamp]);
+
   const startDrag = useCallback((cx, cy) => {
     const el = widgetRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     offset.current = { x: cx - r.left, y: cy - r.top };
+    startPos.current = { x: cx, y: cy };
+    hasMoved.current = false;
     dragging.current = true;
   }, []);
 
-  const onMouseDown  = useCallback(e => { e.preventDefault(); startDrag(e.clientX, e.clientY); }, [startDrag]);
-  const onTouchStart = useCallback(e => { startDrag(e.touches[0].clientX, e.touches[0].clientY); }, [startDrag]);
+  const onMouseDown  = useCallback(e => {
+    if (e.button !== 0) return; // Only left click
+    if (e.target.closest('button') || e.target.closest('input')) return;
+    e.preventDefault();
+    startDrag(e.clientX, e.clientY);
+  }, [startDrag]);
 
-  return { pos, widgetRef, onMouseDown, onTouchStart };
+  const onTouchStart = useCallback(e => {
+    if (e.target.closest('button') || e.target.closest('input')) return;
+    startDrag(e.touches[0].clientX, e.touches[0].clientY);
+  }, [startDrag]);
+
+  return { pos, widgetRef, onMouseDown, onTouchStart, hasMoved };
 }
 
 /* ── Icône Réglages (hors du composant pour éviter la recréation) ────────── */
@@ -131,7 +173,7 @@ export default function PomodoroWidget({ onClose }) {
   const breakRef   = useRef(breakMin);
 
   const initPos = { x: window.innerWidth - 270, y: window.innerHeight - 400 };
-  const { pos, widgetRef, onMouseDown, onTouchStart } = useDrag(initPos);
+  const { pos, widgetRef, onMouseDown, onTouchStart, hasMoved } = useDrag(initPos);
 
   useEffect(() => { modeRef.current  = mode;    }, [mode]);
   useEffect(() => { isMutedRef.current = isMuted; }, [isMuted]);
@@ -237,7 +279,10 @@ export default function PomodoroWidget({ onClose }) {
         className={`pomo-pill pomo-mode-${mode}`}
         onMouseDown={onMouseDown}
         onTouchStart={onTouchStart}
-        onClick={() => setCollapsed(false)}
+        onClick={() => {
+          if (hasMoved.current) return;
+          setCollapsed(false);
+        }}
         title="Agrandir le minuteur"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="14" r="8"/><path d="M10 3h4"/><path d="M12 3v3"/><path d="M12 10v4l2.5 2.5"/></svg>
@@ -263,13 +308,26 @@ export default function PomodoroWidget({ onClose }) {
           <button
             className={`pomo-close${showSettings ? ' pomo-close-active' : ''}`}
             onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
             onClick={() => setShowSettings(s => !s)}
             title="Réglages"
           ><IcoGear /></button>
-          <button className="pomo-close" onMouseDown={e => e.stopPropagation()} onClick={() => setCollapsed(true)} title="Réduire">
+          <button
+            className="pomo-close"
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            onClick={() => setCollapsed(true)}
+            title="Réduire"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
           </button>
-          <button className="pomo-close" onMouseDown={e => e.stopPropagation()} onClick={onClose} title="Fermer">
+          <button
+            className="pomo-close"
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            onClick={onClose}
+            title="Fermer"
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
