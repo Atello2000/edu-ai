@@ -117,7 +117,7 @@ export function useSessions({
         }
         const i = idx2 === -1 ? 0 : idx2;
         Object.assign(sessions[i], update, { timestamp: Date.now() });
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, maxSessions)));
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions.slice(0, maxSessionsRef.current)));
         eventBus.emit('history:refresh');
         eventBus.emit('dashboard:refresh');
       }
