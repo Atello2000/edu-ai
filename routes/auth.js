@@ -53,10 +53,6 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'Email invalide.' });
 
   const emailLower = email.toLowerCase().trim();
-  const isGmail = emailLower.endsWith('@gmail.com') || emailLower.endsWith('@googlemail.com');
-  if (!isGmail)
-    return res.status(400).json({ error: 'Seuls les comptes e-mail Google (@gmail.com) sont autorisés pour l\'inscription.' });
-
   if (password.length < 8)
     return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum).' });
 
@@ -70,7 +66,7 @@ router.post('/register', async (req, res) => {
     const info = await db.prepare(
       `INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date)
        SELECT $1, $2, $3, $4, $5, 40, $6
-       WHERE (SELECT COUNT(*) FROM users) < 12`
+       WHERE (SELECT COUNT(*) FROM users) < 100`
     ).run(emailLower, hash, name.trim(), verifyToken, verifyExp, currentMonth);
     if (!info.changes) {
       return res.status(403).json({ error: 'L\'accès est limité pendant la bêta. Revenez bientôt !' });
@@ -294,7 +290,7 @@ router.get('/google/callback', async (req, res) => {
         const r = await db.prepare(
           `INSERT INTO users (email, password, name, google_id, email_verified, jetons, jetons_reset_date)
            SELECT $1, $2, $3, $4, 1, 40, $5
-           WHERE (SELECT COUNT(*) FROM users) < 12`
+           WHERE (SELECT COUNT(*) FROM users) < 100`
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id, currentMonth);
         if (!r.changes) return res.redirect(`${APP_URL}/login?error=beta_full`);
         user = await db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);
