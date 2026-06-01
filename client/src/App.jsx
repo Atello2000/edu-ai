@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth.jsx';
 import { useDir } from './hooks/useDir.js';
@@ -23,65 +23,128 @@ function PageLoader() {
 
 function VerifyEmailScreen({ user }) {
   const { logout } = useAuth();
+  const [sending, setSending] = useState(false);
+  const [sent,    setSent]    = useState(false);
 
   async function resend() {
+    if (sending) return;
+    setSending(true);
     try {
       const res = await apiFetch('/api/auth/resend-verify', { method: 'POST' });
-      if (res.ok) toast.success('E-mail renvoyé ! Vérifiez vos spams.');
+      if (res.ok) { setSent(true); toast.success('E-mail renvoyé ! Vérifiez vos spams.'); }
       else toast.error("Impossible de renvoyer l'e-mail.");
     } catch {
       toast.error('Une erreur est survenue.');
-    }
+    } finally { setSending(false); }
   }
 
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: 'var(--bg, #080c16)',
+      justifyContent: 'center', background: '#070b14',
       padding: '24px 16px', fontFamily: 'Outfit, sans-serif',
     }}>
+      {/* Glow background */}
       <div style={{
-        background: '#0d1117', border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '24px', padding: '40px 28px', maxWidth: '420px',
-        width: '100%', textAlign: 'center', boxSizing: 'border-box',
-        boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+        position: 'fixed', top: '30%', left: '50%', transform: 'translate(-50%,-50%)',
+        width: '500px', height: '500px', borderRadius: '50%', pointerEvents: 'none',
+        background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)',
+      }} />
+
+      <div style={{
+        position: 'relative', background: '#0d1117',
+        border: '1px solid rgba(59,130,246,0.2)',
+        borderRadius: '28px', padding: '44px 32px 36px',
+        maxWidth: '400px', width: '100%', textAlign: 'center',
+        boxSizing: 'border-box',
+        boxShadow: '0 32px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
       }}>
+        {/* Icon */}
         <div style={{
-          width: '72px', height: '72px', borderRadius: '50%',
-          background: 'rgba(59,130,246,0.12)', border: '1.5px solid rgba(59,130,246,0.3)',
+          width: '76px', height: '76px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.1))',
+          border: '1.5px solid rgba(59,130,246,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 24px', fontSize: '32px',
-        }}>📧</div>
+          margin: '0 auto 28px',
+          boxShadow: '0 0 32px rgba(59,130,246,0.2)',
+        }}>
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="url(#emailGrad)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <defs>
+              <linearGradient id="emailGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#3b82f6"/>
+                <stop offset="100%" stopColor="#6366f1"/>
+              </linearGradient>
+            </defs>
+            <rect x="2" y="4" width="20" height="16" rx="3"/>
+            <polyline points="2,4 12,13 22,4"/>
+          </svg>
+        </div>
 
+        {/* Title */}
         <h1 style={{
-          fontSize: '22px', fontWeight: '800', margin: '0 0 10px',
-          color: '#f1f5f9', letterSpacing: '-0.02em',
-        }}>Vérifiez votre email</h1>
+          fontSize: '24px', fontWeight: '800', margin: '0 0 12px',
+          background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          letterSpacing: '-0.02em',
+        }}>Confirmez votre email</h1>
 
-        <p style={{ color: '#64748b', fontSize: '14px', lineHeight: '1.7', margin: '0 0 8px' }}>
-          Un lien de confirmation a été envoyé à
+        <p style={{ color: '#475569', fontSize: '14px', lineHeight: '1.7', margin: '0 0 6px' }}>
+          Un lien d&apos;activation a été envoyé à
         </p>
         <p style={{
-          color: '#3b82f6', fontWeight: '600', fontSize: '14px',
-          margin: '0 0 28px', wordBreak: 'break-all',
+          background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
+          borderRadius: '10px', padding: '8px 14px', display: 'inline-block',
+          color: '#60a5fa', fontWeight: '600', fontSize: '14px',
+          margin: '0 0 28px', wordBreak: 'break-all', maxWidth: '100%',
         }}>{user?.email}</p>
 
-        <button onClick={resend} style={{
-          width: '100%', background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-          color: '#fff', border: 'none', borderRadius: '14px',
-          padding: '14px', fontSize: '15px', fontWeight: '600',
-          cursor: 'pointer', marginBottom: '12px',
-          boxShadow: '0 8px 20px -4px rgba(59,130,246,0.4)',
+        {/* Steps */}
+        <div style={{
+          background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+          borderRadius: '14px', padding: '16px 18px', marginBottom: '24px', textAlign: 'left',
         }}>
-          Renvoyer le lien
+          {[
+            ['1', 'Ouvrez votre boîte mail'],
+            ['2', 'Cliquez sur le lien de confirmation'],
+            ['3', 'Accédez à Jangalai'],
+          ].map(([n, label]) => (
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: n !== '3' ? '10px' : 0 }}>
+              <span style={{
+                width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(59,130,246,0.15)', border: '1px solid rgba(59,130,246,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '11px', fontWeight: '700', color: '#60a5fa',
+              }}>{n}</span>
+              <span style={{ fontSize: '13.5px', color: '#94a3b8' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={resend} disabled={sending} style={{
+          width: '100%',
+          background: sent
+            ? 'rgba(34,197,94,0.15)'
+            : 'linear-gradient(135deg, #3b82f6, #6366f1)',
+          color: sent ? '#4ade80' : '#fff',
+          border: sent ? '1px solid rgba(34,197,94,0.3)' : 'none',
+          borderRadius: '14px', padding: '14px', fontSize: '15px',
+          fontWeight: '600', cursor: sending ? 'wait' : 'pointer',
+          marginBottom: '10px', opacity: sending ? 0.7 : 1,
+          boxShadow: sent ? 'none' : '0 8px 20px -4px rgba(59,130,246,0.35)',
+          transition: 'all 0.2s',
+        }}>
+          {sending ? 'Envoi…' : sent ? '✓ Lien renvoyé' : 'Renvoyer le lien'}
         </button>
 
         <button onClick={logout} style={{
-          width: '100%', background: 'transparent',
-          color: '#475569', border: '1px solid rgba(255,255,255,0.07)',
-          borderRadius: '14px', padding: '12px', fontSize: '14px',
-          cursor: 'pointer',
-        }}>
+          width: '100%', background: 'transparent', color: '#334155',
+          border: '1px solid rgba(255,255,255,0.05)', borderRadius: '14px',
+          padding: '12px', fontSize: '13.5px', cursor: 'pointer',
+          transition: 'color 0.2s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.color = '#64748b'}
+          onMouseLeave={e => e.currentTarget.style.color = '#334155'}
+        >
           Se déconnecter
         </button>
       </div>
