@@ -51,7 +51,7 @@ protectedRouter.post('/checkout', async (req, res) => {
     }
 
     const payload = {
-      item_name: `EDU AI ${plan.toUpperCase()}`,
+      item_name: `Jangalai ${plan.toUpperCase()}`,
       item_price: String(config.price),
       currency: 'XOF',
       ref_command: refCommand,
