@@ -179,29 +179,6 @@ export default function Landing() {
         </div>
       </div>
 
-      <div className="testimonials-section">
-        <div className="testimonials-inner">
-          <div className="section-label fade-up">Témoignages</div>
-          <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '2.5rem' }}>Ce qu'en disent les <em>étudiants</em></h2>
-          <div className="testimonials-grid">
-            <div className="testimonial-card fade-up fade-up-delay-1">
-              <div className="stars">★★★★★</div>
-              <div className="testimonial-text">J'ai préparé mes partiels de biochimie avec Jangalai. Les flashcards générées automatiquement depuis mes cours m'ont fait gagner des heures. J'ai eu 16/20 alors que j'avais 11 en octobre.</div>
-              <div className="testimonial-author"><div className="testimonial-avatar av-blue">A</div><div><div className="testimonial-name">Amina K.</div><div className="testimonial-role">L2 Sciences de la Vie, Paris</div></div></div>
-            </div>
-            <div className="testimonial-card fade-up fade-up-delay-2">
-              <div className="stars">★★★★★</div>
-              <div className="testimonial-text">Le chat avec le cours change tout. Je charge mon PPT et je pose mes questions directement — c'est comme avoir un prof disponible 24h/24. J'utilise Jangalai tous les soirs avant les exams.</div>
-              <div className="testimonial-author"><div className="testimonial-avatar av-teal">M</div><div><div className="testimonial-name">Mamadou D.</div><div className="testimonial-role">Master Droit des Affaires, Dakar</div></div></div>
-            </div>
-            <div className="testimonial-card fade-up fade-up-delay-3">
-              <div className="stars">★★★★★</div>
-              <div className="testimonial-text">Les fiches d'examen générées en un clic sont bluffantes. En médecine on a des cours énormes — Jangalai m'extrait l'essentiel et les questions probables. Incontournable pour les concours.</div>
-              <div className="testimonial-author"><div className="testimonial-avatar av-gold">S</div><div><div className="testimonial-name">Sofia R.</div><div className="testimonial-role">PACES, Université de Lyon</div></div></div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="pricing-section" id="pricing">
         <div className="pricing-inner">
