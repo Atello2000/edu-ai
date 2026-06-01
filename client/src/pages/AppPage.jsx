@@ -544,126 +544,129 @@ export default function AppPage() {
       {showGoalModal  && <GoalModal onSelect={handleGoalSelect} balance={balance} />}
       {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} onSelectPlan={handleSelectPlan} />}
       
-      {showCongratsModal && (
-        <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={() => setShowCongratsModal(false)}>
-          <div className="congrats-modal-wrap" onClick={e => e.stopPropagation()} style={{
-            background: 'var(--surface, #111827)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderRadius: '24px',
-            padding: '40px 24px',
-            maxWidth: '440px',
-            width: '90%',
-            boxSizing: 'border-box',
-            textAlign: 'center',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(99, 102, 241, 0.15)',
-            position: 'relative',
-            animation: 'modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both'
-          }}>
-            {/* Glow Background Effect */}
-            <div style={{
-              position: 'absolute',
-              top: '-10%',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '180px',
-              height: '180px',
-              background: congratsPlan === 'max' ? 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, rgba(168,85,247,0) 70%)' : 'radial-gradient(circle, rgba(245,166,35,0.3) 0%, rgba(245,166,35,0) 70%)',
-              pointerEvents: 'none',
-              zIndex: 0
-            }} />
-
-            {/* Premium Icon */}
-            <div style={{
+      {showCongratsModal && (() => {
+        const isMax    = congratsPlan === 'max';
+        const accent   = isMax ? '#a855f7' : '#f5a623';
+        const accentTo = isMax ? '#ec4899' : '#f76b1c';
+        const glowRgb  = isMax ? '168,85,247' : '245,166,35';
+        const jetons   = isMax ? 400 : 150;
+        const benefits = [
+          <><strong>{jetons} jetons</strong> alloués pour ce mois</>,
+          <>Outils IA avancés débloqués (Socratique, Prédicteur&hellip;)</>,
+          <>Taille de fichiers augmentée · sessions illimitées</>,
+        ];
+        return (
+          <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={() => setShowCongratsModal(false)}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: '#0d1117',
+              border: `1px solid rgba(${glowRgb},0.25)`,
+              borderRadius: '24px',
+              padding: '40px 28px 32px',
+              maxWidth: '420px',
+              width: '92%',
+              boxSizing: 'border-box',
+              textAlign: 'center',
+              boxShadow: `0 32px 64px -12px rgba(0,0,0,0.7), 0 0 48px rgba(${glowRgb},0.15)`,
               position: 'relative',
-              zIndex: 1,
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              background: congratsPlan === 'max' ? 'rgba(168,85,247,0.1)' : 'rgba(245,166,35,0.1)',
-              border: congratsPlan === 'max' ? '1.5px solid rgba(168,85,247,0.3)' : '1.5px solid rgba(245,166,35,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 24px auto',
-              boxShadow: congratsPlan === 'max' ? '0 0 20px rgba(168,85,247,0.2)' : '0 0 20px rgba(245,166,35,0.2)',
-              fontSize: '40px'
+              overflow: 'hidden',
+              animation: 'modalSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) both',
             }}>
-              {congratsPlan === 'max' ? '👑' : '⭐'}
+              {/* Glow */}
+              <div style={{
+                position: 'absolute', top: '-20%', left: '50%', transform: 'translateX(-50%)',
+                width: '240px', height: '240px', pointerEvents: 'none', zIndex: 0,
+                background: `radial-gradient(circle, rgba(${glowRgb},0.25) 0%, transparent 70%)`,
+              }} />
+
+              {/* SVG Star */}
+              <div style={{
+                position: 'relative', zIndex: 1,
+                width: '80px', height: '80px', borderRadius: '50%',
+                background: `rgba(${glowRgb},0.12)`,
+                border: `1.5px solid rgba(${glowRgb},0.35)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 24px',
+                boxShadow: `0 0 28px rgba(${glowRgb},0.25)`,
+                animation: 'modalSlideUp 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both',
+              }}>
+                <svg width="38" height="38" viewBox="0 0 24 24" fill="none">
+                  <defs>
+                    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor={accent} />
+                      <stop offset="100%" stopColor={accentTo} />
+                    </linearGradient>
+                  </defs>
+                  <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
+                    fill="url(#starGrad)"
+                    stroke="none"
+                  />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h2 style={{
+                position: 'relative', zIndex: 1,
+                fontSize: 'clamp(20px,6.5vw,26px)', fontWeight: '800',
+                margin: '0 0 10px',
+                background: `linear-gradient(135deg, ${accent} 0%, ${accentTo} 100%)`,
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.02em',
+              }}>
+                Abonnement Activé !
+              </h2>
+
+              <p style={{
+                position: 'relative', zIndex: 1,
+                color: '#94a3b8', fontSize: '14.5px', lineHeight: '1.65',
+                margin: '0 0 24px', padding: '0 8px',
+              }}>
+                Votre compte est maintenant sur le plan <strong style={{ color: '#e2e8f0' }}>{isMax ? 'MAX' : 'PRO'}</strong>. Vos jetons ont été rechargés instantanément.
+              </p>
+
+              {/* Benefits */}
+              <div style={{
+                position: 'relative', zIndex: 1,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: '14px', padding: '16px 18px',
+                marginBottom: '28px', textAlign: 'left',
+              }}>
+                <p style={{ margin: '0 0 10px', fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.06em', fontWeight: '700' }}>
+                  Vos nouveaux avantages
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {benefits.map((b, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '13.5px', color: '#e2e8f0' }}>
+                      <span style={{ color: accent, fontWeight: '700', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* CTA */}
+              <button
+                onClick={() => setShowCongratsModal(false)}
+                style={{
+                  position: 'relative', zIndex: 1,
+                  width: '100%',
+                  background: `linear-gradient(135deg, ${accent} 0%, ${accentTo} 100%)`,
+                  color: '#fff', border: 'none',
+                  padding: '14px 28px', borderRadius: '14px',
+                  fontSize: '15px', fontWeight: '600', cursor: 'pointer',
+                  boxShadow: `0 10px 24px -5px rgba(${glowRgb},0.45)`,
+                  transition: 'opacity .15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '.9'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                C&apos;est parti ! 🚀
+              </button>
             </div>
-
-            {/* Title */}
-            <h2 style={{
-              fontSize: 'clamp(20px, 6.5vw, 28px)',
-              fontWeight: '800',
-              margin: '0 0 10px 0',
-              background: congratsPlan === 'max' ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : 'linear-gradient(135deg, #f5a623 0%, #f76b1c 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              letterSpacing: '-0.02em'
-            }}>
-              Abonnement Activé !
-            </h2>
-
-            <p style={{
-              color: 'var(--text-secondary, #9ca3af)',
-              fontSize: '15px',
-              lineHeight: '1.6',
-              margin: '0 0 28px 0',
-              padding: '0 10px'
-            }}>
-              Félicitations ! Votre compte a été mis à niveau vers le plan <strong>{congratsPlan === 'max' ? 'MAX' : 'PRO'}</strong> avec succès. Vos limites ont été instantanément rechargées.
-            </p>
-
-            {/* Benefits box */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.06)',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '32px',
-              textAlign: 'left'
-            }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase', color: 'var(--text-muted, #6b7280)', letterSpacing: '0.05em', fontWeight: '700' }}>
-                Vos nouveaux avantages :
-              </h4>
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#fff', marginBottom: '8px' }}>
-                  <span style={{ color: congratsPlan === 'max' ? '#a855f7' : '#f5a623' }}>✓</span>
-                  <strong>{congratsPlan === 'max' ? '400' : '150'} jetons</strong> alloués pour ce mois
-                </li>
-                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#fff', marginBottom: '8px' }}>
-                  <span style={{ color: congratsPlan === 'max' ? '#a855f7' : '#f5a623' }}>✓</span>
-                  Outils d&apos;intelligence artificielle avancés débloqués
-                </li>
-                <li style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#fff' }}>
-                  <span style={{ color: congratsPlan === 'max' ? '#a855f7' : '#f5a623' }}>✓</span>
-                  Taille maximale des fichiers augmentée
-                </li>
-              </ul>
-            </div>
-
-            {/* CTA Button */}
-            <button
-              onClick={() => setShowCongratsModal(false)}
-              className="act-btn"
-              style={{
-                width: '100%',
-                background: congratsPlan === 'max' ? 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' : 'linear-gradient(135deg, #f5a623 0%, #f76b1c 100%)',
-                color: '#fff',
-                border: 'none',
-                padding: '14px 28px',
-                borderRadius: '14px',
-                fontSize: '15px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                boxShadow: congratsPlan === 'max' ? '0 10px 20px -5px rgba(168,85,247,0.4)' : '0 10px 20px -5px rgba(245,166,35,0.4)',
-              }}
-            >
-              C&apos;est parti ! 🚀
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {isWaitingPayment && (
         <div className="modal-overlay" style={{ zIndex: 9999 }}>
