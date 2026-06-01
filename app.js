@@ -62,6 +62,7 @@ app.get('/payment-success', (req, res) => {
   const plan = req.query.plan || 'pro';
   const userAgent = req.headers['user-agent'] || '';
   const isMobile = /mobile|android|iphone|ipad|phone/i.test(userAgent);
+  const hasToken = !!req.cookies?.['jangalai.token'];
 
   if (isMobile) {
     res.send(`
@@ -204,6 +205,12 @@ app.get('/payment-success', (req, res) => {
             transform: scale(0.98);
             opacity: 0.95;
           }
+          .btn-secondary {
+            background: rgba(255,255,255,0.06) !important;
+            box-shadow: none !important;
+            color: #94a3b8 !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+          }
           @keyframes slideUp {
             0% { transform: translateY(20px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
@@ -249,21 +256,24 @@ app.get('/payment-success', (req, res) => {
             </ul>
           </div>
 
-          <button class="btn-close" onclick="openApp()">
-            Ouvrir Jangalai 🚀
+          ${hasToken ? `
+          <button class="btn-close" onclick="window.location.href='/app'">
+            Accéder à l'application 🚀
           </button>
-
-          <p style="font-size:12.5px; color:#475569; margin:16px 0 0; line-height:1.6; padding:0 4px;">
-            Vous avez payé depuis votre PC ?<br>
-            Retournez sur cet onglet — votre plan est déjà actif.
+          ` : `
+          <button class="btn-close btn-secondary" onclick="window.location.href='/'">
+            Retour au site
+          </button>
+          <p style="font-size:13px; color:#475569; margin:16px 0 0; line-height:1.6; padding:0 4px;">
+            Votre plan est déjà actif.<br>
+            Retournez sur l'onglet de votre PC —<br>
+            l'application s'est débloquée automatiquement.
           </p>
+          <a href="/login" style="display:inline-block; margin-top:14px; font-size:12.5px; color:#64748b; text-decoration:underline;">
+            Se connecter sur ce mobile
+          </a>
+          `}
         </div>
-
-        <script>
-          function openApp() {
-            window.location.href = '/';
-          }
-        </script>
       </body>
       </html>
     `);
