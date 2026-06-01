@@ -249,21 +249,19 @@ app.get('/payment-success', (req, res) => {
             </ul>
           </div>
 
-          <button class="btn-close" onclick="redirectToApp()">
-            Accéder à l'application 🚀
+          <button class="btn-close" onclick="openApp()">
+            Ouvrir Jangalai 🚀
           </button>
+
+          <p style="font-size:12.5px; color:#475569; margin:16px 0 0; line-height:1.6; padding:0 4px;">
+            Vous avez payé depuis votre PC ?<br>
+            Retournez sur cet onglet — votre plan est déjà actif.
+          </p>
         </div>
 
         <script>
-          function redirectToApp() {
-            try {
-              const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-              const params = new URLSearchParams(window.location.search);
-              const plan = params.get('plan') || 'pro';
-              window.location.href = origin + '/app?payment=success&plan=' + plan;
-            } catch (e) {
-              window.location.href = '/app?payment=success&plan=${plan}';
-            }
+          function openApp() {
+            window.location.href = '/';
           }
         </script>
       </body>
