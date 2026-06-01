@@ -212,7 +212,7 @@ export default function Landing() {
                 <div className="plan-feat">Répétitions espacées (SM-2)</div>
                 <div className="plan-feat">Traitement accéléré des fichiers</div>
                 <div className="plan-feat">Rechargement instantané à l'abonnement</div>
-                <div className="plan-feat">Paiement local Wave / Orange Money</div>
+                <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
             </div>
@@ -227,7 +227,7 @@ export default function Landing() {
                 <div className="plan-feat">Traitement ultra-prioritaire</div>
                 <div className="plan-feat">Stockage de cours étendu</div>
                 <div className="plan-feat">Rechargement instantané à l'abonnement</div>
-                <div className="plan-feat">Paiement local Wave / Orange Money</div>
+                <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
             </div>
