@@ -2,7 +2,8 @@ const { Resend } = require('resend');
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM   = process.env.EMAIL_FROM || 'Jangalai <noreply@jangalai.app>';
-const APP_URL = process.env.APP_URL  || 'http://localhost:3001';
+let APP_URL  = process.env.APP_URL  || 'http://localhost:3001';
+APP_URL = APP_URL.trim().replace(/^ttps:\/\//i, 'https://').replace(/^tps:\/\//i, 'https://').replace(/^tp:\/\//i, 'http://');
 
 async function sendEmail({ to, subject, html }) {
   if (!resend) {

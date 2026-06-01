@@ -29,7 +29,12 @@ function withAdminFlag(user) {
 }
 
 function getAppUrl(req) {
-  return process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  let url = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  url = url.trim();
+  url = url.replace(/^ttps:\/\//i, 'https://');
+  url = url.replace(/^tps:\/\//i, 'https://');
+  url = url.replace(/^tp:\/\//i, 'http://');
+  return url;
 }
 
 function setToken(res, userId, req) {
