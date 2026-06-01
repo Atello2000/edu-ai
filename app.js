@@ -365,6 +365,9 @@ if (fs.existsSync(reactDist)) {
 }
 
 app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).json({ error: 'Jeton de sécurité invalide ou expiré (CSRF). Veuillez rafraîchir la page.' });
+  }
   logger.error('Unhandled error', { method: req.method, url: req.url, userId: req.user?.id, message: err.message, stack: err.stack });
   const isDev = process.env.NODE_ENV !== 'production';
   res.status(500).json({ error: isDev ? err.message : 'Erreur serveur' });

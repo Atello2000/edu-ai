@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { apiFetch } from '../utils/apiFetch';
 import './Onboarding.css';
 
 const LEVELS = [
@@ -74,8 +75,8 @@ export default function Onboarding({ onDone }) {
     setLoading(true);
     try {
       const finalDomain = getFinalDomain();
-      const r = await fetch('/api/auth/onboarding', {
-        method: 'POST', credentials: 'include',
+      const r = await apiFetch('/api/auth/onboarding', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(skip ? { level: null, domains: [], specialty: null, name: null } : {
           level:     getFinalLevel(),
