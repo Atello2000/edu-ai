@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiFetch } from '../utils/apiFetch';
 import Logo from '../components/Logo.jsx';
 import './Admin.css';
 
@@ -14,11 +15,7 @@ function fmtTokens(n) {
   return String(n);
 }
 
-function esc(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+// MED-03 : suppression de esc() — React échappe nativement le contenu textuel.
 
 export default function Admin() {
   const navigate = useNavigate();
@@ -48,7 +45,7 @@ export default function Admin() {
   useEffect(() => {
     (async () => {
       try {
-        const check = await fetch('/api/admin/stats', { credentials: 'include' });
+        const check = await apiFetch('/api/admin/stats', { credentials: 'include' });
         if (!check.ok) {
           const body = await check.json().catch(() => ({}));
           setAccessError(`Erreur ${check.status} — ${body.error || 'Accès refusé'}`);
@@ -56,15 +53,15 @@ export default function Admin() {
           return;
         }
         const [sRes, uRes, tRes, mRes, aRes] = await Promise.all([
-          fetch('/api/admin/stats',     { credentials: 'include' }),
-          fetch('/api/admin/users',     { credentials: 'include' }),
-          fetch('/api/admin/tokens',    { credentials: 'include' }),
-          fetch('/api/admin/messages',  { credentials: 'include' }),
-          fetch('/api/admin/ai-config', { credentials: 'include' }),
+          apiFetch('/api/admin/stats',     { credentials: 'include' }),
+          apiFetch('/api/admin/users',     { credentials: 'include' }),
+          apiFetch('/api/admin/tokens',    { credentials: 'include' }),
+          apiFetch('/api/admin/messages',  { credentials: 'include' }),
+          apiFetch('/api/admin/ai-config', { credentials: 'include' }),
         ]);
         const [s, u, t, m, a, j] = await Promise.all([
           sRes.json(), uRes.json(), tRes.json(), mRes.json(), aRes.json(),
-          fetch('/api/admin/jetons', { credentials: 'include' }).then(r => r.json()),
+          apiFetch('/api/admin/jetons', { credentials: 'include' }).then(r => r.json()),
         ]);
         setStats(s);
         setUsers(u.users || []);
@@ -83,14 +80,14 @@ export default function Admin() {
   }, [navigate]);
 
   async function setPlan(id, plan) {
-    await fetch(`/api/admin/users/${id}/plan`, {
+    await apiFetch(`/api/admin/users/${id}/plan`, {
       method: 'PATCH', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan }),
     });
     const [sRes, uRes] = await Promise.all([
-      fetch('/api/admin/stats', { credentials: 'include' }),
-      fetch('/api/admin/users', { credentials: 'include' }),
+      apiFetch('/api/admin/stats', { credentials: 'include' }),
+      apiFetch('/api/admin/users', { credentials: 'include' }),
     ]);
     const [s, u] = await Promise.all([sRes.json(), uRes.json()]);
     setStats(s);
@@ -99,10 +96,10 @@ export default function Admin() {
 
   async function deleteUser(id, name) {
     if (!confirm(`Supprimer le compte de "${name}" ? Cette action est irréversible.`)) return;
-    await fetch(`/api/admin/users/${id}`, { method: 'DELETE', credentials: 'include' });
+    await apiFetch(`/api/admin/users/${id}`, { method: 'DELETE', credentials: 'include' });
     const [sRes, uRes] = await Promise.all([
-      fetch('/api/admin/stats', { credentials: 'include' }),
-      fetch('/api/admin/users', { credentials: 'include' }),
+      apiFetch('/api/admin/stats', { credentials: 'include' }),
+      apiFetch('/api/admin/users', { credentials: 'include' }),
     ]);
     const [s, u] = await Promise.all([sRes.json(), uRes.json()]);
     setStats(s);
@@ -111,7 +108,7 @@ export default function Admin() {
 
   async function saveAiConfig() {
     setAiSaving(true);
-    await fetch('/api/admin/ai-config', {
+    await apiFetch('/api/admin/ai-config', {
       method: 'PATCH', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(aiDraft),
@@ -123,7 +120,7 @@ export default function Admin() {
   }
 
   async function refreshJetonUsers() {
-    const r = await fetch('/api/admin/jetons', { credentials: 'include' });
+    const r = await apiFetch('/api/admin/jetons', { credentials: 'include' });
     const d = await r.json();
     setJetonUsers(d.users || []);
   }
@@ -136,7 +133,7 @@ export default function Admin() {
     const note   = jetonNotes[userId] || '';
     setJetonBusy(p => ({ ...p, [userId]: true }));
     try {
-      await fetch(`/api/admin/users/${userId}/jetons`, {
+      await apiFetch(`/api/admin/users/${userId}/jetons`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, note }),
@@ -155,7 +152,7 @@ export default function Admin() {
     if (balance === '' || isNaN(Number(balance))) return;
     setJetonBusy(p => ({ ...p, [userId]: true }));
     try {
-      await fetch(`/api/admin/users/${userId}/jetons`, {
+      await apiFetch(`/api/admin/users/${userId}/jetons`, {
         method: 'PATCH', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ balance: Number(balance) }),
@@ -169,13 +166,13 @@ export default function Admin() {
   }
 
   async function markRead(id) {
-    await fetch(`/api/admin/messages/${id}/read`, { method: 'PATCH', credentials: 'include' });
+    await apiFetch(`/api/admin/messages/${id}/read`, { method: 'PATCH', credentials: 'include' });
     setMessages(prev => prev.map(m => m.id === id ? { ...m, is_read: 1 } : m));
     setUnread(prev => Math.max(0, prev - 1));
   }
 
   async function deleteMessage(id) {
-    await fetch(`/api/admin/messages/${id}`, { method: 'DELETE', credentials: 'include' });
+    await apiFetch(`/api/admin/messages/${id}`, { method: 'DELETE', credentials: 'include' });
     const deleted = messages.find(m => m.id === id);
     setMessages(prev => prev.filter(m => m.id !== id));
     if (deleted && !deleted.is_read) setUnread(prev => Math.max(0, prev - 1));
@@ -338,8 +335,8 @@ export default function Admin() {
               return (
                 <tr key={u.id}>
                   <td style={{color:'var(--muted)',fontSize:'.8rem'}}>{u.id}</td>
-                  <td><strong dangerouslySetInnerHTML={{__html: esc(u.name)}} /></td>
-                  <td style={{color:'var(--muted)',fontSize:'.83rem'}} dangerouslySetInnerHTML={{__html: esc(u.email)}} />
+                  <td><strong>{u.name}</strong></td>
+                  <td style={{color:'var(--muted)',fontSize:'.83rem'}}>{u.email}</td>
                   <td><span className={`plan-badge plan-${u.plan}`}>{planLabel}</span></td>
                   <td className="token-cell">
                     <span className="token-total">{fmtTokens(Number(u.total_tokens||0))}</span>
@@ -502,12 +499,12 @@ export default function Admin() {
           <div key={m.id} className={`msg-card${m.is_read ? ' msg-read' : ' msg-unread'}`}>
             <div className="msg-meta">
               <span className="msg-author">
-                <strong dangerouslySetInnerHTML={{__html: esc(m.user_name)}} />
+                <strong>{m.user_name}</strong>
                 <span className={`plan-badge plan-${m.user_plan}`} style={{marginLeft:'.4rem'}}>
                   {m.user_plan}
                 </span>
               </span>
-              <span className="msg-email" dangerouslySetInnerHTML={{__html: esc(m.user_email)}} />
+              <span className="msg-email">{m.user_email}</span>
               <span className="msg-date">{new Date(m.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
               <div className="msg-actions">
                 {!m.is_read && (

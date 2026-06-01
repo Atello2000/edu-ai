@@ -215,8 +215,21 @@ async function initSchema() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_shared_content_expires ON shared_content(expires_at)`,
   ];
+  // MED-01 : Loguer les erreurs de migration au lieu de les avaler silencieusement.
+  // Les codes 42701 (column already exists) et 42P07 (relation already exists) sont attendus.
+  const EXPECTED_CODES = new Set(['42701', '42P07', '42710']);
   for (const sql of migrations) {
-    try { await pool.query(sql); } catch (_) {}
+    try {
+      await pool.query(sql);
+    } catch (err) {
+      if (!EXPECTED_CODES.has(err.code)) {
+        require('./services/logger').warn('Migration warning', {
+          sql: sql.replace(/\s+/g, ' ').slice(0, 120),
+          code: err.code,
+          error: err.message,
+        });
+      }
+    }
   }
   require('./services/logger').info('PostgreSQL schema ready');
 }

@@ -134,6 +134,17 @@ publicRouter.post('/', async (req, res) => {
 
   const config = PLAN_CONFIG[plan];
 
+  // MED-04 : Vérifier que le montant payé correspond au prix attendu
+  const receivedPrice = Number(item_price);
+  if (!receivedPrice || receivedPrice < config.price) {
+    logger.error('IPN price mismatch — montant insuffisant', {
+      ref_command,
+      expected: config.price,
+      received: item_price,
+    });
+    return res.status(400).send('Price Mismatch');
+  }
+
   try {
     // Vérifier si l'utilisateur existe
     const user = await db.prepare('SELECT id, plan FROM users WHERE id = ?').get(userId);

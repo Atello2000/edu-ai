@@ -335,6 +335,20 @@ app.use('/api/feedback', csrfAndAuth, require('./routes/feedback'));
 app.use('/api/share',   require('./routes/share')); // POST interne requireAuth+CSRF, GET public
 app.use('/api/push',    require('./routes/push'));
 
+// ── MED-02 : Purge périodique des contenus partagés expirés ─────────────────
+// Toutes les 6 heures, supprime les lignes dont expires_at < NOW().
+setInterval(async () => {
+  try {
+    const { pool } = require('./db');
+    const result = await pool.query('DELETE FROM shared_content WHERE expires_at < NOW()');
+    if (result.rowCount > 0) {
+      logger.info(`Purged ${result.rowCount} expired shared content(s)`);
+    }
+  } catch (err) {
+    logger.warn('Shared content purge failed', { error: err.message });
+  }
+}, 6 * 3600 * 1000);
+
 // SPA fallback — toutes les routes non-API renvoient index.html
 if (fs.existsSync(reactDist)) {
   app.get('*', (req, res) => {
