@@ -42,8 +42,10 @@ protectedRouter.post('/checkout', async (req, res) => {
   const cancelUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/app?payment=cancel`;
 
   try {
-    const paytechApiKey = process.env.PAYTECH_API_KEY;
-    const paytechApiSecret = process.env.PAYTECH_API_SECRET;
+    const rawApiKey = process.env.PAYTECH_API_KEY || '';
+    const rawApiSecret = process.env.PAYTECH_API_SECRET || '';
+    const paytechApiKey = rawApiKey.replace(/^["']|["']$/g, '').trim();
+    const paytechApiSecret = rawApiSecret.replace(/^["']|["']$/g, '').trim();
 
     if (!paytechApiKey || !paytechApiSecret) {
       logger.error('Configuration PayTech manquante dans les variables d\'environnement');
@@ -103,8 +105,10 @@ publicRouter.post('/', async (req, res) => {
     return res.status(400).send('Bad Request');
   }
 
-  const paytechApiKey = process.env.PAYTECH_API_KEY || '';
-  const paytechApiSecret = process.env.PAYTECH_API_SECRET || '';
+  const rawApiKey = process.env.PAYTECH_API_KEY || '';
+  const rawApiSecret = process.env.PAYTECH_API_SECRET || '';
+  const paytechApiKey = rawApiKey.replace(/^["']|["']$/g, '').trim();
+  const paytechApiSecret = rawApiSecret.replace(/^["']|["']$/g, '').trim();
 
   const localKeyHash = crypto.createHash('sha256').update(paytechApiKey).digest('hex');
   const localSecretHash = crypto.createHash('sha256').update(paytechApiSecret).digest('hex');

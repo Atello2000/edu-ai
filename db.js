@@ -1,9 +1,12 @@
 require('dotenv').config();
 const { Pool } = require('pg');
 
+const rawDbUrl = process.env.DATABASE_URL || '';
+const cleanDbUrl = rawDbUrl.replace(/^["']|["']$/g, '').trim();
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost')
+  connectionString: cleanDbUrl,
+  ssl: cleanDbUrl && !cleanDbUrl.includes('localhost')
     ? { rejectUnauthorized: false }
     : false,
   max: 10,

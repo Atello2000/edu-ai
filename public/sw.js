@@ -91,7 +91,12 @@ self.addEventListener('fetch', e => {
           }
         }
         return res;
-      }).catch(() => caches.match(e.request))
+      }).catch(err => {
+        return caches.match(e.request).then(cached => {
+          if (cached) return cached;
+          throw err; // Rethrow original fetch error on cache miss to let the browser handle it cleanly
+        });
+      })
     );
   }
 });
