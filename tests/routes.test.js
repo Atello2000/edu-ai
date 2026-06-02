@@ -46,8 +46,8 @@ describe('POST /api/upload', () => {
     fs.unlinkSync(tmp);
   });
 
-  it('accepte un PDF valide', async () => {
-    // Minimal PDF valide (1 page vide)
+  it('rejette un PDF sans texte lisible', async () => {
+    // Minimal PDF valide syntaxiquement, mais vide.
     const minPdf = Buffer.from(
       '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj ' +
       '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj ' +
@@ -61,13 +61,10 @@ describe('POST /api/upload', () => {
     const res = await request(app)
       .post('/api/upload')
       .attach('files', tmp);
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.files[0]).toHaveProperty('id');
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/extraire le texte/i);
     // Nettoyage
     fs.unlinkSync(tmp);
-    const uploaded = path.join(__dirname, '..', 'uploads', res.body.files[0].id);
-    if (fs.existsSync(uploaded)) fs.unlinkSync(uploaded);
   }, 20000); // pdf-parse cold-start peut dépasser 5 s
 });
 

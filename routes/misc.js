@@ -78,6 +78,7 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
   }
 
   const files = [];
+  const failedFiles = [];
   // Traitement séquentiel pour optimiser et aplatir l'usage de la mémoire RAM
   for (const f of req.files) {
     let text = '';
@@ -85,11 +86,22 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
     let originalLength = 0;
     try {
       const raw = await extractText(f.path, f.originalname);
+      if (!raw || !raw.trim()) {
+        failedFiles.push({
+          name: f.originalname,
+          reason: 'Aucun texte lisible extrait',
+        });
+        continue;
+      }
       truncated = raw.length > MAX_TEXT_UPLOAD;
       text = truncated ? raw.slice(0, MAX_TEXT_UPLOAD) : raw;
       originalLength = raw.length;
     } catch (e) {
       logger.error('Failed to extract text from file', { file: f.originalname, error: e.message });
+      failedFiles.push({
+        name: f.originalname,
+        reason: e.message || 'Extraction impossible',
+      });
     } finally {
       // Nettoyage immédiat sur le disque
       try {
@@ -98,6 +110,7 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
         logger.warn('Failed to delete temp file', { path: f.path, error: err.message });
       }
     }
+    if (!text.trim()) continue;
     const id = Date.now() + '-' + Math.round(Math.random() * 1e9);
     // multer lit les noms de fichiers UTF-8 en Latin-1 par défaut →
     // re-décoder les octets latin1 comme UTF-8 pour restaurer les accents
@@ -106,7 +119,18 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
     files.push({ id, name, size: f.size, text, truncated, originalLength });
   }
 
-  res.json({ success: true, files });
+  if (!files.length) {
+    const first = failedFiles[0];
+    const hint = first?.reason === 'Aucun texte lisible extrait'
+      ? 'Le fichier semble scanné, vide, protégé, ou non lisible. Essayez un PDF avec texte sélectionnable, un DOCX/PPTX, ou activez l’OCR.'
+      : 'Le fichier est peut-être corrompu, protégé, ou dans un format que le serveur ne peut pas lire.';
+    return res.status(422).json({
+      error: `Impossible d'extraire le texte du fichier. ${hint}`,
+      files: failedFiles,
+    });
+  }
+
+  res.json({ success: true, files, warnings: failedFiles });
 });
 
 // Compteur d'utilisateurs en ligne
