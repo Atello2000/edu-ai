@@ -48,13 +48,11 @@ export function useUpload() {
     selectedFiles.forEach(f => form.append('files', f));
 
     try {
-      const csrf = await ensureCsrfToken();
+      await ensureCsrfToken(); // Garantit que le cookie CSRF est bien présent avant l'appel
       const files = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('POST', '/api/upload');
         xhr.withCredentials = true;
-
-        if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
 
         // Suivi de la progression en temps réel
         xhr.upload.onprogress = (e) => {
