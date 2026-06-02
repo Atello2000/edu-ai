@@ -1,7 +1,13 @@
 const path = require('path');
 const fs   = require('fs');
+const os   = require('os');
 const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
+
+// officeparser crée un dossier temporaire pour décompresser les fichiers Office.
+// Sur Railway (et tout container read-only), le CWD /app n'est pas accessible
+// en écriture → on pointe vers le répertoire temp de l'OS (/tmp sur Linux).
+const OFFICE_PARSER_CONFIG = { tempFilesLocation: os.tmpdir() };
 
 const OCR_THRESHOLD = 200; // Si le PDF extrait moins de N chars → probablement scanné
 
@@ -150,7 +156,7 @@ async function extractText(filePath, originalName) {
       officeParser.parseOffice(resolved, (data, err) => {
         if (err) reject(new Error(String(err)));
         else resolve(data);
-      });
+      }, OFFICE_PARSER_CONFIG);
     });
   }
 
@@ -179,7 +185,7 @@ async function extractTextFromBuffer(buffer, originalName) {
     officeParser.parseOffice(buffer, (data, err) => {
       if (err) reject(new Error(String(err)));
       else resolve(data);
-    });
+    }, OFFICE_PARSER_CONFIG);
   });
 }
 
