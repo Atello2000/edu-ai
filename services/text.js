@@ -152,8 +152,13 @@ async function extractText(filePath, originalName) {
       text = rawText;
     }
   } else {
+    // Multer sauvegarde les fichiers SANS extension → officeparser ne peut pas
+    // déterminer le type depuis le chemin et échoue sur copyFileSync.
+    // Solution : lire le fichier en Buffer; officeparser utilise alors `file-type`
+    // (détection par magic bytes) pour identifier DOCX/PPTX/XLSX automatiquement.
+    const buffer = fs.readFileSync(resolved);
     text = await new Promise((resolve, reject) => {
-      officeParser.parseOffice(resolved, (data, err) => {
+      officeParser.parseOffice(buffer, (data, err) => {
         if (err) reject(new Error(String(err)));
         else resolve(data);
       }, OFFICE_PARSER_CONFIG);
