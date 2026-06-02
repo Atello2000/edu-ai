@@ -10,7 +10,7 @@ function getCsrfToken() {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-async function ensureCsrfToken() {
+export async function ensureCsrfToken() {
   const existing = getCsrfToken();
   if (existing) return existing;
   try {

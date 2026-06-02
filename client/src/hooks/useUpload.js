@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiFetch } from '../utils/apiFetch';
+import { apiFetch, ensureCsrfToken } from '../utils/apiFetch';
 
 const ALLOWED_EXTS = ['pdf', 'ppt', 'pptx', 'docx'];
 
@@ -9,16 +9,26 @@ const ALLOWED_EXTS = ['pdf', 'ppt', 'pptx', 'docx'];
 export function useUpload() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading,     setUploading]     = useState(false);
+  const [progress,      setProgress]      = useState(0);
 
-  function addFiles(files) {
-    const valid = Array.from(files).filter(f =>
-      ALLOWED_EXTS.includes(f.name.split('.').pop().toLowerCase())
-    );
+  function addFiles(files, maxSizeBytes = null) {
+    let tooLargeCount = 0;
+    const valid = Array.from(files).filter(f => {
+      const ext = f.name.split('.').pop().toLowerCase();
+      const isAllowed = ALLOWED_EXTS.includes(ext);
+      if (!isAllowed) return false;
+      if (maxSizeBytes && f.size > maxSizeBytes) {
+        tooLargeCount++;
+        return false;
+      }
+      return true;
+    });
     setSelectedFiles(prev => {
       const next = [...prev];
       valid.forEach(f => { if (!next.find(x => x.name === f.name)) next.push(f); });
       return next;
     });
+    return tooLargeCount;
   }
 
   function removeFile(index) {
@@ -33,18 +43,50 @@ export function useUpload() {
   async function upload() {
     if (!selectedFiles.length) return null;
     setUploading(true);
+    setProgress(0);
     const form = new FormData();
     selectedFiles.forEach(f => form.append('files', f));
+
     try {
-      const res  = await apiFetch('/api/upload', { method: 'POST', body: form });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Erreur upload');
+      const csrf = await ensureCsrfToken();
+      const files = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/upload');
+        xhr.withCredentials = true;
+
+        if (csrf) xhr.setRequestHeader('X-CSRF-Token', csrf);
+
+        // Suivi de la progression en temps réel
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const pct = Math.round((e.loaded / e.total) * 100);
+            setProgress(pct);
+          }
+        };
+
+        xhr.onload = () => {
+          try {
+            const data = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && data.success) {
+              resolve(data.files);
+            } else {
+              reject(new Error(data.error || `Erreur serveur (${xhr.status})`));
+            }
+          } catch {
+            reject(new Error('Erreur de traitement du serveur.'));
+          }
+        };
+
+        xhr.onerror = () => reject(new Error('Erreur réseau lors de l\'upload.'));
+        xhr.send(form);
+      });
       setSelectedFiles([]);
-      return data.files;
+      return files;
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   }
 
-  return { selectedFiles, uploading, addFiles, removeFile, upload };
+  return { selectedFiles, uploading, progress, addFiles, removeFile, upload };
 }
