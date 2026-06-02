@@ -9,6 +9,8 @@ const { requireAuth } = require('../middleware/auth');
 const { doubleCsrfProtection } = require('../middleware/csrf');
 const logger   = require('../services/logger');
 
+const uploadsAbsDir = path.resolve(__dirname, '..', 'uploads');
+
 const MAX_TEXT_UPLOAD = 200000; // ~40 000 mots — couvre les cours très longs
 
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
@@ -22,7 +24,7 @@ const PLAN_FILE_LIMITS = {
 };
 
 const upload = multer({
-  dest: 'uploads/',
+  dest: uploadsAbsDir + path.sep,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     if (['.pdf', '.ppt', '.pptx', '.docx'].includes(ext)) {
@@ -85,7 +87,10 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
     let truncated = false;
     let originalLength = 0;
     try {
-      const raw = await extractText(f.path, f.originalname);
+      // f.path est relatif (multer) → on le résout en absolu pour éviter
+      // le rejet de sécurité dans extractText sur Railway (Linux)
+      const absPath = path.resolve(f.path);
+      const raw = await extractText(absPath, f.originalname);
       if (!raw || !raw.trim()) {
         failedFiles.push({
           name: f.originalname,
@@ -104,10 +109,11 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
       });
     } finally {
       // Nettoyage immédiat sur le disque
+      const absPath = path.resolve(f.path);
       try {
-        fs.unlinkSync(f.path);
+        fs.unlinkSync(absPath);
       } catch (err) {
-        logger.warn('Failed to delete temp file', { path: f.path, error: err.message });
+        logger.warn('Failed to delete temp file', { path: absPath, error: err.message });
       }
     }
     if (!text.trim()) continue;
@@ -121,9 +127,17 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
 
   if (!files.length) {
     const first = failedFiles[0];
-    const hint = first?.reason === 'Aucun texte lisible extrait'
-      ? 'Le fichier semble scanné, vide, protégé, ou non lisible. Essayez un PDF avec texte sélectionnable, un DOCX/PPTX, ou activez l’OCR.'
-      : 'Le fichier est peut-être corrompu, protégé, ou dans un format que le serveur ne peut pas lire.';
+    let hint;
+    if (first?.reason === 'Aucun texte lisible extrait') {
+      hint = 'Le fichier semble scanné (image), vide ou protégé. '
+           + 'Utilisez un PDF avec texte sélectionnable, un DOCX ou PPTX. '
+           + 'Si votre PDF est scanné, l\'OCR Mistral peut l\'analyser — vérifiez que MISTRAL_API_KEY est configuré sur le serveur.';
+    } else if (first?.reason?.includes('Accès non autorisé')) {
+      hint = 'Erreur interne de chemin de fichier. Contactez le support.';
+      logger.error('Security path check failed during upload', { reason: first?.reason });
+    } else {
+      hint = `Détail : ${first?.reason || 'inconnu'}. Le fichier est peut-être corrompu ou protégé par un mot de passe.`;
+    }
     return res.status(422).json({
       error: `Impossible d'extraire le texte du fichier. ${hint}`,
       files: failedFiles,
