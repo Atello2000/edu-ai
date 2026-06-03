@@ -87,7 +87,7 @@ export default function Landing() {
           Importez votre cours, choisissez votre objectif. Jangalai s'occupe du reste.
         </p>
         <div className="hero-btns fade-up fade-up-delay-3">
-          <Link to="/login" className="btn-hero">Commencer gratuitement →</Link>
+          <Link to="/login?tab=register" className="btn-hero">Commencer gratuitement →</Link>
           <a href="#how-it-works" className="btn-hero-outline">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg> Voir comment ça marche
           </a>
@@ -102,7 +102,7 @@ export default function Landing() {
         <div className="app-mockup fade-up fade-up-delay-2">
           <div className="mockup-bar">
             <div className="mockup-dot red"/><div className="mockup-dot yellow"/><div className="mockup-dot green"/>
-            <div className="mockup-url">jangalai.app · Flashcards</div>
+            <div className="mockup-url">jangalai.online · Flashcards</div>
           </div>
           <div className="mockup-body">
             <div className="mockup-sidebar">
@@ -232,6 +232,21 @@ export default function Landing() {
               <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
             </div>
           </div>
+
+          {/* Recharge ponctuelle */}
+          <div className="topup-banner fade-up" style={{ marginTop: '1.5rem' }}>
+            <div className="topup-left">
+              <span className="topup-icon">⚡</span>
+              <div>
+                <div className="topup-title">Recharge ponctuelle</div>
+                <div className="topup-sub">+50 jetons · sans changer ton plan · disponible à tout moment</div>
+              </div>
+            </div>
+            <Link to="/login?tab=register">
+              <button className="topup-cta">1 000 F CFA</button>
+            </Link>
+          </div>
+
         </div>
       </div>
  
@@ -249,13 +264,14 @@ export default function Landing() {
           <FaqItem q="Comment fonctionne la révision espacée ?" a="L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées. Les cartes maîtrisées reviennent moins souvent, les difficiles plus fréquemment. Des notifications push vous rappellent quand des cartes sont à réviser." />
           <FaqItem q="Mes cours sont-ils stockés sur vos serveurs ?" a="Le contenu textuel est conservé lorsque vous classez un cours dans une matière, ce qui vous permet de le réutiliser sans le recharger. Les fichiers originaux (PDF, PPT) ne sont pas conservés." />
           <FaqItem q="Les plans payants sont-ils disponibles ?" a="Oui ! Les abonnements Pro et Max sont maintenant ouverts. Vous pouvez vous abonner instantanément et en toute sécurité en payant avec Wave, Orange Money ou par carte bancaire." />
+          <FaqItem q="Puis-je acheter des jetons sans m'abonner ?" a="Oui. La recharge ponctuelle vous permet d'ajouter 50 jetons pour 1 000 F CFA, sans modifier votre plan en cours. C'est idéal si vous avez épuisé vos jetons en milieu de mois ou si vous souhaitez tester l'application avant de vous abonner. La recharge est disponible depuis la section Tarifs de l'application." />
         </div>
       </div>
 
       <div className="cta-section">
         <h2 className="fade-up">Révisez mieux.<br /><em>Commencez aujourd'hui.</em></h2>
         <p className="fade-up fade-up-delay-1">Jangalai est disponible 24h/24, sans rendez-vous, sans abonnement requis. Chargez votre cours, choisissez votre objectif — résumé, quiz, flashcards — et commencez à réviser en moins d'une minute.</p>
-        <Link to="/login" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>Créer mon compte gratuit →</Link>
+        <Link to="/login?tab=register" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>Créer mon compte gratuit →</Link>
         <div className="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Prêt en 60 secondes</div>
       </div>
 
@@ -266,7 +282,7 @@ export default function Landing() {
           <a href="#pricing">Tarifs</a>
           <a href="#faq">FAQ</a>
           <Link to="/login">Connexion</Link>
-          <Link to="/login" className="footer-cta-link">Inscription gratuite</Link>
+          <Link to="/login?tab=register" className="footer-cta-link">Inscription gratuite</Link>
         </div>
         <div>© 2026 Jangalai</div>
       </footer>

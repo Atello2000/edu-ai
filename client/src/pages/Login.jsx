@@ -139,7 +139,7 @@ export default function Login() {
             <GoogleIcon /> Continuer avec Google
           </a>
 
-          <div className="auth-divider">ou se connecter par e-mail</div>
+          <div className="auth-divider">{tab === 'register' ? "ou s'inscrire par e-mail" : 'ou se connecter par e-mail'}</div>
 
           {tab === 'login' ? (
             <form className="auth-form" onSubmit={handleLogin}>
