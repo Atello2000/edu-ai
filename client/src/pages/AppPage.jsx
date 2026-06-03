@@ -416,7 +416,7 @@ export default function AppPage() {
 
     if (pendingFolderId) {
       try {
-        await fetch(`/api/folders/${pendingFolderId}/files`, {
+        await apiFetch(`/api/folders/${pendingFolderId}/files`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ files: files.map(f => ({ id: f.id || f.path, name: f.name, size: f.size || 0, text: f.text || '' })) }),
@@ -545,15 +545,21 @@ export default function AppPage() {
       {showPlansModal && <PlansModal currentPlan={user?.plan || 'free'} onClose={() => setShowPlansModal(false)} onSelectPlan={handleSelectPlan} />}
       
       {showCongratsModal && (() => {
+        const isTopup  = congratsPlan === 'topup';
         const isMax    = congratsPlan === 'max';
-        const accent   = isMax ? '#a855f7' : '#f5a623';
-        const accentTo = isMax ? '#ec4899' : '#f76b1c';
-        const glowRgb  = isMax ? '168,85,247' : '245,166,35';
-        const jetons   = isMax ? 400 : 150;
-        const benefits = [
+        const accent   = isMax ? '#a855f7' : isTopup ? '#3d7eff' : '#f5a623';
+        const accentTo = isMax ? '#ec4899' : isTopup ? '#7c3aed' : '#f76b1c';
+        const glowRgb  = isMax ? '168,85,247' : isTopup ? '61,126,255' : '245,166,35';
+        const jetons   = isMax ? 400 : isTopup ? 50 : 150;
+        const planLabel = isMax ? 'MAX' : isTopup ? null : 'PRO';
+        const benefits = isTopup ? [
+          <><strong>+{jetons} jetons</strong> ajoutés à votre solde</>,
+          <>Votre plan reste inchangé</>,
+          <>Disponible à tout moment, sans engagement</>,
+        ] : [
           <><strong>{jetons} jetons</strong> alloués pour ce mois</>,
-          <>Outils IA avancés débloqués (Socratique, Prédicteur&hellip;)</>,
-          <>Taille de fichiers augmentée · sessions illimitées</>,
+          <>Rechargement automatique chaque mois</>,
+          <>Espace de cours et sessions illimités</>,
         ];
         return (
           <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={() => setShowCongratsModal(false)}>
@@ -613,7 +619,7 @@ export default function AppPage() {
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 letterSpacing: '-0.02em',
               }}>
-                Abonnement Activé !
+                {isTopup ? 'Recharge effectuée' : 'Abonnement activé'}
               </h2>
 
               <p style={{
@@ -621,7 +627,10 @@ export default function AppPage() {
                 color: '#94a3b8', fontSize: '14.5px', lineHeight: '1.65',
                 margin: '0 0 24px', padding: '0 8px',
               }}>
-                Votre compte est maintenant sur le plan <strong style={{ color: '#e2e8f0' }}>{isMax ? 'MAX' : 'PRO'}</strong>. Vos jetons ont été rechargés instantanément.
+                {isTopup
+                  ? <>+{jetons} jetons ajoutés à votre solde instantanément.</>
+                  : <>Votre compte est maintenant sur le plan <strong style={{ color: '#e2e8f0' }}>{planLabel}</strong>. Vos jetons ont été rechargés instantanément.</>
+                }
               </p>
 
               {/* Benefits */}
@@ -661,7 +670,7 @@ export default function AppPage() {
                 onMouseEnter={e => e.currentTarget.style.opacity = '.9'}
                 onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
-                C&apos;est parti ! 🚀
+                C&apos;est parti →
               </button>
             </div>
           </div>
