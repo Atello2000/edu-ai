@@ -8,14 +8,23 @@
  *
  * Appelé automatiquement par le script "build" dans package.json.
  */
-const puppeteer = require('puppeteer');
-const path      = require('path');
-const fs        = require('fs');
-const http      = require('http');
-const express   = require('express');
+const path = require('path');
+const fs   = require('fs');
 
-const OUT = path.join(__dirname, '..', 'public', 'landing-prerender.html');
+const OUT  = path.join(__dirname, '..', 'public', 'landing-prerender.html');
 const DIST = path.join(__dirname, '..', 'client', 'dist');
+
+// Vérifie que puppeteer est disponible (absent en production Railway — devDependency)
+let puppeteer;
+try {
+  puppeteer = require('puppeteer');
+} catch {
+  console.warn('⚠ prerender-landing : puppeteer non disponible (devDependency, normal en production). Ignoré.');
+  process.exit(0);
+}
+
+const http    = require('http');
+const express = require('express');
 
 if (!fs.existsSync(DIST)) {
   console.warn('⚠ client/dist introuvable — lance npm run build d\'abord.');
