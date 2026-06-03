@@ -24,7 +24,8 @@ app.use(helmet({
     useDefaults: true,
     directives: {
       'default-src': ["'self'"],
-      'script-src':  ["'self'"],
+      // hash du script inline de détection de thème dans index.html
+      'script-src':  ["'self'", "'sha256-xcAClzY7Nh5mMt63CkniY43Pmll/VUTMKQ/b/Bvi19w='"],
       'style-src':   ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       'font-src':    ["'self'", 'https://fonts.gstatic.com', 'data:'],
       'img-src':     ["'self'", 'data:', 'blob:'],
