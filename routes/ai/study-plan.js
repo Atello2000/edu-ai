@@ -13,6 +13,11 @@ router.post('/study-plan', async (req, res) => {
   let deducted = 0;
 
   try {
+    if (!['pro', 'max'].includes(req.user?.plan)) {
+      send({ type: 'error', message: 'Cette fonctionnalité est réservée aux plans Pro et Max.' });
+      return res.end();
+    }
+
     const { exam_date, files = [], topics = [], srs_due_fronts = [], lang } = req.body;
 
     const jeton = await checkAndDeduct(req.user?.id, 'study-plan', req.user?.plan || 'free');

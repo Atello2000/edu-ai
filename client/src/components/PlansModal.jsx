@@ -8,13 +8,14 @@ const PLANS = [
     name:    'Gratuit',
     price:   '0',
     jetons:  40,
+    jetonsLabel: 'jetons à l\'inscription',
     accent:  '#1dd1a1',
     accentBg:'rgba(29,209,161,.1)',
     features:[
       'Résumés, quiz, flashcards',
       'Chat avec le cours',
       'Carte mentale & fiche exam',
-      'Fichiers jusqu\'à 5 Mo · 10 sessions',
+      'Fichiers jusqu\'à 5 Mo',
     ],
   },
   {
@@ -22,14 +23,15 @@ const PLANS = [
     name:    'Pro',
     price:   '2 500',
     jetons:  150,
+    jetonsLabel: 'jetons / mois',
     accent:  '#f5a623',
     accentBg:'rgba(245,166,35,.1)',
     best:    true,
     features:[
-      'Outils avancés déverrouillés',
       'Prédicteur & plan de révision',
       'Mode socratique & analyse erreurs',
-      'Fichiers jusqu\'à 10 Mo · 30 sessions',
+      'Résumés, quiz, flashcards, chat',
+      'Fichiers jusqu\'à 10 Mo',
     ],
   },
   {
@@ -37,13 +39,14 @@ const PLANS = [
     name:    'Max',
     price:   '5 000',
     jetons:  400,
+    jetonsLabel: 'jetons / mois',
     accent:  '#a855f7',
     accentBg:'rgba(168,85,247,.1)',
     features:[
       'Tout le plan Pro inclus',
-      '10× plus de jetons qu\'en gratuit',
       'Export PDF fiche d\'examen',
-      'Fichiers jusqu\'à 20 Mo · sessions illimitées',
+      'Fichiers jusqu\'à 20 Mo',
+      'Sessions illimitées',
     ],
   },
 ];
@@ -147,7 +150,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                       <path d="M7 1.4L11.6 4V10L7 12.6L2.4 10V4Z" fill="currentColor" fillOpacity=".2" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
                       <circle cx="7" cy="7" r="1.4" fill="currentColor"/>
                     </svg>
-                    <strong>{plan.jetons}</strong> jetons / mois
+                    <strong>{plan.jetons}</strong> {plan.jetonsLabel}
                   </div>
                   <div className="plan-tile-sep" style={{ background: plan.accent }}/>
                   <ul className="plan-tile-features">

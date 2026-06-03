@@ -11,6 +11,10 @@ const { langLabel, parseJsonResponse } = require('./helpers');
 router.post('/error-analysis', async (req, res) => {
   let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
   try {
+    if (!['pro', 'max'].includes(req.user?.plan)) {
+      return res.status(403).json({ error: 'Cette fonctionnalité est réservée aux plans Pro et Max.' });
+    }
+
     const { wrong_answers, lang } = req.body;
 
     if (!Array.isArray(wrong_answers) || wrong_answers.length < 3) {

@@ -75,6 +75,19 @@
 .alert.success { background: var(--teal-bg); color: var(--teal); border: 1px solid rgba(29,209,161,.3); }
 .alert.error   { background: var(--rose-bg); color: var(--rose); border: 1px solid rgba(255,107,129,.3); }
 
+.plan-info-block { display: flex; flex-direction: column; gap: .6rem; }
+.plan-info-row {
+  display: flex; align-items: baseline;
+  justify-content: space-between; gap: .5rem;
+  font-size: .84rem;
+}
+.plan-info-label { color: var(--muted); font-size: .76rem; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0; }
+.plan-info-value { color: var(--text); text-align: right; }
+.plan-info-features { margin-top: .4rem; display: flex; flex-direction: column; gap: .3rem; }
+.plan-info-feat { font-size: .83rem; }
+.plan-info-feat-ok     { color: var(--teal); }
+.plan-info-feat-locked { color: var(--border); text-decoration: line-through; }
+
 @media (max-width: 500px) {
   .profile-page { padding: 1rem; }
   .profile-card { padding: 1.5rem 1.1rem; }

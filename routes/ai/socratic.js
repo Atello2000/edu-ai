@@ -13,6 +13,11 @@ router.post('/socratic', async (req, res) => {
   let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
 
   try {
+    if (!['pro', 'max'].includes(req.user?.plan)) {
+      send({ type: 'error', message: 'Cette fonctionnalité est réservée aux plans Pro et Max.' });
+      return res.end();
+    }
+
     const { files, history, lang } = req.body;
 
     // Validation : fichier obligatoire

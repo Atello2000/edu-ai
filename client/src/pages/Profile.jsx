@@ -6,6 +6,27 @@ import './Profile.css';
 
 const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
 
+const PLAN_INFO = {
+  free: {
+    jetons:   '40 jetons à l\'inscription (unique)',
+    fileSize: '5 Mo max par fichier',
+    features: ['Résumés, quiz, flashcards', 'Chat avec le cours', 'Carte mentale & fiche d\'examen', 'Glossaire automatique'],
+    locked:   ['Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs', 'Export PDF fiche d\'examen'],
+  },
+  pro: {
+    jetons:   '150 jetons / mois (rechargement automatique)',
+    fileSize: '10 Mo max par fichier',
+    features: ['Tous les outils de base', 'Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs'],
+    locked:   ['Export PDF fiche d\'examen'],
+  },
+  max: {
+    jetons:   '400 jetons / mois (rechargement automatique)',
+    fileSize: '20 Mo max par fichier',
+    features: ['Tout le plan Pro', 'Export PDF fiche d\'examen', 'Sessions illimitées'],
+    locked:   [],
+  },
+};
+
 export default function Profile() {
   const { user, setUser } = useAuth();
   const [nameVal, setNameVal]   = useState('');
@@ -87,6 +108,39 @@ export default function Profile() {
               {nameBusy ? 'Enregistrement…' : 'Enregistrer'}
             </button>
           </form>
+        </div>
+
+        <div className="profile-section">
+          <h3>Mon plan</h3>
+          {(() => {
+            const info = PLAN_INFO[user.plan] || PLAN_INFO.free;
+            return (
+              <div className="plan-info-block">
+                <div className="plan-info-row">
+                  <span className="plan-info-label">Jetons</span>
+                  <span className="plan-info-value">{info.jetons}</span>
+                </div>
+                <div className="plan-info-row">
+                  <span className="plan-info-label">Fichiers</span>
+                  <span className="plan-info-value">{info.fileSize}</span>
+                </div>
+                <div className="plan-info-features">
+                  <div className="plan-info-label" style={{ marginBottom: '.4rem' }}>Inclus</div>
+                  {info.features.map(f => (
+                    <div key={f} className="plan-info-feat plan-info-feat-ok">✓ {f}</div>
+                  ))}
+                  {info.locked.map(f => (
+                    <div key={f} className="plan-info-feat plan-info-feat-locked">✕ {f}</div>
+                  ))}
+                </div>
+                {user.plan !== 'max' && (
+                  <a href="/app" onClick={e => { e.preventDefault(); window.history.back(); setTimeout(() => window.dispatchEvent(new CustomEvent('plans:open-from-profile')), 100); }} className="save-btn" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', marginTop: '1rem' }}>
+                    {user.plan === 'free' ? 'Passer au plan Pro →' : 'Passer au plan Max →'}
+                  </a>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         <div className="profile-section">

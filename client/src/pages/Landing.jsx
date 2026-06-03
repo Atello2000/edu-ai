@@ -204,14 +204,6 @@ export default function Landing() {
 
             {/* ── Recharge ponctuelle ── */}
             <div className="price-card price-card-topup fade-up fade-up-delay-2">
-              <div className="topup-card-icon">
-                <svg viewBox="0 0 14 14" fill="none" width="22" height="22">
-                  <path d="M7 1.4L11.6 4V10L7 12.6L2.4 10V4Z"
-                    fill="currentColor" fillOpacity=".18"
-                    stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
-                  <circle cx="7" cy="7" r="1.8" fill="currentColor"/>
-                </svg>
-              </div>
               <div className="plan-name">Recharge</div>
               <div className="plan-price topup-price">1 000 <span>F CFA</span></div>
               <div className="plan-desc">Un crédit ponctuel, sans abonnement</div>
