@@ -122,7 +122,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
         <div className="plans-modal-top">
           <div>
             <h2 className="plans-modal-h2">Choisir un plan</h2>
-            <p className="plans-modal-p">Prix en francs CFA · Paiement instantané sécurisé par Wave & Orange Money</p>
+            <p className="plans-modal-p">Prix en francs CFA · Wave, Orange Money & Carte bancaire (Visa/Mastercard)</p>
           </div>
           <button className="plans-close-btn" onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">

@@ -192,12 +192,11 @@ export default function Landing() {
               <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
               <div className="plan-features">
                 <div className="plan-feat"><strong>40 jetons</strong> offerts à l'inscription</div>
-                <div className="plan-feat">Accès complet aux outils IA</div>
-                <div className="plan-feat">Résumé (3 jetons) & Quiz (2 jetons)</div>
-                <div className="plan-feat">Flashcards (2 jetons) & Chat (1 jeton)</div>
+                <div className="plan-feat">Résumés, quiz, flashcards</div>
+                <div className="plan-feat">Chat avec le cours</div>
+                <div className="plan-feat">Carte mentale & fiche d'examen</div>
                 <div className="plan-feat">Préparer ma session inclus</div>
-                <div className="plan-feat">Carte mentale & objectif de session</div>
-                <div className="plan-feat">PDF, PPT, DOCX</div>
+                <div className="plan-feat">Fichiers jusqu'à 5 Mo · PDF, PPT, DOCX</div>
               </div>
               <Link to="/login"><button className="plan-cta">Commencer gratuitement</button></Link>
             </div>
@@ -222,12 +221,11 @@ export default function Landing() {
               <div className="plan-price">2 500 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour les étudiants en période d'examen</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>150 jetons</strong> crédités / mois</div>
-                <div className="plan-feat">Toutes les fonctionnalités IA débloquées</div>
-                <div className="plan-feat">Historique de révision illimité</div>
-                <div className="plan-feat">Répétitions espacées (SM-2)</div>
-                <div className="plan-feat">Traitement accéléré des fichiers</div>
-                <div className="plan-feat">Rechargement instantané à l'abonnement</div>
+                <div className="plan-feat"><strong>150 jetons</strong> rechargés / mois</div>
+                <div className="plan-feat">Prédicteur de questions d'examen</div>
+                <div className="plan-feat">Plan de révision & mode socratique</div>
+                <div className="plan-feat">Analyse des erreurs récurrentes</div>
+                <div className="plan-feat">Fichiers jusqu'à 10 Mo</div>
                 <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
@@ -237,12 +235,11 @@ export default function Landing() {
               <div className="plan-price">5 000 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour une révision intensive sans limites</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>400 jetons</strong> crédités / mois</div>
-                <div className="plan-feat">Toutes les fonctionnalités IA débloquées</div>
-                <div className="plan-feat">Export PDF des fiches d'examen</div>
-                <div className="plan-feat">Traitement ultra-prioritaire</div>
+                <div className="plan-feat"><strong>400 jetons</strong> rechargés / mois</div>
+                <div className="plan-feat">Tout le plan Pro inclus</div>
+                <div className="plan-feat">Export PDF fiche d'examen</div>
+                <div className="plan-feat">Fichiers jusqu'à 20 Mo · sessions illimitées</div>
                 <div className="plan-feat">Stockage de cours étendu</div>
-                <div className="plan-feat">Rechargement instantané à l'abonnement</div>
                 <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
