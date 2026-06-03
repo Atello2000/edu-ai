@@ -10,7 +10,7 @@ const { getBalance, JETON_COSTS, MONTHLY_JETONS } = require('../services/jetons'
 router.get('/jetons/prices', (req, res) => {
   res.json({
     costs: JETON_COSTS,
-    session: (JETON_COSTS.summarize || 3) + (JETON_COSTS.quiz || 2) + (JETON_COSTS.flashcards || 1),
+    session: (JETON_COSTS.summarize || 3) + (JETON_COSTS.quiz || 2) + (JETON_COSTS.flashcards || 2),
   });
 });
 

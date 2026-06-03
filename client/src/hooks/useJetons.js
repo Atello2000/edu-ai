@@ -4,7 +4,7 @@ import eventBus from '../utils/eventBus';
 // Coûts par défaut (fallback si l'API est indisponible)
 const DEFAULT_COSTS = {
   summarize: 3, quiz: 2, flashcards: 2, chat: 1,
-  'exam-sheet': 3, glossary: 2, mindmap: 2, session: 6,
+  'exam-sheet': 3, glossary: 2, mindmap: 2, session: 7,
   socratic: 1, predict: 2, 'study-plan': 1, 'error-analysis': 1, compare: 4,
 };
 
