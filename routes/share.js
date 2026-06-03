@@ -7,7 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { doubleCsrfProtection } = require('../middleware/csrf');
 
 // POST /api/share — crée un lien de partage (authentifié, 0 jeton)
-router.post('/', requireAuth, doubleCsrfProtection, async (req, res) => {
+router.post('/', requireAuth, doubleCsrfProtection, async (req, res, next) => {
   try {
     const { type = 'summary', title = '', content } = req.body;
     if (!content) return res.status(400).json({ error: 'Contenu manquant.' });
@@ -22,12 +22,12 @@ router.post('/', requireAuth, doubleCsrfProtection, async (req, res) => {
     res.json({ token, url: `/share/${token}`, expires_at: expiresAt });
   } catch (err) {
     logger.error('POST /share error', { message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // GET /api/share/:token — lecture publique (pas d'auth)
-router.get('/:token', async (req, res) => {
+router.get('/:token', async (req, res, next) => {
   try {
     const row = await prepare(
       'SELECT type, title, content, expires_at FROM shared_content WHERE token = ?'
@@ -42,7 +42,7 @@ router.get('/:token', async (req, res) => {
     res.json({ type: row.type, title: row.title, content: JSON.parse(row.content) });
   } catch (err) {
     logger.error('GET /share error', { message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

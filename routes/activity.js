@@ -31,7 +31,7 @@ async function calcStreak(userId) {
 }
 
 // ── POST /api/activity ────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
+router.post('/', async (req, res, next) => {
   const { topic, type, score, total } = req.body || {};
   if (!topic || !['flashcards', 'quiz'].includes(type))
     return res.status(400).json({ error: 'Paramètres invalides.' });
@@ -43,12 +43,12 @@ router.post('/', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     logger.error('POST /activity error', { message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // ── GET /api/activity/summary ─────────────────────────────────────────────────
-router.get('/summary', async (req, res) => {
+router.get('/summary', async (req, res, next) => {
   try {
     const uid = req.user.id;
 
@@ -87,18 +87,18 @@ router.get('/summary', async (req, res) => {
     res.json({ streak, totalSessions, recentActivity, topTopics, bestScores });
   } catch (err) {
     logger.error('GET /activity/summary error', { message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // ── DELETE /api/activity — efface tout l'historique de l'utilisateur ─────────
-router.delete('/', async (req, res) => {
+router.delete('/', async (req, res, next) => {
   try {
     await prepare('DELETE FROM activity WHERE user_id = ?').run(req.user.id);
     res.json({ ok: true });
   } catch (err) {
     logger.error('DELETE /activity error', { message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

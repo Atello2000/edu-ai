@@ -157,12 +157,9 @@ async function extractText(filePath, originalName) {
     // Solution : lire le fichier en Buffer; officeparser utilise alors `file-type`
     // (détection par magic bytes) pour identifier DOCX/PPTX/XLSX automatiquement.
     const buffer = fs.readFileSync(resolved);
-    text = await new Promise((resolve, reject) => {
-      officeParser.parseOffice(buffer, (data, err) => {
-        if (err) reject(new Error(String(err)));
-        else resolve(data);
-      }, OFFICE_PARSER_CONFIG);
-    });
+    const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
+    const { value: parsed } = await ast.to('md');
+    text = parsed || '';
   }
 
   textCache.set(resolved, text);
@@ -172,7 +169,7 @@ async function extractText(filePath, originalName) {
 // Purge entries whose file has been deleted from disk
 setInterval(() => {
   for (const [p] of textCache) if (!fs.existsSync(p)) textCache.delete(p);
-}, 3600000);
+}, 3600000).unref();
 
 async function extractTextFromBuffer(buffer, originalName) {
   const ext = path.extname(originalName).toLowerCase();
@@ -186,12 +183,9 @@ async function extractTextFromBuffer(buffer, originalName) {
     }
     return text;
   }
-  return new Promise((resolve, reject) => {
-    officeParser.parseOffice(buffer, (data, err) => {
-      if (err) reject(new Error(String(err)));
-      else resolve(data);
-    }, OFFICE_PARSER_CONFIG);
-  });
+  const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
+  const { value: parsed } = await ast.to('md');
+  return parsed || '';
 }
 
 module.exports = { extractText, extractTextFromBuffer, textCache };

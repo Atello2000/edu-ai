@@ -188,10 +188,10 @@ export default function Landing() {
           <div className="pricing-grid">
             <div className="price-card fade-up fade-up-delay-1">
               <div className="plan-name">Gratuit</div>
-              <div className="plan-price">0 F CFA <span>/ mois</span></div>
+              <div className="plan-price">0 F CFA</div>
               <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>40 jetons</strong> crédités / mois</div>
+                <div className="plan-feat"><strong>40 jetons</strong> offerts à l'inscription</div>
                 <div className="plan-feat">Accès complet aux outils IA</div>
                 <div className="plan-feat">Résumé (3 jetons) & Quiz (2 jetons)</div>
                 <div className="plan-feat">Flashcards (2 jetons) & Chat (1 jeton)</div>
@@ -264,7 +264,7 @@ export default function Landing() {
         <div className="section-label fade-up">FAQ</div>
         <h2 className="fade-up fade-up-delay-1">Questions <em>fréquentes</em></h2>
         <div className="faq fade-up fade-up-delay-2">
-          <FaqItem q="Comment fonctionne le système de jetons (crédits) ?" a="Jangalai utilise un système de jetons transparent. Chaque action IA consomme un nombre de jetons précis (ex. Résumé : 3 jetons, Quiz QCM : 2 jetons, Flashcards : 2 jetons, Message Chat : 1 jeton, Fiche d'examen : 3 jetons). Votre solde mensuel (40 jetons en Gratuit, 150 en Pro, 400 en Max) se recharge automatiquement chaque mois et à chaque abonnement. Vous pouvez suivre votre historique complet de jetons directement dans votre profil." />
+          <FaqItem q="Comment fonctionne le système de jetons (crédits) ?" a="Jangalai utilise un système de jetons transparent. Chaque action IA consomme un nombre de jetons précis (ex. Résumé : 3 jetons, Quiz QCM : 2 jetons, Flashcards : 2 jetons, Message Chat : 1 jeton, Fiche d'examen : 3 jetons). Le plan Gratuit offre 40 jetons à l'inscription — une allocation unique pour découvrir l'application. Les plans Pro (150 jetons) et Max (400 jetons) sont rechargés automatiquement chaque mois. Vous pouvez aussi acheter des jetons supplémentaires à tout moment via la recharge ponctuelle. Votre historique complet est disponible dans votre profil." />
           <FaqItem q="Qu'est-ce que « Préparer ma session » ?" a="C'est le moyen le plus rapide de démarrer une révision complète. En un clic, Jangalai génère simultanément un résumé, un quiz et des flashcards à partir de vos cours — le tout adapté à l'objectif que vous avez défini (examen demain, comprendre, mémoriser ou s'entraîner). Parfait la veille d'une évaluation." />
           <FaqItem q="Comment fonctionne l'objectif de session ?" a="Juste après avoir chargé votre cours, Jangalai vous demande votre objectif du moment. « Examen demain » génère un quiz difficile court et des fiches essentielles. « Mémoriser » maximise le nombre de flashcards. « S'entraîner » crée beaucoup de questions variées. Vous pouvez toujours passer cette étape et régler les paramètres manuellement." />
           <FaqItem q="Comment fonctionne « Revoir mes erreurs » ?" a="Après avoir soumis un quiz, le score affiche un bouton « Revoir les erreurs » qui relance un quiz avec uniquement les questions manquées. Vous pouvez aussi cliquer « Erreurs → Flashcards » pour transformer ces questions en cartes de révision instantanément, sans appel à l'IA." />

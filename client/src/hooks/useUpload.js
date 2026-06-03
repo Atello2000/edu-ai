@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { apiFetch, ensureCsrfToken } from '../utils/apiFetch';
+import { ensureCsrfToken } from '../utils/apiFetch';
 
 const ALLOWED_EXTS = ['pdf', 'ppt', 'pptx', 'docx'];
 

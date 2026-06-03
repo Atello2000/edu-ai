@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 
 const SRS_KEY = 'jangalai-srs';
 
@@ -21,7 +22,7 @@ export function usePush() {
     const now = Date.now();
     const dueCount = Object.values(srsData).filter(c => !c.nextReview || c.nextReview <= now).length;
     if (dueCount > 0) {
-      fetch('/api/push/notify-due', {
+      apiFetch('/api/push/notify-due', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dueCount }),
       }).catch(() => {});
@@ -41,7 +42,7 @@ export function usePush() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(d.publicKey),
       });
-      await fetch('/api/push/subscribe', {
+      await apiFetch('/api/push/subscribe', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ subscription: sub }),
       });
@@ -56,7 +57,7 @@ export function usePush() {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
-        await fetch('/api/push/unsubscribe', {
+        await apiFetch('/api/push/unsubscribe', {
           method: 'DELETE', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });

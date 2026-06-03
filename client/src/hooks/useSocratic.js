@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
 
 function getLang() {
@@ -34,7 +35,7 @@ export function useSocratic() {
       : [];
 
     try {
-      const res = await fetch('/api/socratic', {
+      const res = await apiFetch('/api/socratic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

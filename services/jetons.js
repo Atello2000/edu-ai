@@ -28,9 +28,11 @@ const JETON_COSTS = {
   compare:         4,
 };
 
-// ── Allocation mensuelle par plan ─────────────────────────────────────────────
+// ── Allocation par plan ───────────────────────────────────────────────────────
+// Free : 40 jetons offerts une seule fois à l'inscription (pas de rechargement mensuel).
+// Pro/Max : rechargement mensuel automatique.
 const MONTHLY_JETONS = {
-  free: 40,   // ~8 quiz ou ~4 résumés/mois
+  free: 40,   // allocation unique à l'inscription
   pro:  150,  // ~75 quiz ou ~30 sessions complètes/mois
   max:  400,  // ~200 quiz ou ~80 sessions complètes/mois
 };
@@ -44,6 +46,8 @@ function getCurrentMonth() {
  * Atomique : une seule requête par mois déclenche le rechargement.
  */
 async function refillIfNeeded(userId, plan) {
+  if (plan === 'free') return; // allocation unique à l'inscription, pas de rechargement mensuel
+
   const month      = getCurrentMonth();
   const allocation = MONTHLY_JETONS[plan] ?? MONTHLY_JETONS.free;
 

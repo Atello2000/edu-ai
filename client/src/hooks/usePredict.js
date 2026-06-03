@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
 
 function getLang() {
@@ -18,7 +19,7 @@ export function usePredict() {
     reset();
     setLoading(true);
     try {
-      const res = await fetch('/api/predict', {
+      const res = await apiFetch('/api/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ files, lang: getLang() }),

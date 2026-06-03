@@ -11,6 +11,19 @@ const logger   = require('../services/logger');
 
 const uploadsAbsDir = path.resolve(__dirname, '..', 'uploads');
 
+function checkMagicBytes(filePath, ext) {
+  try {
+    const buf = Buffer.alloc(8);
+    const fd  = fs.openSync(filePath, 'r');
+    try { fs.readSync(fd, buf, 0, 8, 0); }
+    finally { fs.closeSync(fd); }
+    if (ext === '.pdf')                     return buf.slice(0, 4).toString() === '%PDF';
+    if (ext === '.pptx' || ext === '.docx') return buf[0] === 0x50 && buf[1] === 0x4B; // ZIP/PK
+    if (ext === '.ppt')                     return buf[0] === 0xD0 && buf[1] === 0xCF; // OLE2
+    return false;
+  } catch { return false; }
+}
+
 const MAX_TEXT_UPLOAD = 200000; // ~40 000 mots — couvre les cours très longs
 
 const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
@@ -90,6 +103,11 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
       // f.path est relatif (multer) → on le résout en absolu pour éviter
       // le rejet de sécurité dans extractText sur Railway (Linux)
       const absPath = path.resolve(f.path);
+      const ext = path.extname(f.originalname).toLowerCase();
+      if (!checkMagicBytes(absPath, ext)) {
+        failedFiles.push({ name: f.originalname, reason: 'Format invalide (contenu ne correspond pas à l\'extension)' });
+        continue;
+      }
       const raw = await extractText(absPath, f.originalname);
       if (!raw || !raw.trim()) {
         failedFiles.push({

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useConfirm } from './ConfirmModal';
+import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
 import toast from '../utils/toast';
 
@@ -68,7 +69,7 @@ export default function LibraryPanel({ onUseFiles }) {
       confirmLabel: 'Retirer', danger: true,
     });
     if (!ok) return;
-    await fetch(`/api/folders/${f.folder_id}/files/${f.id}`, { method: 'DELETE' });
+    await apiFetch(`/api/folders/${f.folder_id}/files/${f.id}`, { method: 'DELETE' });
     setFiles(prev => prev.filter(x => x.id !== f.id));
     setSelectedIds(prev => { const n = new Set(prev); n.delete(f.id); return n; });
     eventBus.emit('folders:refresh');

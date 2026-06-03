@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 
 const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
 
@@ -24,7 +25,7 @@ export default function UserMenu({ user, onOpenSettings }) {
   }, []);
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await apiFetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   }
 

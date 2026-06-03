@@ -10,7 +10,7 @@ const { VALID_LANGS, langLabel, userContext, parseJsonResponse } = require('./he
 const { topicCacheKey, getCachedTopic, setCachedTopic }         = require('./topicCache');
 
 // POST /api/topic — flashcards ou quiz sur un sujet libre (sans fichier)
-router.post('/topic', async (req, res) => {
+router.post('/topic', async (req, res, next) => {
   const { topic, type, count: rawCount, lang: rawLang } = req.body || {};
   if (!topic || !['flashcards', 'quiz'].includes(type))
     return res.status(400).json({ error: 'Paramètres invalides.' });
@@ -97,7 +97,7 @@ Format JSON strict, sans texte autour :
   } catch (err) {
     logger.error('AI topic error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, jAction, jeton.cost || 0);
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

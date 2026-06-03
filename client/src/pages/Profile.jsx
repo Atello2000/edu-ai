@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
+import { apiFetch } from '../utils/apiFetch';
 import './Profile.css';
 
 const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
@@ -28,7 +29,7 @@ export default function Profile() {
   async function saveName(e) {
     e.preventDefault();
     setNameBusy(true);
-    const r = await fetch('/api/auth/profile', {
+    const r = await apiFetch('/api/auth/profile', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: nameVal }),
     });
@@ -44,7 +45,7 @@ export default function Profile() {
   async function changePwd(e) {
     e.preventDefault();
     setPwdBusy(true);
-    const r = await fetch('/api/auth/profile', {
+    const r = await apiFetch('/api/auth/profile', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: curPwd, newPassword: newPwd }),
     });

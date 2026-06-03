@@ -12,7 +12,7 @@ const { pool } = require('../db');
 const logger   = require('../services/logger');
 
 // GET /api/srs — toutes les cartes SRS de l'utilisateur
-router.get('/srs', async (req, res) => {
+router.get('/srs', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT card_hash, interval_days, ease_factor, repetitions,
@@ -36,12 +36,12 @@ router.get('/srs', async (req, res) => {
     });
   } catch (err) {
     logger.error('SRS GET error', { userId: req.user.id, message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // GET /api/srs/due-count — nombre de cartes dont la révision est due
-router.get('/srs/due-count', async (req, res) => {
+router.get('/srs/due-count', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT COUNT(*) AS count
@@ -51,12 +51,12 @@ router.get('/srs/due-count', async (req, res) => {
     );
     res.json({ count: Number(rows[0]?.count ?? 0) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
 // POST /api/srs/sync — upsert batch depuis le client
-router.post('/srs/sync', async (req, res) => {
+router.post('/srs/sync', async (req, res, next) => {
   const rawCards = req.body.cards;
   if (!Array.isArray(rawCards) || !rawCards.length) return res.json({ synced: 0 });
   // Limiter à 500 cartes par sync, tronquer les champs texte (anti-abus)
@@ -110,7 +110,7 @@ router.post('/srs/sync', async (req, res) => {
     res.json({ synced: values.length });
   } catch (err) {
     logger.error('SRS sync error', { userId: req.user.id, message: err.message });
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
