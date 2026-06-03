@@ -16,8 +16,9 @@ const PAYTECH_CHECKOUT_URL = 'https://paytech.sn/api/payment/request-payment';
 
 // Tarification et quotas alloués en Francs CFA (XOF)
 const PLAN_CONFIG = {
-  pro: { name: 'Abonnement Pro', price: 2500, jetons: 150 },
-  max: { name: 'Abonnement Max', price: 5000, jetons: 400 }
+  pro:   { name: 'Abonnement Pro',  price: 2500, jetons: 150, isTopup: false },
+  max:   { name: 'Abonnement Max',  price: 5000, jetons: 400, isTopup: false },
+  topup: { name: 'Recharge jetons', price: 1000, jetons:  50, isTopup: true  },
 };
 
 /**
@@ -34,8 +35,9 @@ protectedRouter.post('/checkout', async (req, res) => {
   const userId = req.user.id;
   const userEmail = req.user.email;
 
-  // Référence unique de transaction : PAYTECH_sub_{userId}_{plan}_{timestamp}
-  const refCommand = `PAYTECH_sub_${userId}_${plan}_${Date.now()}`;
+  // Référence unique : PAYTECH_sub_* pour abonnements, PAYTECH_topup_* pour recharges
+  const txType = config.isTopup ? 'topup' : 'sub';
+  const refCommand = `PAYTECH_${txType}_${userId}_${plan}_${Date.now()}`;
 
   const ipnUrl = `${process.env.BACKEND_URL}/api/payment/ipn`;
   const successUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?plan=${plan}`;
@@ -113,7 +115,14 @@ publicRouter.post('/', async (req, res) => {
   const localKeyHash = crypto.createHash('sha256').update(paytechApiKey).digest('hex');
   const localSecretHash = crypto.createHash('sha256').update(paytechApiSecret).digest('hex');
 
-  if (api_key_sha256 !== localKeyHash || api_secret_sha256 !== localSecretHash) {
+  function safeCompareHex(a, b) {
+    try {
+      if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+      return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+    } catch { return false; }
+  }
+
+  if (!safeCompareHex(api_key_sha256, localKeyHash) || !safeCompareHex(api_secret_sha256, localSecretHash)) {
     logger.error('Signature IPN invalide : échec de l\'authentification des clés');
     return res.status(403).send('Forbidden');
   }
@@ -121,15 +130,16 @@ publicRouter.post('/', async (req, res) => {
   logger.info('Notification IPN PayTech reçue et validée avec succès', { ref_command, item_price, type_event });
 
   // 2. Traitement de la commande et crédit de l'utilisateur
-  // Référence attendue : PAYTECH_sub_{userId}_{plan}_{timestamp}
+  // Référence attendue : PAYTECH_{sub|topup}_{userId}_{plan}_{timestamp}
   const parts = ref_command.split('_');
-  if (parts.length < 4 || parts[0] !== 'PAYTECH' || parts[1] !== 'sub') {
+  if (parts.length < 4 || parts[0] !== 'PAYTECH' || !['sub', 'topup'].includes(parts[1])) {
     logger.error('Format de ref_command PayTech invalide', { ref_command });
     return res.status(400).send('Invalid Reference');
   }
 
+  const txType = parts[1]; // 'sub' ou 'topup'
   const userId = parseInt(parts[2], 10);
-  const plan = parts[3];
+  const plan   = parts[3];
 
   if (isNaN(userId) || !PLAN_CONFIG[plan]) {
     logger.error('Données de ref_command PayTech invalides ou corrompues', { userId, plan });
@@ -170,33 +180,32 @@ publicRouter.post('/', async (req, res) => {
       return res.status(404).send('User Not Found');
     }
 
-    // Effectuer l'écriture atomique : Mettre à jour le plan et AJOUTER le quota de jetons
-    const row = await db.prepare(`
-      UPDATE users
-      SET plan = ?, jetons = jetons + ?
-      WHERE id = ?
-      RETURNING jetons AS balance
-    `).get(plan, config.jetons, userId);
+    // Écriture atomique : topup = jetons seuls, sub = plan + jetons
+    const updateSql = txType === 'topup'
+      ? `UPDATE users SET jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance`
+      : `UPDATE users SET plan = ?, jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance`;
+
+    const updateParams = txType === 'topup'
+      ? [config.jetons, userId]
+      : [plan, config.jetons, userId];
+
+    const row = await db.prepare(updateSql).get(...updateParams);
 
     if (row) {
-      // Enregistrer la transaction d'ajout de jetons
+      const note = txType === 'topup'
+        ? `Recharge PayTech (+${config.jetons} jetons)`
+        : `Abonnement PayTech ${plan.toUpperCase()} (+${config.jetons} jetons)`;
+
       await db.prepare(`
         INSERT INTO jeton_transactions (user_id, action, amount, balance_after, note)
         VALUES (?, ?, ?, ?, ?)
-      `).run(
-        userId,
-        `payment_success:${plan}`,
-        config.jetons,
-        row.balance,
-        `Abonnement PayTech ${plan.toUpperCase()} (+${config.jetons} jetons)`
-      );
+      `).run(userId, `payment_success:${plan}`, config.jetons, row.balance, note);
 
-      logger.info(`Plan utilisateur promu avec succès et jetons crédités`, {
-        userId,
-        oldPlan: user.plan,
-        newPlan: plan,
+      logger.info(`Paiement traité — ${txType}`, {
+        userId, plan, txType,
         creditedTokens: config.jetons,
-        newBalance: row.balance
+        newBalance: row.balance,
+        ...(txType === 'sub' ? { oldPlan: user.plan, newPlan: plan } : {}),
       });
     }
 

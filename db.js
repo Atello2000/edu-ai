@@ -7,7 +7,7 @@ const cleanDbUrl = rawDbUrl.replace(/^["']|["']$/g, '').trim();
 const pool = new Pool({
   connectionString: cleanDbUrl,
   ssl: cleanDbUrl && !cleanDbUrl.includes('localhost')
-    ? { rejectUnauthorized: false }
+    ? { rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true' }
     : false,
   max: 10,
   idleTimeoutMillis: 10000,
@@ -226,6 +226,10 @@ async function initSchema() {
       amount      INTEGER NOT NULL,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
+    // Rôle admin en base — plus fiable que la comparaison d'email
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false",
+    // Révocation de session — permet d'invalider tous les tokens émis avant cette date
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_invalidated_at TIMESTAMPTZ",
   ];
   // MED-01 : Loguer les erreurs de migration au lieu de les avaler silencieusement.
   // Les codes 42701 (column already exists) et 42P07 (relation already exists) sont attendus.
@@ -242,6 +246,12 @@ async function initSchema() {
         });
       }
     }
+  }
+  // Synchronise is_admin depuis ADMIN_EMAIL à chaque démarrage
+  const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
+  if (adminEmail) {
+    await pool.query('UPDATE users SET is_admin = true  WHERE LOWER(email) = $1', [adminEmail]);
+    await pool.query('UPDATE users SET is_admin = false WHERE LOWER(email) != $1', [adminEmail]);
   }
   require('./services/logger').info('PostgreSQL schema ready');
 }

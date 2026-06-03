@@ -19,7 +19,7 @@ export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState('login');
+  const [tab, setTab] = useState(() => searchParams.get('tab') === 'register' ? 'register' : 'login');
   const [error, setError] = useState(() => {
     const e = searchParams.get('error');
     if (e === 'beta_full')    return 'L\'accès est limité pendant la bêta. Revenez bientôt !';

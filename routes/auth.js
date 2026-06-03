@@ -4,14 +4,15 @@ const jwt      = require('jsonwebtoken');
 const crypto   = require('crypto');
 const router   = express.Router();
 const db       = require('../db');
-const { JWT_SECRET } = require('../middleware/auth');
+const { JWT_SECRET, REFRESH_SECRET, ACCESS_COOKIE_OPTS } = require('../middleware/auth');
 const { generateAndSetCsrfToken } = require('../middleware/csrf');
 const { sendVerifyEmail, sendResetEmail } = require('../services/email');
 const { doubleCsrfProtection } = require('../middleware/csrf');
 const logger   = require('../services/logger');
 
-const EMAIL_RE  = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const COOKIE_OPTS = {
+const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const BETA_LIMIT = parseInt(process.env.BETA_USER_LIMIT || '100', 10);
+const REFRESH_COOKIE_OPTS = {
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
   sameSite: 'lax',
@@ -29,26 +30,36 @@ function withAdminFlag(user) {
 }
 
 function getAppUrl(req) {
-  let url = process.env.CLIENT_URL || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-  url = url.trim();
-  url = url.replace(/^ttps:\/\//i, 'https://');
-  url = url.replace(/^tps:\/\//i, 'https://');
-  url = url.replace(/^tp:\/\//i, 'http://');
-  return url;
+  const raw = process.env.CLIENT_URL || process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+  return raw.trim().replace(/\/+$/, ''); // retire juste les slashes finaux, pas de patch protocole
 }
 
 function setToken(res, userId, req) {
-  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
-  res.cookie('jangalai.token', token, COOKIE_OPTS);
-  // Générer aussi le token CSRF lié à la session (cookie lisible + cookie signé)
+  const token        = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
+  const refreshToken = jwt.sign({ userId, type: 'refresh' }, REFRESH_SECRET, { expiresIn: '7d' });
+  res.cookie('jangalai.token',   token,        ACCESS_COOKIE_OPTS);
+  res.cookie('jangalai.refresh', refreshToken, REFRESH_COOKIE_OPTS);
   if (req) generateAndSetCsrfToken(req, res);
 }
 
-async function getTokenUser(req) {
+async function getTokenUser(req, res) {
   const token = req.cookies?.['jangalai.token'];
-  if (!token) return null;
-  try { return jwt.verify(token, JWT_SECRET); }
-  catch { return null; }
+  if (token) {
+    try { return jwt.verify(token, JWT_SECRET); }
+    catch (err) { if (err.name !== 'TokenExpiredError') return null; }
+  }
+  // Access token absent ou expiré — tenter le refresh
+  const rt = req.cookies?.['jangalai.refresh'];
+  if (rt && res) {
+    try {
+      const decoded = jwt.verify(rt, REFRESH_SECRET);
+      if (decoded.type !== 'refresh') return null;
+      const newToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '1h' });
+      res.cookie('jangalai.token', newToken, ACCESS_COOKIE_OPTS);
+      return { userId: decoded.userId };
+    } catch { return null; }
+  }
+  return null;
 }
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
@@ -75,7 +86,7 @@ router.post('/register', async (req, res) => {
     const info = await db.prepare(
       `INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date)
        SELECT $1, $2, $3, $4, $5, 40, $6
-       WHERE (SELECT COUNT(*) FROM users) < 100`
+       WHERE (SELECT COUNT(*) FROM users) < ${BETA_LIMIT}`
     ).run(emailLower, hash, (name || '').trim(), verifyToken, verifyExp, currentMonth);
     if (!info.changes) {
       return res.status(403).json({ error: 'L\'accès est limité pendant la bêta. Revenez bientôt !' });
@@ -112,14 +123,29 @@ router.post('/login', async (req, res) => {
 });
 
 // ── POST /api/auth/logout ─────────────────────────────────────────────────────
-router.post('/logout', doubleCsrfProtection, (req, res) => {
-  res.clearCookie('jangalai.token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+router.post('/logout', doubleCsrfProtection, async (req, res) => {
+  const base = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
+  // Révoque tous les tokens en cours pour cet utilisateur
+  try {
+    let userId = null;
+    const token = req.cookies?.['jangalai.token'];
+    const rt    = req.cookies?.['jangalai.refresh'];
+    if (token)  { try { userId = jwt.verify(token, JWT_SECRET).userId; } catch {} }
+    if (!userId && rt) {
+      try { const d = jwt.verify(rt, REFRESH_SECRET); if (d.type === 'refresh') userId = d.userId; } catch {}
+    }
+    if (userId) {
+      await db.prepare('UPDATE users SET session_invalidated_at = NOW() WHERE id = ?').run(userId);
+    }
+  } catch {}
+  res.clearCookie('jangalai.token',   base);
+  res.clearCookie('jangalai.refresh', base);
   res.json({ ok: true });
 });
 
 // ── GET /api/auth/me ──────────────────────────────────────────────────────────
 router.get('/me', async (req, res) => {
-  const decoded = await getTokenUser(req);
+  const decoded = await getTokenUser(req, res);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
   const user = await db.prepare('SELECT id, email, name, plan, email_verified, level, domains, specialty, onboarding_done, created_at FROM users WHERE id = ?').get(decoded.userId);
   if (!user) return res.status(401).json({ error: 'Session invalide.' });
@@ -128,7 +154,7 @@ router.get('/me', async (req, res) => {
 
 // ── POST /api/auth/onboarding ─────────────────────────────────────────────────
 router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
-  const decoded = await getTokenUser(req);
+  const decoded = await getTokenUser(req, res);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
   const PRESET_LEVELS  = ['licence','master','doctorat','professionnel','autre'];
@@ -167,7 +193,7 @@ router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
 
 // ── PUT /api/auth/profile ─────────────────────────────────────────────────────
 router.put('/profile', doubleCsrfProtection, async (req, res) => {
-  const decoded = await getTokenUser(req);
+  const decoded = await getTokenUser(req, res);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
   const { name, currentPassword, newPassword } = req.body || {};
@@ -205,7 +231,7 @@ router.get('/verify/:token', async (req, res) => {
 
 // ── POST /api/auth/resend-verify ──────────────────────────────────────────────
 router.post('/resend-verify', doubleCsrfProtection, async (req, res) => {
-  const decoded = await getTokenUser(req);
+  const decoded = await getTokenUser(req, res);
   if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
   const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
   if (!user || user.email_verified) return res.json({ ok: true });
@@ -244,7 +270,10 @@ router.post('/reset-password', async (req, res) => {
   if (new Date(user.reset_expires) < new Date()) return res.status(400).json({ error: 'Lien expiré.' });
 
   const hash = await bcrypt.hash(password, 12);
-  await db.prepare('UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL, email_verified = 1 WHERE id = ?').run(hash, user.id);
+  // Révoque toutes les sessions existantes en même temps que le reset
+  await db.prepare(
+    'UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL, email_verified = 1, session_invalidated_at = NOW() WHERE id = ?'
+  ).run(hash, user.id);
   setToken(res, user.id, req);
   res.json({ ok: true });
 });
@@ -307,7 +336,7 @@ router.get('/google/callback', async (req, res) => {
         const r = await db.prepare(
           `INSERT INTO users (email, password, name, google_id, email_verified, jetons, jetons_reset_date)
            SELECT $1, $2, $3, $4, 1, 40, $5
-           WHERE (SELECT COUNT(*) FROM users) < 100`
+           WHERE (SELECT COUNT(*) FROM users) < ${BETA_LIMIT}`
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id, currentMonth);
         if (!r.changes) return res.redirect(`${getAppUrl(req)}/login?error=beta_full`);
         user = await db.prepare('SELECT * FROM users WHERE id = ?').get(r.lastInsertRowid);

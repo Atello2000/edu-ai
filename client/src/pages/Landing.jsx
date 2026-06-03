@@ -51,7 +51,7 @@ function FaqItem({ q, a }) {
         aria-expanded={open}
         onClick={() => setOpen(o => !o)}
       >{q}</button>
-      <div className="faq-a" role="region" aria-hidden={!open}>{a}</div>
+      <div className="faq-a" hidden={!open}>{a}</div>
     </div>
   );
 }
@@ -76,7 +76,7 @@ export default function Landing() {
         </div>
         <div className="nav-actions">
           <Link to="/login" className="btn-outline">Connexion</Link>
-          <Link to="/login" className="btn-primary">Commencer</Link>
+          <Link to="/login?tab=register" className="btn-primary">Commencer</Link>
         </div>
       </nav>
 

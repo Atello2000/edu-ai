@@ -29,6 +29,7 @@ export default function Admin() {
   const [accessError, setAccessError] = useState('');
 
   // ── Gestion des jetons ─────────────────────────────────────────────────────
+  const [analytics,    setAnalytics]    = useState(null);
   const [jetonUsers,   setJetonUsers]   = useState([]);
   const [jetonAmounts, setJetonAmounts] = useState({});   // { userId: string }
   const [jetonNotes,   setJetonNotes]   = useState({});   // { userId: string }
@@ -59,9 +60,10 @@ export default function Admin() {
           apiFetch('/api/admin/messages',  { credentials: 'include' }),
           apiFetch('/api/admin/ai-config', { credentials: 'include' }),
         ]);
-        const [s, u, t, m, a, j] = await Promise.all([
+        const [s, u, t, m, a, j, an] = await Promise.all([
           sRes.json(), uRes.json(), tRes.json(), mRes.json(), aRes.json(),
-          apiFetch('/api/admin/jetons', { credentials: 'include' }).then(r => r.json()),
+          apiFetch('/api/admin/jetons',    { credentials: 'include' }).then(r => r.json()),
+          apiFetch('/api/admin/analytics', { credentials: 'include' }).then(r => r.json()),
         ]);
         setStats(s);
         setUsers(u.users || []);
@@ -71,6 +73,7 @@ export default function Admin() {
         setAiConfig(a);
         setAiDraft({ provider: a.provider, model: a.model });
         setJetonUsers(j.users || []);
+        setAnalytics(an);
         setLoading(false);
       } catch (err) {
         setAccessError('Erreur réseau : ' + err.message);
@@ -252,6 +255,84 @@ export default function Admin() {
                 </div>
               )) : <span style={{color:'var(--muted)',fontSize:'.82rem'}}>Aucune donnée</span>}
             </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Analytics ─────────────────────────────────────────────────────── */}
+      {analytics && (
+        <>
+          <div className="admin-section-title" style={{marginTop:'2rem'}}>Analytics produit</div>
+          <div className="breakdown-row">
+
+            {/* Bloc 1 — Features les plus utilisées (7j) */}
+            <div className="breakdown-card">
+              <h4>Features utilisées <span style={{fontWeight:400,fontSize:'.75rem',color:'var(--muted)'}}>7 derniers jours</span></h4>
+              {analytics.features?.length ? analytics.features.map(f => {
+                const label = {
+                  summarize:'Résumé', quiz:'Quiz', flashcards:'Flashcards',
+                  chat:'Chat', 'exam-sheet':'Fiche exam', glossary:'Glossaire',
+                  mindmap:'Carte mentale', socratic:'Socratique', 'study-plan':'Plan révision',
+                  predict:'Questions probables', 'error-analysis':'Analyse erreurs', compare:'Comparaison',
+                }[f.action] || f.action;
+                return (
+                  <div className="breakdown-item" key={f.action}>
+                    <span>{label}</span>
+                    <span className="breakdown-val">
+                      {Number(f.nb_uses)} fois
+                      <span style={{color:'var(--muted)',fontWeight:400,fontSize:'.76rem',marginLeft:4}}>
+                        ({Number(f.jetons_consumed)} ⬡)
+                      </span>
+                    </span>
+                  </div>
+                );
+              }) : <span style={{color:'var(--muted)',fontSize:'.82rem'}}>Aucune activité sur 7 jours</span>}
+            </div>
+
+            {/* Bloc 2 — Conversion funnel */}
+            <div className="breakdown-card">
+              <h4>Conversion & croissance</h4>
+              {analytics.conversion && (() => {
+                const c = analytics.conversion;
+                const paidRate = c.total > 0
+                  ? Math.round(((Number(c.pro) + Number(c.max)) / Number(c.total)) * 100)
+                  : 0;
+                return (
+                  <>
+                    <div className="breakdown-item">
+                      <span>Inscrits vérifiés</span>
+                      <span className="breakdown-val">{Number(c.verified)} / {Number(c.total)}</span>
+                    </div>
+                    <div className="breakdown-item">
+                      <span>Taux de conversion payant</span>
+                      <span className="breakdown-val" style={{color: paidRate > 10 ? 'var(--teal,#1dd1a1)' : 'var(--text)'}}>
+                        {paidRate}%
+                      </span>
+                    </div>
+                    <div className="breakdown-item">
+                      <span>Nouveaux cette semaine</span>
+                      <span className="breakdown-val">{Number(c.new_7d)}</span>
+                    </div>
+                    <div className="breakdown-item">
+                      <span>Nouveaux ce mois</span>
+                      <span className="breakdown-val">{Number(c.new_30d)}</span>
+                    </div>
+                    {analytics.revenue && (
+                      <div className="breakdown-item" style={{marginTop:8, paddingTop:8, borderTop:'1px solid var(--border)'}}>
+                        <span>Revenu (30 jours)</span>
+                        <span className="breakdown-val" style={{color:'var(--gold,#d4a94c)'}}>
+                          {Number(analytics.revenue.total_xof).toLocaleString('fr-FR')} XOF
+                          <span style={{fontWeight:400,color:'var(--muted)',fontSize:'.76rem',marginLeft:4}}>
+                            ({Number(analytics.revenue.nb_transactions)} tx)
+                          </span>
+                        </span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
           </div>
         </>
       )}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1200px; height: 630px;
+    overflow: hidden;
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: #1e3a6b;
+    color: #e8ecf6;
+  }
+
+  .canvas {
+    width: 1200px; height: 630px;
+    position: relative;
+    background: #1e3a6b;
+    padding: 56px 72px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  /* Halos de fond */
+  .canvas::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 60% at 25% 65%, rgba(61,126,255,.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 78% 22%, rgba(29,209,161,.05) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Logo ── */
+  .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .logo-wordmark {
+    font-size: 52px;
+    font-weight: 600;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .logo-wordmark .blue { color: #3d7eff; }
+
+  /* ── Corps ── */
+  .body { position: relative; z-index: 1; }
+
+  .headline {
+    font-size: 74px;
+    font-weight: 700;
+    letter-spacing: -2px;
+    line-height: 1.1;
+    color: #e8ecf6;
+    margin-bottom: 20px;
+  }
+
+  .accent-bar {
+    width: 80px; height: 3px;
+    background: #3d7eff;
+    border-radius: 2px;
+    opacity: .75;
+    margin-bottom: 22px;
+  }
+
+  .subtitle {
+    font-size: 26px;
+    font-weight: 400;
+    letter-spacing: .3px;
+    color: #6b7fa3;
+  }
+
+  /* ── Pied de page ── */
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+    padding-top: 20px;
+    border-top: 1px solid rgba(30,45,74,.6);
+  }
+
+  .url {
+    font-size: 22px;
+    font-weight: 500;
+    color: #3d7eff;
+    opacity: .9;
+    margin: 0 auto;
+  }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- Logo -->
+  <div class="logo">
+    <svg width="72" height="72" viewBox="0 0 48 48" fill="none">
+      <line x1="11" y1="39" x2="25" y2="27" stroke="#3d7eff" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+      <line x1="25" y1="27" x2="37" y2="9"  stroke="#a78bfa" stroke-width="2.2" stroke-linecap="round" opacity=".85"/>
+      <line x1="11" y1="39" x2="37" y2="9"  stroke="#a78bfa" stroke-width=".8"  stroke-linecap="round" opacity=".2"/>
+      <line x1="25" y1="27" x2="38" y2="31" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <line x1="11" y1="39" x2="5"  y2="30" stroke="#3d7eff" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+      <circle cx="38" cy="31" r="2.2" fill="#a78bfa" opacity=".65"/>
+      <circle cx="5"  cy="30" r="2.2" fill="#3d7eff" opacity=".65"/>
+      <circle cx="11" cy="39" r="5.5" fill="#3d7eff" opacity=".12"/>
+      <circle cx="11" cy="39" r="3.5" fill="#3d7eff" opacity=".35"/>
+      <circle cx="11" cy="39" r="2.2" fill="#3d7eff"/>
+      <circle cx="25" cy="27" r="4.5" fill="#a78bfa" opacity=".12"/>
+      <circle cx="25" cy="27" r="3"   fill="#a78bfa" opacity=".35"/>
+      <circle cx="25" cy="27" r="1.9" fill="#a78bfa"/>
+      <circle cx="37" cy="9"  r="8"   fill="#1dd1a1" opacity=".08"/>
+      <circle cx="37" cy="9"  r="5.5" fill="#1dd1a1" opacity=".18"/>
+      <circle cx="37" cy="9"  r="3.5" fill="#1dd1a1" opacity=".75"/>
+      <circle cx="37" cy="9"  r="1.8" fill="#1e3a6b"/>
+    </svg>
+    <span class="logo-wordmark">jangal<span class="blue">ai</span></span>
+  </div>
+
+  <!-- Headline + sous-titre -->
+  <div class="body">
+    <div class="headline">Révisez plus vite,<br>apprenez différemment</div>
+    <div class="accent-bar"></div>
+    <div class="subtitle">Résumé &nbsp;·&nbsp; Quiz &nbsp;·&nbsp; Flashcards &nbsp;·&nbsp; Carte mentale</div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="url">jangalai.online</span>
+  </div>
+
+</div>
+</body>
+</html>

@@ -48,6 +48,15 @@ const PLANS = [
   },
 ];
 
+// Carte recharge ponctuelle — ne change pas le plan, ajoute juste des jetons
+const TOPUP = {
+  key:     'topup',
+  price:   '1 000',
+  jetons:  50,
+  accent:  '#3d7eff',
+  accentBg:'rgba(61,126,255,.1)',
+};
+
 const Check = ({ color }) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
     stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -111,7 +120,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
           </button>
         </div>
 
-        {/* ── Cartes ── */}
+        {/* ── Cartes abonnements ── */}
         <div className="plans-cards-row">
           {displayedPlans.map(plan => {
             const isCurrent = plan.key === (currentPlan || 'free');
@@ -121,10 +130,9 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                 className={`plan-tile${plan.best ? ' plan-tile-best' : ''}${isCurrent ? ' plan-tile-current' : ''}`}
                 style={{ '--accent': plan.accent, '--accent-bg': plan.accentBg, display:'flex', flexDirection:'column', borderRadius:'12px', border: isCurrent ? '1.5px solid var(--accent)' : plan.best ? '2px solid var(--accent)' : '1.5px solid var(--border)', background:'var(--surface)', overflow:'hidden' }}
               >
-                {/* Header coloré */}
                 <div className="plan-tile-head">
                   <div className="plan-tile-name-row">
-                     <span className="plan-tile-name">{plan.name}</span>
+                    <span className="plan-tile-name">{plan.name}</span>
                     {isCurrent && <span className="plan-tile-pill" style={{ background: plan.accent }}>Actuel</span>}
                     {plan.best && !isCurrent && <span className="plan-tile-pill" style={{ background: plan.accent }}>Meilleure valeur</span>}
                   </div>
@@ -133,54 +141,73 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                     <span className="plan-tile-currency">CFA<br/>/ mois</span>
                   </div>
                 </div>
-
-                {/* Body */}
                 <div className="plan-tile-body">
-                  {/* Jetons */}
                   <div className="plan-tile-jetons" style={{ color: plan.accent }}>
                     <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
-                      <path d="M7 1.4L11.6 4V10L7 12.6L2.4 10V4Z"
-                        fill="currentColor" fillOpacity=".2"
-                        stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                      <path d="M7 1.4L11.6 4V10L7 12.6L2.4 10V4Z" fill="currentColor" fillOpacity=".2" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
                       <circle cx="7" cy="7" r="1.4" fill="currentColor"/>
                     </svg>
                     <strong>{plan.jetons}</strong> jetons / mois
                   </div>
-
-                  {/* Séparateur */}
                   <div className="plan-tile-sep" style={{ background: plan.accent }}/>
-
-                  {/* Features */}
                   <ul className="plan-tile-features">
                     {plan.features.map(f => (
-                      <li key={f}>
-                        <Check color={plan.accent} />
-                        <span>{f}</span>
-                      </li>
+                      <li key={f}><Check color={plan.accent}/><span>{f}</span></li>
                     ))}
                   </ul>
-
-                  {/* CTA */}
                   <button
                     className="plan-tile-cta"
-                    style={isCurrent && plan.key === 'free' ? {} : {
-                      background: plan.accent, color: '#fff', borderColor: plan.accent,
-                    }}
+                    style={isCurrent && plan.key === 'free' ? {} : { background: plan.accent, color: '#fff', borderColor: plan.accent }}
                     disabled={isCurrent && plan.key === 'free'}
-                    onClick={() => {
-                      handleInternalSelectPlan(plan.key);
-                    }}
+                    onClick={() => handleInternalSelectPlan(plan.key)}
                   >
-                    {isCurrent 
-                      ? (plan.key === 'free' ? '✓ Plan actuel' : 'Renouveler le plan') 
-                      : `S'abonner au plan ${plan.name}`
-                    }
+                    {isCurrent
+                      ? (plan.key === 'free' ? '✓ Plan actuel' : 'Renouveler le plan')
+                      : `S'abonner au plan ${plan.name}`}
                   </button>
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* ── Recharge ponctuelle ── */}
+        <div style={{
+          marginTop: '20px',
+          padding: '16px 20px',
+          border: `1px solid ${TOPUP.accentBg.replace('.1)', '.25)')}`,
+          borderRadius: '12px',
+          background: TOPUP.accentBg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '16px',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+            <span style={{ fontSize:'22px' }}>⚡</span>
+            <div>
+              <div style={{ fontWeight:600, fontSize:'15px', color:'var(--text)' }}>
+                Recharge ponctuelle
+              </div>
+              <div style={{ fontSize:'13px', color:'var(--muted)', marginTop:'2px' }}>
+                +{TOPUP.jetons} jetons · sans changer ton plan · disponible à tout moment
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => handleInternalSelectPlan(TOPUP.key)}
+            style={{
+              background: TOPUP.accent, color: '#fff', border: 'none',
+              borderRadius: '10px', padding: '10px 20px',
+              fontWeight: 600, fontSize: '14px', cursor: 'pointer',
+              whiteSpace: 'nowrap', flexShrink: 0,
+            }}
+          >
+            {TOPUP.price} CFA
+          </button>
+        </div>
+
       </div>
     </div>
   );
