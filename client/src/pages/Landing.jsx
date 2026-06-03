@@ -201,7 +201,31 @@ export default function Landing() {
               </div>
               <Link to="/login"><button className="plan-cta">Commencer gratuitement</button></Link>
             </div>
-            <div className="price-card featured fade-up fade-up-delay-2">
+
+            {/* ── Recharge ponctuelle ── */}
+            <div className="price-card price-card-topup fade-up fade-up-delay-2">
+              <div className="topup-card-icon">
+                <svg viewBox="0 0 14 14" fill="none" width="22" height="22">
+                  <path d="M7 1.4L11.6 4V10L7 12.6L2.4 10V4Z"
+                    fill="currentColor" fillOpacity=".18"
+                    stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                  <circle cx="7" cy="7" r="1.8" fill="currentColor"/>
+                </svg>
+              </div>
+              <div className="plan-name">Recharge</div>
+              <div className="plan-price topup-price">1 000 <span>F CFA</span></div>
+              <div className="plan-desc">Un crédit ponctuel, sans abonnement</div>
+              <div className="plan-features">
+                <div className="plan-feat"><strong>+50 jetons</strong> ajoutés immédiatement</div>
+                <div className="plan-feat">Votre plan reste inchangé</div>
+                <div className="plan-feat">Paiement unique, sans engagement</div>
+                <div className="plan-feat">Wave, Orange Money, carte</div>
+                <div className="plan-feat">Disponible à tout moment</div>
+              </div>
+              <Link to="/login?tab=register"><button className="plan-cta plan-cta-topup">Recharger mes jetons</button></Link>
+            </div>
+
+            <div className="price-card featured fade-up fade-up-delay-3">
               <div className="plan-name">Pro</div>
               <div className="plan-price">2 500 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour les étudiants en période d'examen</div>
@@ -216,7 +240,7 @@ export default function Landing() {
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
             </div>
-            <div className="price-card fade-up fade-up-delay-3">
+            <div className="price-card fade-up fade-up-delay-4">
               <div className="plan-name">Max</div>
               <div className="plan-price">5 000 F CFA <span>/ mois</span></div>
               <div className="plan-desc">Pour une révision intensive sans limites</div>
@@ -231,20 +255,6 @@ export default function Landing() {
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
             </div>
-          </div>
-
-          {/* Recharge ponctuelle */}
-          <div className="topup-banner fade-up" style={{ marginTop: '1.5rem' }}>
-            <div className="topup-left">
-              <span className="topup-icon">⚡</span>
-              <div>
-                <div className="topup-title">Recharge ponctuelle</div>
-                <div className="topup-sub">+50 jetons · sans changer ton plan · disponible à tout moment</div>
-              </div>
-            </div>
-            <Link to="/login?tab=register">
-              <button className="topup-cta">1 000 F CFA</button>
-            </Link>
           </div>
 
         </div>
