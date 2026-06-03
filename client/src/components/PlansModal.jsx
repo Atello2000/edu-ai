@@ -53,11 +53,19 @@ const PLANS = [
 
 // Carte recharge ponctuelle — ne change pas le plan, ajoute juste des jetons
 const TOPUP = {
-  key:     'topup',
-  price:   '1 000',
-  jetons:  50,
-  accent:  '#3d7eff',
-  accentBg:'rgba(61,126,255,.1)',
+  key:        'topup',
+  name:       'Recharge',
+  price:      '1 000',
+  jetons:     50,
+  jetonsLabel:'jetons ajoutés immédiatement',
+  accent:     '#3d7eff',
+  accentBg:   'rgba(61,126,255,.1)',
+  features: [
+    'Votre plan reste inchangé',
+    'Paiement unique, sans engagement',
+    'Wave, Orange Money, carte',
+    'Disponible à tout moment',
+  ],
 };
 
 const Check = ({ color }) => (
@@ -123,7 +131,7 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
           </button>
         </div>
 
-        {/* ── Cartes abonnements ── */}
+        {/* ── Cartes abonnements + Recharge dans la même grille ── */}
         <div className="plans-cards-row">
           {displayedPlans.map(plan => {
             const isCurrent = plan.key === (currentPlan || 'free');
@@ -172,43 +180,45 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
               </div>
             );
           })}
-        </div>
 
-        {/* ── Recharge ponctuelle ── */}
-        <div style={{
-          marginTop: '20px',
-          padding: '16px 20px',
-          border: `1px solid ${TOPUP.accentBg.replace('.1)', '.25)')}`,
-          borderRadius: '12px',
-          background: TOPUP.accentBg,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-            <span style={{ fontSize:'22px' }}>⚡</span>
-            <div>
-              <div style={{ fontWeight:600, fontSize:'15px', color:'var(--text)' }}>
-                Recharge ponctuelle
+          {/* ── Recharge ponctuelle — card dans la grille ── */}
+          <div
+            className="plan-tile plan-tile-topup"
+            style={{ '--accent': TOPUP.accent, '--accent-bg': TOPUP.accentBg, display:'flex', flexDirection:'column', borderRadius:'12px', border:`1.5px dashed rgba(61,126,255,.4)`, background: TOPUP.accentBg, overflow:'hidden' }}
+          >
+            <div className="plan-tile-head">
+              <div className="plan-tile-name-row">
+                <span className="plan-tile-name">{TOPUP.name}</span>
+                <span className="plan-tile-pill" style={{ background: TOPUP.accent }}>Ponctuel</span>
               </div>
-              <div style={{ fontSize:'13px', color:'var(--muted)', marginTop:'2px' }}>
-                +{TOPUP.jetons} jetons · sans changer ton plan · disponible à tout moment
+              <div className="plan-tile-price-row">
+                <span className="plan-tile-price" style={{ color: TOPUP.accent }}>{TOPUP.price}</span>
+                <span className="plan-tile-currency">CFA</span>
               </div>
             </div>
+            <div className="plan-tile-body">
+              <div className="plan-tile-jetons" style={{ color: TOPUP.accent }}>
+                <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+                  <path d="M7 1.4L11.6 4V10L7 12.6L2.4 10V4Z" fill="currentColor" fillOpacity=".2" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+                  <circle cx="7" cy="7" r="1.4" fill="currentColor"/>
+                </svg>
+                <strong>+{TOPUP.jetons}</strong> {TOPUP.jetonsLabel}
+              </div>
+              <div className="plan-tile-sep" style={{ background: TOPUP.accent }}/>
+              <ul className="plan-tile-features">
+                {TOPUP.features.map(f => (
+                  <li key={f}><Check color={TOPUP.accent}/><span>{f}</span></li>
+                ))}
+              </ul>
+              <button
+                className="plan-tile-cta"
+                style={{ background: TOPUP.accent, color: '#fff', borderColor: TOPUP.accent }}
+                onClick={() => handleInternalSelectPlan(TOPUP.key)}
+              >
+                Recharger mes jetons
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => handleInternalSelectPlan(TOPUP.key)}
-            style={{
-              background: TOPUP.accent, color: '#fff', border: 'none',
-              borderRadius: '10px', padding: '10px 20px',
-              fontWeight: 600, fontSize: '14px', cursor: 'pointer',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}
-          >
-            {TOPUP.price} CFA
-          </button>
         </div>
 
       </div>

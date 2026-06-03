@@ -4596,7 +4596,7 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1.5rem;
-  width: min(860px, 94vw);
+  width: min(1080px, 94vw);
   box-shadow: 0 20px 60px rgba(0,0,0,.18);
   max-height: 92vh;
   overflow-y: auto;
@@ -4619,10 +4619,10 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 }
 .plans-close-btn:hover { color: var(--text); background: var(--hover); }
 
-/* ── Rangée de cartes — 3 colonnes via Grid (plus fiable que flex+overflow-x) ── */
+/* ── Rangée de cartes — 4 colonnes (3 abonnements + Recharge) ── */
 .plans-cards-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
   align-items: stretch;
   padding-bottom: 2px; /* évite que les box-shadow soient coupées */
