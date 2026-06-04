@@ -14,6 +14,12 @@ jest.mock('../db', () => {
     prepare: (sql) => ({
       async get(...params) {
         const lower = sql.toLowerCase();
+        // SELECT par token de vérification
+        if (lower.includes('where verify_token')) {
+          const token = params[0];
+          for (const u of users.values()) if (u.verify_token === token) return { ...u };
+          return null;
+        }
         // SELECT par email
         if (lower.includes('where email')) {
           const email = params[0];
@@ -30,11 +36,23 @@ jest.mock('../db', () => {
         const lower = sql.toLowerCase();
         // INSERT users
         if (lower.includes('insert into users')) {
-          const [email, password, name] = params;
+          const [email, password, name, verifyToken, verifyExpires] = params;
           const id = nextId++;
           users.set(id, { id, email, password, name: name || '', plan: 'free',
-            email_verified: 0, jetons: 40, is_admin: false, session_invalidated_at: null });
+            email_verified: 0, verify_token: verifyToken, verify_expires: verifyExpires,
+            jetons: 40, is_admin: false, session_invalidated_at: null });
           return { lastInsertRowid: id, rowCount: 1, changes: 1 };
+        }
+        // UPDATE email verification
+        if (lower.includes('email_verified = 1')) {
+          const id = params[params.length - 1];
+          const u = users.get(Number(id));
+          if (u) {
+            u.email_verified = 1;
+            u.verify_token = null;
+            u.verify_expires = null;
+          }
+          return { rowCount: u ? 1 : 0, changes: u ? 1 : 0 };
         }
         // UPDATE session_invalidated_at
         if (lower.includes('session_invalidated_at')) {
@@ -42,6 +60,11 @@ jest.mock('../db', () => {
           const u = users.get(Number(id));
           if (u) u.session_invalidated_at = new Date().toISOString();
           return { rowCount: 1, changes: 1 };
+        }
+        if (lower.includes('delete from users')) {
+          const id = Number(params[0]);
+          const existed = users.delete(id);
+          return { rowCount: existed ? 1 : 0, changes: existed ? 1 : 0 };
         }
         return { rowCount: 0, changes: 0 };
       },
@@ -58,13 +81,19 @@ jest.mock('../middleware/csrf', () => ({
 }));
 
 jest.mock('../services/email', () => ({
-  sendVerifyEmail: async () => {},
-  sendResetEmail:  async () => {},
+  sendVerifyEmail: jest.fn(async () => {}),
+  sendResetEmail:  jest.fn(async () => {}),
 }));
 
 const request = require('supertest');
+const emailService = require('../services/email');
 let app;
 beforeAll(() => { app = require('../app'); });
+
+beforeEach(() => {
+  emailService.sendVerifyEmail.mockClear();
+  emailService.sendResetEmail.mockClear();
+});
 
 // ── Register ──────────────────────────────────────────────────────────────────
 describe('POST /api/auth/register', () => {
@@ -87,6 +116,29 @@ describe('POST /api/auth/register', () => {
     expect(r.status).toBe(200);
     expect(r.body.user).toBeDefined();
     expect(r.body.user.email).toBe('new@example.com');
+  });
+});
+
+describe('Email verification', () => {
+  it('ne consomme pas le token en GET et vérifie seulement en POST', async () => {
+    const agent = request.agent(app);
+    const register = await agent.post('/api/auth/register')
+      .send({ email: 'verify@example.com', password: 'securepass123', name: 'Verify' });
+    expect(register.status).toBe(200);
+
+    const token = emailService.sendVerifyEmail.mock.calls.at(-1)[1];
+    const preview = await agent.get(`/api/auth/verify/${token}`);
+    expect(preview.status).toBe(200);
+    expect(preview.text).toMatch(/Confirmer mon email/);
+
+    const before = await agent.get('/api/auth/me');
+    expect(before.body.user.email_verified).toBe(0);
+
+    const verified = await agent.post(`/api/auth/verify/${token}`);
+    expect(verified.status).toBe(302);
+
+    const after = await agent.get('/api/auth/me');
+    expect(after.body.user.email_verified).toBe(1);
   });
 });
 

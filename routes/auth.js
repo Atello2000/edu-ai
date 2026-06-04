@@ -64,6 +64,47 @@ async function getTokenUser(req, res) {
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
 
+function sendVerifyConfirmPage(res, token) {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(`<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Confirmer votre email - Jangalai</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#070b14;color:#f8fafc;font-family:Arial,sans-serif}
+    main{width:min(92vw,420px);text-align:center}
+    h1{font-size:28px;margin:0 0 12px}
+    p{color:#bac4d4;line-height:1.55;margin:0 0 24px}
+    button{border:0;border-radius:8px;background:#3d7eff;color:white;font-weight:700;font-size:16px;padding:13px 22px;cursor:pointer}
+    button:hover{background:#2f6fea}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Confirmer votre email</h1>
+    <p>Cliquez sur le bouton pour activer votre compte Jangalai.</p>
+    <form method="post" action="/api/auth/verify/${token}">
+      <button type="submit">Confirmer mon email</button>
+    </form>
+  </main>
+</body>
+</html>`);
+}
+
+async function verifyEmailToken(req, res) {
+  const user = await db.prepare('SELECT * FROM users WHERE verify_token = ?').get(req.params.token);
+  if (!user) return res.redirect(`${getAppUrl(req)}/login?error=invalid_token`);
+  if (new Date(user.verify_expires) < new Date())
+    return res.redirect(`${getAppUrl(req)}/login?error=token_expired`);
+
+  await db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
+  setToken(res, user.id, req);
+  res.redirect(`${getAppUrl(req)}/app?verified=1`);
+}
+
 // ── POST /api/auth/register ───────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   const { email, password, name } = req.body || {};
@@ -93,7 +134,17 @@ router.post('/register', async (req, res) => {
     }
     const user = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(info.lastInsertRowid);
 
-    sendVerifyEmail(user.email, verifyToken).catch(err => logger.error('sendVerifyEmail failed', { email: user.email, message: err.message }));
+    try {
+      await sendVerifyEmail(user.email, verifyToken);
+    } catch (err) {
+      logger.error('sendVerifyEmail failed', { email: user.email, message: err.message });
+      try {
+        await db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
+      } catch (cleanupErr) {
+        logger.error('Failed to clean up user after verification email failure', { userId: user.id, message: cleanupErr.message });
+      }
+      return res.status(502).json({ error: "Impossible d'envoyer l'e-mail de verification pour le moment. Reessayez dans quelques minutes." });
+    }
     setToken(res, user.id, req);
     res.json({ user: withAdminFlag(user) });
   } catch (err) {
@@ -219,15 +270,16 @@ router.put('/profile', doubleCsrfProtection, async (req, res) => {
 
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────
 router.get('/verify/:token', async (req, res) => {
-  const user = await db.prepare('SELECT * FROM users WHERE verify_token = ?').get(req.params.token);
+  const user = await db.prepare('SELECT id, verify_expires FROM users WHERE verify_token = ?').get(req.params.token);
   if (!user) return res.redirect(`${getAppUrl(req)}/login?error=invalid_token`);
   if (new Date(user.verify_expires) < new Date())
     return res.redirect(`${getAppUrl(req)}/login?error=token_expired`);
 
-  await db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
-  setToken(res, user.id, req);
-  res.redirect(`${getAppUrl(req)}/app?verified=1`);
+  sendVerifyConfirmPage(res, req.params.token);
 });
+
+// ── POST /api/auth/verify/:token ── validation réelle après action utilisateur
+router.post('/verify/:token', verifyEmailToken);
 
 // ── POST /api/auth/resend-verify ──────────────────────────────────────────────
 router.post('/resend-verify', doubleCsrfProtection, async (req, res) => {
@@ -239,7 +291,12 @@ router.post('/resend-verify', doubleCsrfProtection, async (req, res) => {
   const token = genToken();
   const exp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
   await db.prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?').run(token, exp, user.id);
-  sendVerifyEmail(user.email, token).catch(err => logger.error('sendVerifyEmail failed (resend)', { email: user.email, message: err.message }));
+  try {
+    await sendVerifyEmail(user.email, token);
+  } catch (err) {
+    logger.error('sendVerifyEmail failed (resend)', { email: user.email, message: err.message });
+    return res.status(502).json({ error: "Impossible d'envoyer l'e-mail de verification pour le moment." });
+  }
   res.json({ ok: true });
 });
 

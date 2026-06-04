@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth.jsx';
 import { useDir } from './hooks/useDir.js';
 import OfflineBanner from './components/OfflineBanner.jsx';
@@ -179,7 +179,9 @@ function AdminRoute({ children }) {
 
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) return <PageLoader />;
+  if (user?.email_verified === 0 && new URLSearchParams(location.search).has('error')) return children;
   if (user) return <Navigate to="/app" replace />;
   return children;
 }
