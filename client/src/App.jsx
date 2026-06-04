@@ -27,11 +27,12 @@ function VerifyEmailScreen({ user }) {
   const [sent,    setSent]    = useState(false);
 
   useEffect(() => {
-    // Poll the user status every 4 seconds to detect when they confirm on mobile
+    let polls = 0;
+    const MAX_POLLS = 150; // 10 minutes à raison de 4s/poll
     const timer = setInterval(async () => {
+      if (++polls >= MAX_POLLS) { clearInterval(timer); return; }
       await refreshSession();
     }, 4000);
-
     return () => clearInterval(timer);
   }, [refreshSession]);
 

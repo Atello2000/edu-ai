@@ -165,6 +165,33 @@ if (isPrimaryReplica) {
       logger.warn('Shared content purge failed', { error: err.message });
     }
   }, 6 * 3600 * 1000).unref();
+
+  setInterval(async () => {
+    try {
+      const { pool } = require('./db');
+      const result = await pool.query('DELETE FROM ai_cache WHERE expires_at < NOW()');
+      if (result.rowCount > 0) {
+        logger.info(`Purged ${result.rowCount} expired AI cache entries`);
+      }
+    } catch (err) {
+      logger.warn('AI cache purge failed', { error: err.message });
+    }
+  }, 6 * 3600 * 1000).unref();
+
+  // Purge des données historiques anciennes (une fois par jour)
+  setInterval(async () => {
+    try {
+      const { pool } = require('./db');
+      const [tx, quota] = await Promise.all([
+        pool.query("DELETE FROM jeton_transactions WHERE created_at < NOW() - INTERVAL '6 months'"),
+        pool.query("DELETE FROM user_quota WHERE date < to_char(NOW() - INTERVAL '3 months', 'YYYY-MM-DD')"),
+      ]);
+      if (tx.rowCount > 0)    logger.info(`Purged ${tx.rowCount} old jeton transactions`);
+      if (quota.rowCount > 0) logger.info(`Purged ${quota.rowCount} old user quota rows`);
+    } catch (err) {
+      logger.warn('Historical data purge failed', { error: err.message });
+    }
+  }, 24 * 3600 * 1000).unref();
 }
 
 // SEO — Dynamic rendering : sert la landing pré-rendue aux crawlers

@@ -51,7 +51,9 @@ Si la question est générale et n'utilise pas le cours : n'ajoute pas de source
 
 Cours disponibles (${courseNames}) :${context}`;
 
-    const finalMessages = messages.slice(-10);
+    const finalMessages = messages
+      .filter(m => m.role === 'user' || m.role === 'assistant')
+      .slice(-10);
     let   fullText  = '';
     let   chatModel = '';
 

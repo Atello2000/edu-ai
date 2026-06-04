@@ -26,8 +26,7 @@ function checkMagicBytes(filePath, ext) {
 
 const MAX_TEXT_UPLOAD = 200000; // ~40 000 mots — couvre les cours très longs
 
-const COURSE_EXTS = ['.pdf', '.ppt', '.pptx'];
-const coursesDir  = path.join(__dirname, '..', 'courses');
+const coursesDir = path.join(__dirname, '..', 'courses');
 
 // Limite upload par plan (en production)
 const PLAN_FILE_LIMITS = {
@@ -197,6 +196,7 @@ router.get('/health', async (req, res) => {
       env: process.env.NODE_ENV || 'development',
       ai_config: cfg,
       providers_configured: {
+        gemini:    !!process.env.GEMINI_API_KEY,
         groq:      !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3),
         anthropic: !!process.env.ANTHROPIC_API_KEY,
         mistral:   !!process.env.MISTRAL_API_KEY,

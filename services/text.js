@@ -212,10 +212,13 @@ function pdfHasImages(buffer) {
       || buffer.includes(Buffer.from(' BI\n'));           // inline image begin variante
 }
 
+const GEMINI_INLINE_LIMIT = 15 * 1024 * 1024; // 15 Mo — marge sous la limite API de 20 Mo
+
 // ── Gemini : extraction complète d'un PDF scanné (texte + figures) ────────────
 async function ocrPdfWithGemini(buffer) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
+  if (buffer.length > GEMINI_INLINE_LIMIT) return null; // trop grand pour inline data
   try {
     const base64 = buffer.toString('base64');
     const res = await fetch(
@@ -245,6 +248,7 @@ async function ocrPdfWithGemini(buffer) {
 async function describePdfFiguresWithGemini(buffer) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
+  if (buffer.length > GEMINI_INLINE_LIMIT) return null;
   try {
     const base64 = buffer.toString('base64');
     const res = await fetch(
@@ -327,59 +331,8 @@ class LRUTextCache {
 const MAX_CACHE_BYTES = 200 * 1024 * 1024; // 200 MB
 const textCache = new LRUTextCache(MAX_CACHE_BYTES);
 
-async function extractText(filePath, originalName) {
-  const resolved = path.resolve(filePath);
-  if (
-    !resolved.startsWith(uploadsDir + path.sep) &&
-    !resolved.startsWith(coursesDir + path.sep) &&
-    resolved !== uploadsDir &&
-    resolved !== coursesDir
-  ) {
-    throw new Error('Accès non autorisé au fichier');
-  }
-
-  if (textCache.has(resolved)) return textCache.get(resolved);
-
-  const ext = path.extname(originalName).toLowerCase();
-  let text;
-  if (ext === '.pdf') {
-    const buffer  = fs.readFileSync(resolved);
-    const data    = await pdfParse(buffer);
-    const rawText = data.text?.trim() || '';
-    if (rawText.length < OCR_THRESHOLD) {
-      // PDF scanné → extraction complète Gemini (texte + figures), Mistral en fallback
-      const ocrText = await ocrPdfWithGemini(buffer)
-        || (process.env.MISTRAL_API_KEY ? await ocrWithMistral(buffer, originalName) : null);
-      text = ocrText || rawText;
-    } else if (pdfHasImages(buffer)) {
-      // PDF texte + figures → garder le texte pdf-parse, ajouter descriptions des figures
-      const figDesc = await describePdfFiguresWithGemini(buffer);
-      text = figDesc ? rawText + '\n\n--- Schémas et figures ---\n' + figDesc : rawText;
-    } else {
-      // PDF texte pur → pdf-parse suffit, aucun appel Gemini
-      text = rawText;
-    }
-  } else {
-    const buffer = fs.readFileSync(resolved);
-    const ast    = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
-    const { value: parsed } = await ast.to('md');
-    text = parsed || '';
-    // Extraire et décrire les images/schémas embarqués (PPTX, DOCX)
-    const imageDesc = await extractAndDescribeOfficeImages(buffer, ext);
-    if (imageDesc) text += imageDesc;
-  }
-
-  textCache.set(resolved, text);
-  return text;
-}
-
-// Purge entries whose file has been deleted from disk
-setInterval(() => {
-  for (const [p] of textCache) if (!fs.existsSync(p)) textCache.delete(p);
-}, 3600000).unref();
-
-async function extractTextFromBuffer(buffer, originalName) {
-  const ext = path.extname(originalName).toLowerCase();
+// Logique d'extraction partagée entre extractText (fichier) et extractTextFromBuffer (buffer direct)
+async function _extractCore(buffer, ext, originalName) {
   if (ext === '.pdf') {
     const data    = await pdfParse(buffer);
     const rawText = data.text?.trim() || '';
@@ -400,6 +353,37 @@ async function extractTextFromBuffer(buffer, originalName) {
   const imageDesc = await extractAndDescribeOfficeImages(buffer, ext);
   if (imageDesc) text += imageDesc;
   return text;
+}
+
+async function extractText(filePath, originalName) {
+  const resolved = path.resolve(filePath);
+  if (
+    !resolved.startsWith(uploadsDir + path.sep) &&
+    !resolved.startsWith(coursesDir + path.sep) &&
+    resolved !== uploadsDir &&
+    resolved !== coursesDir
+  ) {
+    throw new Error('Accès non autorisé au fichier');
+  }
+
+  if (textCache.has(resolved)) return textCache.get(resolved);
+
+  const ext    = path.extname(originalName).toLowerCase();
+  const buffer = await fs.promises.readFile(resolved);
+  const text   = await _extractCore(buffer, ext, originalName);
+
+  textCache.set(resolved, text);
+  return text;
+}
+
+// Purge entries whose file has been deleted from disk
+setInterval(() => {
+  for (const [p] of textCache) if (!fs.existsSync(p)) textCache.delete(p);
+}, 3600000).unref();
+
+async function extractTextFromBuffer(buffer, originalName) {
+  const ext = path.extname(originalName).toLowerCase();
+  return _extractCore(buffer, ext, originalName);
 }
 
 module.exports = { extractText, extractTextFromBuffer, textCache };

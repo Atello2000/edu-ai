@@ -62,8 +62,12 @@ router.post('/srs/sync', async (req, res, next) => {
   // Limiter à 500 cartes par sync, tronquer les champs texte (anti-abus)
   const cards = rawCards.slice(0, 500).map(c => ({
     ...c,
-    front: String(c.front || '').slice(0, 2000),
-    back:  String(c.back  || '').slice(0, 2000),
+    front:       String(c.front || '').slice(0, 2000),
+    back:        String(c.back  || '').slice(0, 2000),
+    interval:    Math.min(Math.max(Number(c.interval)    || 1,   0.1),  365),
+    easeFactor:  Math.min(Math.max(Number(c.easeFactor)  || 2.5, 1.3),  5.0),
+    repetitions: Math.min(Math.max(Number(c.repetitions) || 0,   0),    9999),
+    nextReview:  Math.min(Math.max(Number(c.nextReview)  || 0,   0),    Date.now() + 365 * 24 * 3600 * 1000),
   }));
 
   try {

@@ -1,7 +1,6 @@
 const express = require('express');
 const router  = express.Router();
 const { prepare } = require('../db');
-const { requireAuth } = require('../middleware/auth');
 const { PROVIDERS, getAiConfig, setAiConfig, setUserAiConfig, getUserAiConfig } = require('../services/aiConfig');
 const { addJetons, getBalance, JETON_COSTS, MONTHLY_JETONS } = require('../services/jetons');
 const logger = require('../services/logger');
@@ -17,7 +16,7 @@ function requireAdmin(req, res, next) {
 }
 
 // ── GET /api/admin/users ──────────────────────────────────────────────────────
-router.get('/users', requireAuth, requireAdmin, async (req, res) => {
+router.get('/users', requireAdmin, async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const users = await prepare(`
     SELECT u.id, u.email, u.name, u.plan, u.created_at,
@@ -43,7 +42,7 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── PATCH /api/admin/users/:id/plan ──────────────────────────────────────────
-router.patch('/users/:id/plan', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/users/:id/plan', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   const { plan } = req.body;
@@ -55,7 +54,7 @@ router.patch('/users/:id/plan', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── DELETE /api/admin/users/:id ───────────────────────────────────────────────
-router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/users/:id', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   await prepare('DELETE FROM users WHERE id = ?').run(id);
@@ -64,7 +63,7 @@ router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── GET /api/admin/stats ──────────────────────────────────────────────────────
-router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
+router.get('/stats', requireAdmin, async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const totalRow   = await prepare('SELECT COUNT(*) AS n FROM users').get();
   const proRow     = await prepare("SELECT COUNT(*) AS n FROM users WHERE plan='pro'").get();
@@ -77,7 +76,7 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── GET /api/admin/tokens ─────────────────────────────────────────────────────
-router.get('/tokens', requireAuth, requireAdmin, async (req, res) => {
+router.get('/tokens', requireAdmin, async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
 
   const todayRow = await prepare(`
@@ -106,7 +105,7 @@ router.get('/tokens', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── GET /api/admin/messages ───────────────────────────────────────────────────
-router.get('/messages', requireAuth, requireAdmin, async (req, res) => {
+router.get('/messages', requireAdmin, async (req, res) => {
   const messages = await prepare(`
     SELECT m.id, m.message, m.created_at, m.is_read,
            u.name AS user_name, u.email AS user_email, u.plan AS user_plan
@@ -120,7 +119,7 @@ router.get('/messages', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── PATCH /api/admin/messages/:id/read ───────────────────────────────────────
-router.patch('/messages/:id/read', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/messages/:id/read', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   await prepare('UPDATE user_messages SET is_read = 1 WHERE id = ?').run(id);
@@ -129,7 +128,7 @@ router.patch('/messages/:id/read', requireAuth, requireAdmin, async (req, res) =
 });
 
 // ── DELETE /api/admin/messages/:id ───────────────────────────────────────────
-router.delete('/messages/:id', requireAuth, requireAdmin, async (req, res) => {
+router.delete('/messages/:id', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   await prepare('DELETE FROM user_messages WHERE id = ?').run(id);
@@ -138,7 +137,7 @@ router.delete('/messages/:id', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── GET /api/admin/ai-config ──────────────────────────────────────────────────
-router.get('/ai-config', requireAuth, requireAdmin, async (req, res) => {
+router.get('/ai-config', requireAdmin, async (req, res) => {
   const cfg = await getAiConfig(); // config globale
   const providers = Object.entries(PROVIDERS).map(([id, p]) => ({
     id,
@@ -150,7 +149,7 @@ router.get('/ai-config', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── PATCH /api/admin/ai-config ────────────────────────────────────────────────
-router.patch('/ai-config', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/ai-config', requireAdmin, async (req, res) => {
   const { provider, model } = req.body;
   if (!PROVIDERS[provider])
     return res.status(400).json({ error: 'Provider invalide.' });
@@ -163,7 +162,7 @@ router.patch('/ai-config', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── GET /api/admin/jetons — config et stats globales ─────────────────────────
-router.get('/jetons', requireAuth, requireAdmin, async (req, res) => {
+router.get('/jetons', requireAdmin, async (req, res) => {
   const users = await prepare(`
     SELECT u.id, u.email, u.name, u.plan, u.jetons, u.jetons_reset_date,
            COALESCE(SUM(CASE WHEN t.amount < 0 THEN -t.amount ELSE 0 END), 0) AS total_spent
@@ -176,7 +175,7 @@ router.get('/jetons', requireAuth, requireAdmin, async (req, res) => {
 });
 
 // ── POST /api/admin/users/:id/jetons — ajouter/retirer des jetons ─────────────
-router.post('/users/:id/jetons', requireAuth, requireAdmin, async (req, res) => {
+router.post('/users/:id/jetons', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   const { amount, note } = req.body;
@@ -188,7 +187,7 @@ router.post('/users/:id/jetons', requireAuth, requireAdmin, async (req, res) => 
 });
 
 // ── PATCH /api/admin/users/:id/jetons — définir un solde exact ───────────────
-router.patch('/users/:id/jetons', requireAuth, requireAdmin, async (req, res) => {
+router.patch('/users/:id/jetons', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   const { balance } = req.body;
@@ -201,7 +200,7 @@ router.patch('/users/:id/jetons', requireAuth, requireAdmin, async (req, res) =>
 
 // ── GET /api/admin/analytics ─────────────────────────────────────────────────
 // Agrège 3 blocs : usage features, coût providers, conversion utilisateurs
-router.get('/analytics', requireAuth, requireAdmin, async (req, res) => {
+router.get('/analytics', requireAdmin, async (req, res) => {
   const [features, providers, conversion, revenue, growth] = await Promise.all([
 
     // 1. Features les plus utilisées (7 derniers jours, depuis jeton_transactions)

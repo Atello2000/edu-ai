@@ -89,9 +89,9 @@ exports.sendResetEmail = async (to, token) => {
     subject: 'Reinitialisation de votre mot de passe - Jangalai',
     devUrl: url,
     html: emailTemplate(`
-      <h2 style="margin:0 0 12px;font-size:1.3rem;font-weight:600;color:#111;">Reinitialisez votre mot de passe</h2>
-      <p style="color:#555;line-height:1.6;">Une demande de reinitialisation a ete effectuee pour votre compte.</p>
-      <a href="${url}" style="display:inline-block;margin:20px 0;background:#3d7eff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reinitialiser mon mot de passe</a>
+      <h2 style="margin:0 0 12px;font-size:1.3rem;font-weight:600;color:#111;">R&#233;initialisez votre mot de passe</h2>
+      <p style="color:#555;line-height:1.6;">Une demande de r&#233;initialisation a &#233;t&#233; effectu&#233;e pour votre compte.</p>
+      <a href="${url}" style="display:inline-block;margin:20px 0;background:#3d7eff;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">R&#233;initialiser mon mot de passe</a>
       <p style="color:#999;font-size:.82rem;">Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.</p>
     `),
   });

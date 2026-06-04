@@ -109,12 +109,12 @@ async function getJsonAiConfig() {
 // Règle : Claude/DeepSeek ne sont jamais utilisés automatiquement pour les
 // actions standard. Le x50 de surcoût par rapport à Mistral est trop risqué.
 
-// Groq en premier (gratuit, rapide) → Gemini Flash → Mistral en fallback
+// Gemini en premier (tier gratuit généreux : 1M TPM) → Groq → Mistral en fallback
 const CHEAP_PRIORITY = [
-  { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
-    provider: 'groq',    model: 'llama-3.3-70b-versatile' },
   { keys: ['GEMINI_API_KEY'],
     provider: 'gemini',  model: 'gemini-2.0-flash' },
+  { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
+    provider: 'groq',    model: 'llama-3.3-70b-versatile' },
   { keys: ['MISTRAL_API_KEY'],
     provider: 'mistral', model: 'mistral-small-latest' },
 ];

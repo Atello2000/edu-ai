@@ -162,8 +162,13 @@ async function* streamGemini(model, messages, maxTokens) {
               : 'Gemini 1.5 Flash';
   const stream = await gemini.chat.completions.create({
     model, max_tokens: maxTokens, stream: true, messages,
+    stream_options: { include_usage: true },
   });
   for await (const chunk of stream) {
+    if (chunk.usage) {
+      yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+      continue;
+    }
     const text = chunk.choices[0]?.delta?.content || '';
     if (text) yield { text, model: label };
   }
@@ -393,6 +398,12 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
       const r = await mistral.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
       return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
     }
+    if (provider === 'gemini') {
+      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY)');
+      const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
+      const r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
+      return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+    }
     // groq (défaut)
     const r = await groqComplete({ model, max_tokens: maxTokens, messages: oaiMsgs });
     const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
@@ -445,6 +456,7 @@ async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage 
     }
     if (provider === 'deepseek') { yield* streamDeepSeek(model, oaiMsgs, maxTokens); return; }
     if (provider === 'mistral')  { yield* streamMistral(model, oaiMsgs, maxTokens); return; }
+    if (provider === 'gemini')   { yield* streamGemini(model, oaiMsgs, maxTokens); return; }
     yield* streamGroq(model, oaiMsgs, maxTokens);
   } catch (err) {
     const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);

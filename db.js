@@ -233,6 +233,14 @@ async function initSchema() {
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false",
     // Révocation de session — permet d'invalider tous les tokens émis avant cette date
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_invalidated_at TIMESTAMPTZ",
+    // ── Audit fixes ────────────────────────────────────────────────────────────
+    // Index google_id — évite un full table scan à chaque login OAuth
+    "CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)",
+    // verify_expires & reset_expires : TEXT → TIMESTAMPTZ pour comparaisons SQL natives
+    "ALTER TABLE users ALTER COLUMN verify_expires TYPE TIMESTAMPTZ USING verify_expires::TIMESTAMPTZ",
+    "ALTER TABLE users ALTER COLUMN reset_expires TYPE TIMESTAMPTZ USING reset_expires::TIMESTAMPTZ",
+    // domains : TEXT → JSONB pour validation et indexation native
+    "ALTER TABLE users ALTER COLUMN domains TYPE JSONB USING domains::JSONB",
   ];
   // MED-01 : Loguer les erreurs de migration au lieu de les avaler silencieusement.
   // Les codes 42701 (column already exists) et 42P07 (relation already exists) sont attendus.

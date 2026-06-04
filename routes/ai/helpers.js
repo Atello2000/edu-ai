@@ -20,7 +20,10 @@ function userContext(user) {
   };
   const level = levelLabels[user.level] || '';
   let domains = [];
-  try { domains = JSON.parse(user.domains || '[]'); } catch {}
+  try {
+    const raw = user.domains;
+    domains = Array.isArray(raw) ? raw : JSON.parse(raw || '[]');
+  } catch {}
   const domStr    = domains.length ? domains.join(', ') : '';
   const specialty = user.specialty?.trim() || '';
   if (!level && !domStr && !specialty) return '';
@@ -34,8 +37,7 @@ function userContext(user) {
 
 async function getFileText(file) {
   if (file.text) return file.text;
-  if (!file.path) throw new Error(`Contenu du fichier "${file.name}" indisponible. Veuillez le re-charger.`);
-  return extractText(file.path, file.name);
+  throw new Error(`Contenu du fichier "${file.name}" indisponible. Veuillez le re-charger.`);
 }
 
 /** Extrait le premier objet JSON d'une réponse brute du modèle. */

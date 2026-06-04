@@ -25,7 +25,7 @@ router.post('/quiz', async (req, res) => {
 
     // Focus optionnel : si des topics sont fournis (prédicteur → quiz), on les met en avant
     const focusPart = Array.isArray(focus_topics) && focus_topics.length
-      ? `\nFocus OBLIGATOIRE sur ces concepts détectés comme probables à l'examen : ${focus_topics.slice(0, 8).join(', ')}.`
+      ? `\nFocus OBLIGATOIRE sur ces concepts détectés comme probables à l'examen : ${focus_topics.slice(0, 8).map(t => String(t).slice(0, 150)).join(', ')}.`
       : '';
 
     // ── 1. Charger textes + calculer coût total ───────────────────────────

@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { prepare } = require('../db');
+const { prepare, pool } = require('../db');
 
 const LIBRARY_LIMITS = { free: 15, pro: 50, max: 100 };
 
@@ -95,25 +95,43 @@ router.post('/:id/files', async (req, res) => {
 
   const plan  = req.user?.plan || 'free';
   const limit = LIBRARY_LIMITS[plan] ?? LIBRARY_LIMITS.free;
-  const row   = await prepare(`
-    SELECT COUNT(*) AS count FROM folder_files ff
-    JOIN folders f ON f.id = ff.folder_id WHERE f.user_id = ?
-  `).get(req.user.id);
-  const used = Number(row?.count ?? 0);
-  if (used + files.length > limit) {
-    return res.status(403).json({
-      error: `Limite de bibliothèque atteinte (${used}/${limit} cours). Supprimez des cours ou passez à un plan supérieur.`,
-      limit,
-      used,
-    });
-  }
 
-  for (const f of files) {
-    await prepare(
-      'INSERT INTO folder_files (folder_id, filename, orig_name, size, text, truncated) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (folder_id, filename) DO NOTHING'
-    ).run(folder.id, f.id || f.filename, f.name || f.orig_name, f.size || 0, f.text || '', f.truncated ? 1 : 0);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
+      `SELECT COUNT(*) AS count FROM folder_files ff
+       JOIN folders f ON f.id = ff.folder_id WHERE f.user_id = $1`,
+      [req.user.id]
+    );
+    const used = Number(rows[0]?.count ?? 0);
+    if (used + files.length > limit) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({
+        error: `Limite de bibliothèque atteinte (${used}/${limit} cours). Supprimez des cours ou passez à un plan supérieur.`,
+        limit,
+        used,
+      });
+    }
+
+    for (const f of files) {
+      await client.query(
+        `INSERT INTO folder_files (folder_id, filename, orig_name, size, text, truncated)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (folder_id, filename) DO NOTHING`,
+        [folder.id, f.id || f.filename, f.name || f.orig_name, f.size || 0, f.text || '', f.truncated ? 1 : 0]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ ok: true });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
   }
-  res.json({ ok: true });
 });
 
 // ── Remove a file from a folder ──────────────────────────────────────────────
