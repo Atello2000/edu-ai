@@ -1,4 +1,5 @@
 import { getGoalParams } from '../utils/goalParams.js';
+import JetonIcon from './JetonIcon.jsx';
 
 const GOALS = [
   {
@@ -62,7 +63,7 @@ export default function GoalModal({ onSelect, balance = null }) {
 
         {balance !== null && (
           <p className="goal-balance">
-            Votre solde : <strong>{balance} ⚡</strong>
+            Votre solde : <strong>{balance} <JetonIcon size={13} style={{ color: 'var(--gold, #f59e0b)', marginLeft: 2 }} /></strong>
           </p>
         )}
 
@@ -75,13 +76,13 @@ export default function GoalModal({ onSelect, balance = null }) {
                 key={g.id}
                 className={`goal-card${!canAfford ? ' goal-card--disabled' : ''}`}
                 onClick={() => canAfford && onSelect(g.id)}
-                title={!canAfford ? `Solde insuffisant (${balance} ⚡ disponibles)` : ''}
+                title={!canAfford ? `Solde insuffisant (${balance} <JetonIcon size={13} style={{ color: 'var(--gold, #f59e0b)', marginLeft: 2 }} /> disponibles)` : ''}
               >
                 <span className="goal-icon">{g.icon}</span>
                 <strong>{g.label}</strong>
                 <span>{g.desc}</span>
                 <span className={`goal-cost${!canAfford ? ' goal-cost--over' : ''}`}>
-                  {cost} ⚡
+                  {cost} <JetonIcon size={13} style={{ color: 'var(--gold, #f59e0b)', marginLeft: 2 }} />
                   {!canAfford && <span className="goal-cost-hint"> — solde insuffisant</span>}
                 </span>
               </button>

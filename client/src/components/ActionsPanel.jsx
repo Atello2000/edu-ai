@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
+import JetonIcon from './JetonIcon.jsx';
 // Coûts par défaut (fallback si les coûts dynamiques ne sont pas encore chargés)
 const DEFAULT_COSTS = {
   summarize: 3, quiz: 2, flashcards: 2, chat: 1,
@@ -41,23 +42,6 @@ function estimateSessionCost(files, costs) {
   }, 0);
 }
 
-/**
- * Hexagone SVG — forme d'un jeton physique / crédit chip.
- */
-function TokenHexSvg() {
-  return (
-    <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"
-      width="11" height="11" style={{ display: 'block', flexShrink: 0 }}>
-      <path
-        d="M7 1.4 L11.6 4 V10 L7 12.6 L2.4 10 V4 Z"
-        fill="currentColor" fillOpacity="0.2"
-        stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"
-      />
-      <circle cx="7" cy="7" r="1.4" fill="currentColor" />
-    </svg>
-  );
-}
-
 function jetonColor(cost) {
   if (cost <= 1) return 'teal';
   if (cost <= 3) return 'gold';
@@ -73,7 +57,7 @@ function JetonBadge({ cost, baseCost }) {
       className={`jeton-badge jeton-badge-${color}`}
       title={isEstimate ? `Estimation basée sur la taille du document (coût de base : ${baseCost} jeton${baseCost > 1 ? 's' : ''})` : undefined}
     >
-      <TokenHexSvg />
+      <JetonIcon size={11} style={{ display: 'block' }} />
       {isEstimate ? '~' : ''}{cost} jeton{cost > 1 ? 's' : ''}
       {isEstimate && <span style={{ fontSize: '.68em', opacity: .75, marginLeft: '.2em' }}>volumineux</span>}
     </span>
