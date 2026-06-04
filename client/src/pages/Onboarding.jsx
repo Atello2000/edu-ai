@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiFetch } from '../utils/apiFetch';
 import './Onboarding.css';
@@ -36,6 +36,7 @@ const SPECIALTY_SUGGESTIONS = {
 
 export default function Onboarding({ onDone }) {
   const { user, setUser } = useAuth();
+  const modalRef = useRef(null);
   const [step, setStep]               = useState(1);
   const [name, setName]               = useState(user?.name || '');
   const [level, setLevel]             = useState('');
@@ -45,6 +46,39 @@ export default function Onboarding({ onDone }) {
   const [specialty, setSpecialty]     = useState('');
   const [specCustom, setSpecCustom]   = useState('');
   const [loading, setLoading]         = useState(false);
+  const [showScrollCue, setShowScrollCue] = useState(false);
+
+  function updateScrollCue() {
+    const modal = modalRef.current;
+    if (!modal) return;
+    const remaining = modal.scrollHeight - modal.scrollTop - modal.clientHeight;
+    setShowScrollCue(remaining > 18);
+  }
+
+  useEffect(() => {
+    const modal = modalRef.current;
+    if (!modal) return undefined;
+
+    const update = () => updateScrollCue();
+    const frame = requestAnimationFrame(update);
+    modal.addEventListener('scroll', update, { passive: true });
+
+    let resizeObserver = null;
+    if ('ResizeObserver' in window) {
+      resizeObserver = new ResizeObserver(update);
+      resizeObserver.observe(modal);
+    }
+
+    return () => {
+      cancelAnimationFrame(frame);
+      modal.removeEventListener('scroll', update);
+      resizeObserver?.disconnect();
+    };
+  }, [step, domain, specialty, level, levelCustom, domainCustom, specCustom]);
+
+  function scrollModalDown() {
+    modalRef.current?.scrollBy({ top: Math.round(window.innerHeight * 0.42), behavior: 'smooth' });
+  }
 
   function selectDomain(d) {
     if (domain === d) return;
@@ -94,7 +128,7 @@ export default function Onboarding({ onDone }) {
 
   return (
     <div className="onboarding-overlay">
-      <div className="onboarding-modal">
+      <div className="onboarding-modal" ref={modalRef}>
         <div className="ob-progress">
           <div className={`ob-dot ${step >= 1 ? 'active' : ''}`} />
           <div className={`ob-dot ${step >= 2 ? 'active' : ''}`} />
@@ -255,6 +289,16 @@ export default function Onboarding({ onDone }) {
             </div>
           </>
         )}
+
+        <button
+          type="button"
+          className={`ob-scroll-cue ${showScrollCue ? 'visible' : ''}`}
+          onClick={scrollModalDown}
+          aria-label="Faire défiler vers le bas"
+        >
+          <span>Plus bas</span>
+          <span className="ob-scroll-cue-arrow" aria-hidden="true" />
+        </button>
       </div>
     </div>
   );

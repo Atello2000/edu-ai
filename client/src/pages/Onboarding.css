@@ -17,6 +17,59 @@
   box-shadow: 0 32px 80px rgba(0,0,0,.4);
 }
 
+.ob-scroll-cue {
+  position: fixed;
+  left: 50%;
+  bottom: calc(5vh + .85rem);
+  z-index: 1001;
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  padding: .48rem .78rem;
+  border: 1px solid rgba(61,126,255,.28);
+  border-radius: 999px;
+  background: var(--card);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  color: var(--blue);
+  font-family: 'Outfit', sans-serif;
+  font-size: .74rem;
+  font-weight: 700;
+  box-shadow: 0 12px 28px rgba(0,0,0,.16);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 8px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.ob-scroll-cue.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.ob-scroll-cue-arrow {
+  width: .45rem;
+  height: .45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+  animation: ob-cue-bounce 1.15s ease-in-out infinite;
+}
+
+@keyframes ob-cue-bounce {
+  0%, 100% { transform: rotate(45deg) translate(-1px, -1px); }
+  50% { transform: rotate(45deg) translate(2px, 2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-scroll-cue,
+  .ob-scroll-cue-arrow {
+    transition: none;
+    animation: none;
+  }
+}
+
 .ob-header { text-align: center; margin-bottom: 2rem; }
 .ob-header h2 {
   font-family: 'Cormorant Garamond', serif;
@@ -128,6 +181,7 @@
 
 @media (max-width: 480px) {
   .onboarding-modal { padding: 1.75rem 1.25rem; }
+  .ob-scroll-cue { bottom: calc(5vh + .65rem); }
   .ob-grid { grid-template-columns: 1fr 1fr; }
   .ob-grid-3 { grid-template-columns: 1fr 1fr; }
   .ob-header h2 { font-size: 1.5rem; }
