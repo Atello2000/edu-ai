@@ -19,13 +19,23 @@ describe('services/email URL handling', () => {
     jest.restoreAllMocks();
   });
 
-  it('builds verification links from BACKEND_URL when configured', () => {
+  it('builds verification links from CLIENT_URL when configured', () => {
     process.env.BACKEND_URL = 'ttps://api.example.com///';
     process.env.CLIENT_URL = 'https://app.example.com';
 
     const { _private } = require('../services/email');
 
-    expect(_private.getBackendUrl()).toBe('https://api.example.com');
+    expect(_private.getVerifyUrl()).toBe('https://app.example.com');
+  });
+
+  it('allows VERIFY_URL to override the verification host', () => {
+    process.env.VERIFY_URL = 'https://verify.example.com/';
+    process.env.CLIENT_URL = 'https://app.example.com';
+    process.env.BACKEND_URL = 'https://api.example.com';
+
+    const { _private } = require('../services/email');
+
+    expect(_private.getVerifyUrl()).toBe('https://verify.example.com');
   });
 
   it('builds password reset links from CLIENT_URL when configured', () => {

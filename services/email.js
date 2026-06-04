@@ -27,6 +27,13 @@ function getClientUrl() {
   );
 }
 
+function getVerifyUrl() {
+  return normalizeUrl(
+    process.env.VERIFY_URL || process.env.CLIENT_URL || process.env.APP_URL || process.env.BACKEND_URL,
+    'http://localhost:3001'
+  );
+}
+
 async function sendEmail({ to, subject, html, devUrl }) {
   if (!resend) {
     if (process.env.NODE_ENV === 'production') {
@@ -61,7 +68,7 @@ function emailTemplate(body) {
 }
 
 exports.sendVerifyEmail = async (to, token) => {
-  const url = `${getBackendUrl()}/api/auth/verify/${token}`;
+  const url = `${getVerifyUrl()}/api/auth/verify/${token}`;
   await sendEmail({
     to,
     subject: 'Confirmez votre adresse email - Jangalai',
@@ -90,4 +97,4 @@ exports.sendResetEmail = async (to, token) => {
   });
 };
 
-exports._private = { normalizeUrl, getBackendUrl, getClientUrl };
+exports._private = { normalizeUrl, getBackendUrl, getClientUrl, getVerifyUrl };
