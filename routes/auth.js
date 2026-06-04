@@ -345,6 +345,7 @@ router.get('/google', (req, res) => {
     redirect_uri:  process.env.GOOGLE_CALLBACK_URL,
     response_type: 'code',
     scope:         'email profile',
+    prompt:        'select_account',
     state,
   });
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);

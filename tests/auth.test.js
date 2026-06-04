@@ -93,6 +93,8 @@ beforeAll(() => { app = require('../app'); });
 beforeEach(() => {
   emailService.sendVerifyEmail.mockClear();
   emailService.sendResetEmail.mockClear();
+  delete process.env.GOOGLE_CLIENT_ID;
+  delete process.env.GOOGLE_CALLBACK_URL;
 });
 
 // ── Register ──────────────────────────────────────────────────────────────────
@@ -162,6 +164,19 @@ describe('POST /api/auth/logout', () => {
     const r = await request(app).post('/api/auth/logout');
     expect(r.status).toBe(200);
     expect(r.body.ok).toBe(true);
+  });
+});
+
+describe('GET /api/auth/google', () => {
+  it('force le choix du compte Google', async () => {
+    process.env.GOOGLE_CLIENT_ID = 'client-id.test';
+    process.env.GOOGLE_CALLBACK_URL = 'https://app.example.com/api/auth/google/callback';
+
+    const r = await request(app).get('/api/auth/google');
+    expect(r.status).toBe(302);
+
+    const redirect = new URL(r.headers.location);
+    expect(redirect.searchParams.get('prompt')).toBe('select_account');
   });
 });
 
