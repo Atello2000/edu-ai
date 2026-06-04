@@ -803,14 +803,14 @@ export default function AppPage() {
         {/* MES MATIÈRES */}
         <div className={`panel${activePanel !== 'folders-panel' ? ' hidden' : ''}`} id="folders-panel">
           <ErrorBoundary>
-            <FoldersPanel onGoUpload={handleGoUploadForFolder} onUseFiles={handleUseFiles} />
+            <FoldersPanel onGoUpload={handleGoUploadForFolder} onUseFiles={handleUseFiles} userPlan={user?.plan} />
           </ErrorBoundary>
         </div>
 
         {/* BIBLIOTHÈQUE */}
         <div className={`panel${activePanel !== 'library-panel' ? ' hidden' : ''}`} id="library-panel">
           <ErrorBoundary>
-            <LibraryPanel onUseFiles={handleUseFiles} />
+            <LibraryPanel onUseFiles={handleUseFiles} userPlan={user?.plan} />
           </ErrorBoundary>
         </div>
 

@@ -4,9 +4,10 @@ import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
 import toast from '../utils/toast';
 
-export default function LibraryPanel({ onUseFiles }) {
+export default function LibraryPanel({ onUseFiles, userPlan }) {
   const confirm = useConfirm();
   const [files, setFiles] = useState([]);
+  const [limit, setLimit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [search, setSearch] = useState('');
@@ -17,6 +18,7 @@ export default function LibraryPanel({ onUseFiles }) {
       const res = await fetch('/api/folders/files/all');
       const data = await res.json();
       setFiles(data.files || []);
+      if (data.limit != null) setLimit(data.limit);
     } catch {
       setFiles([]);
     } finally {
@@ -31,7 +33,10 @@ export default function LibraryPanel({ onUseFiles }) {
       try {
         const res  = await fetch('/api/folders/files/all');
         const data = await res.json();
-        if (active) setFiles(data.files || []);
+        if (active) {
+          setFiles(data.files || []);
+          if (data.limit != null) setLimit(data.limit);
+        }
       } catch {
         if (active) setFiles([]);
       } finally {
@@ -98,6 +103,10 @@ export default function LibraryPanel({ onUseFiles }) {
   }, {});
   const groups = Object.values(byFolder);
 
+  const used = files.length;
+  const pct  = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const nearLimit = limit && used >= limit - 2;
+
   return (
     <>
       <div className="panel-header">
@@ -111,6 +120,24 @@ export default function LibraryPanel({ onUseFiles }) {
           </button>
         )}
       </div>
+
+      {limit != null && (
+        <div className="lib-quota">
+          <div className="lib-quota-row">
+            <span className="lib-quota-label">{used} / {limit} cours</span>
+            <span className="lib-quota-plan">{userPlan === 'max' ? 'Max' : userPlan === 'pro' ? 'Pro' : 'Gratuit'}</span>
+          </div>
+          <div className="lib-quota-bar">
+            <div
+              className="lib-quota-fill"
+              style={{ width: `${pct}%`, background: nearLimit ? 'var(--rose, #ff6b81)' : 'var(--blue, #3d7eff)' }}
+            />
+          </div>
+          {used >= limit && (
+            <p className="lib-quota-warn">Limite atteinte — supprimez des cours ou passez à un plan supérieur.</p>
+          )}
+        </div>
+      )}
 
       <input
         type="search"

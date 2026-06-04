@@ -2,6 +2,8 @@ const express = require('express');
 const router  = express.Router();
 const { prepare } = require('../db');
 
+const LIBRARY_LIMITS = { free: 15, pro: 50, max: 100 };
+
 // ── List user folders (with file count) ──────────────────────────────────────
 router.get('/', async (req, res) => {
   const rows = await prepare(`
@@ -66,7 +68,9 @@ router.get('/files/all', async (req, res) => {
     WHERE f.user_id = ?
     ORDER BY LOWER(f.name), LOWER(ff.orig_name)
   `).all(req.user.id);
-  res.json({ files });
+  const plan  = req.user?.plan || 'free';
+  const limit = LIBRARY_LIMITS[plan] ?? LIBRARY_LIMITS.free;
+  res.json({ files, used: files.length, limit });
 });
 
 // ── List files in a folder ───────────────────────────────────────────────────
@@ -88,6 +92,21 @@ router.post('/:id/files', async (req, res) => {
 
   const { files } = req.body;
   if (!files || !files.length) return res.status(400).json({ error: 'Aucun fichier' });
+
+  const plan  = req.user?.plan || 'free';
+  const limit = LIBRARY_LIMITS[plan] ?? LIBRARY_LIMITS.free;
+  const row   = await prepare(`
+    SELECT COUNT(*) AS count FROM folder_files ff
+    JOIN folders f ON f.id = ff.folder_id WHERE f.user_id = ?
+  `).get(req.user.id);
+  const used = Number(row?.count ?? 0);
+  if (used + files.length > limit) {
+    return res.status(403).json({
+      error: `Limite de bibliothèque atteinte (${used}/${limit} cours). Supprimez des cours ou passez à un plan supérieur.`,
+      limit,
+      used,
+    });
+  }
 
   for (const f of files) {
     await prepare(

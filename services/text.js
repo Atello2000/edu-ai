@@ -3,13 +3,145 @@ const fs   = require('fs');
 const os   = require('os');
 const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
+const AdmZip       = require('adm-zip');
 
-// officeparser crée un dossier temporaire pour décompresser les fichiers Office.
-// Sur Railway (et tout container read-only), le CWD /app n'est pas accessible
-// en écriture → on pointe vers le répertoire temp de l'OS (/tmp sur Linux).
 const OFFICE_PARSER_CONFIG = { tempFilesLocation: os.tmpdir() };
 
-const OCR_THRESHOLD = 200; // Si le PDF extrait moins de N chars → probablement scanné
+const OCR_THRESHOLD   = 200;   // PDF avec peu de texte → probablement scanné
+const MIN_IMAGE_BYTES = 5000;  // Ignorer les images < 5 Ko (icônes, décorations)
+const MAX_IMAGES      = 30;    // Max images analysées par document
+const BATCH_SIZE      = 5;     // Parallélisme par batch (respect Gemini 15 RPM gratuit)
+
+// ── Gemini Vision — description d'une image via l'API REST ───────────────────
+async function describeImageWithGemini(base64, mimeType) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Décris ce schéma, figure ou graphique en français pour un étudiant (axes, labels, relations, données visibles). Si c\'est purement décoratif (logo, fond, icône), réponds uniquement "décoratif".' },
+              { inline_data: { mime_type: mimeType, data: base64 } },
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 400 },
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    return text.toLowerCase() === 'décoratif' || !text ? null : text;
+  } catch { return null; }
+}
+
+// ── Extraction d'images depuis PPTX / DOCX (format ZIP) ─────────────────────
+const OFFICE_MEDIA = { '.pptx': 'ppt/media/', '.docx': 'word/media/', '.ppt': null };
+const IMAGE_EXTS   = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']);
+const MIME_MAP     = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.bmp': 'image/bmp', '.webp': 'image/webp' };
+
+// ── Parseur SmartArt (ppt/diagrams/data*.xml) ─────────────────────────────────
+function parseSmartArt(xml) {
+  const texts = [...xml.matchAll(/<a:t(?:\s[^>]*)?>([^<]+)<\/a:t>/g)]
+    .map(m => m[1].trim()).filter(Boolean);
+  const unique = [...new Set(texts)];
+  if (!unique.length) return null;
+  // Détecter les connexions pour inférer le type (processus, hiérarchie...)
+  const hasCxn = xml.includes('<dgm:cxn');
+  const type   = hasCxn ? 'Diagramme de processus' : 'Diagramme SmartArt';
+  return `[${type} : ${unique.join(' → ')}]`;
+}
+
+// ── Parseur graphiques DrawingML (ppt/charts/*.xml, word/charts/*.xml) ─────────
+function parseChartXml(xml) {
+  const TYPE_MAP = {
+    barChart: 'Histogramme', pieChart: 'Camembert', lineChart: 'Courbe',
+    scatterChart: 'Nuage de points', areaChart: 'Aires', doughnutChart: 'Anneau',
+    radarChart: 'Radar', bubbleChart: 'Bulles', stockChart: 'Boursier',
+  };
+  const typeMatch = xml.match(/<c:(barChart|pieChart|lineChart|scatterChart|areaChart|doughnutChart|radarChart|bubbleChart|stockChart)/);
+  const chartType = typeMatch ? (TYPE_MAP[typeMatch[1]] || typeMatch[1]) : 'Graphique';
+
+  const titleMatch = xml.match(/<c:title>[\s\S]*?<a:t[^>]*>([^<]+)<\/a:t>/);
+  const title = titleMatch ? titleMatch[1].trim() : '';
+
+  const series = [...xml.matchAll(/<c:ser>[\s\S]*?<c:tx>[\s\S]*?<a:t[^>]*>([^<]+)<\/a:t>/g)]
+    .map(m => m[1].trim()).filter(Boolean);
+
+  const cats = [...xml.matchAll(/<c:cat>[\s\S]*?<c:v>([^<]+)<\/c:v>/g)]
+    .map(m => m[1].trim()).filter(Boolean).slice(0, 8);
+
+  const vals = [...xml.matchAll(/<c:val>[\s\S]*?<c:v>([^<]+)<\/c:v>/g)]
+    .map(m => m[1].trim()).filter(Boolean).slice(0, 8);
+
+  let desc = `[${chartType}`;
+  if (title)       desc += ` — "${title}"`;
+  if (series.length) desc += ` — Séries : ${series.join(', ')}`;
+  if (cats.length)   desc += ` — Catégories : ${cats.join(', ')}`;
+  if (vals.length && series.length <= 1) desc += ` — Valeurs : ${vals.join(', ')}`;
+  return desc + ']';
+}
+
+async function extractAndDescribeOfficeImages(buffer, ext) {
+  const mediaDir = OFFICE_MEDIA[ext];
+  if (!mediaDir && ext !== '.pptx' && ext !== '.docx') return '';
+  try {
+    const zip  = new AdmZip(buffer);
+    const all  = zip.getEntries();
+    const descriptions = [];
+
+    // ── 1. Images raster (photos, figures, logos) ──────────────────────────────
+    if (mediaDir) {
+      const imgEntries = all
+        .filter(e =>
+          e.entryName.startsWith(mediaDir) &&
+          IMAGE_EXTS.has(path.extname(e.entryName).toLowerCase()) &&
+          e.getData().length >= MIN_IMAGE_BYTES
+        )
+        .sort((a, b) => b.getData().length - a.getData().length)
+        .slice(0, MAX_IMAGES);
+
+      for (let i = 0; i < imgEntries.length; i += BATCH_SIZE) {
+        const batch = imgEntries.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(batch.map(async entry => {
+          const imgExt = path.extname(entry.entryName).toLowerCase();
+          const mime   = MIME_MAP[imgExt] || 'image/png';
+          const desc   = await describeImageWithGemini(entry.getData().toString('base64'), mime);
+          return desc ? `[Figure : ${desc}]` : null;
+        }));
+        descriptions.push(...results.filter(Boolean));
+      }
+    }
+
+    // ── 2. SmartArt (PPTX : ppt/diagrams/data*.xml) ───────────────────────────
+    if (ext === '.pptx') {
+      all.filter(e => /^ppt\/diagrams\/data\d*\.xml$/i.test(e.entryName))
+         .forEach(e => {
+           const desc = parseSmartArt(e.getData().toString('utf8'));
+           if (desc) descriptions.push(desc);
+         });
+    }
+
+    // ── 3. Graphiques DrawingML (PPTX + DOCX) ─────────────────────────────────
+    const chartPattern = ext === '.pptx'
+      ? /^ppt\/charts\/chart\d*\.xml$/i
+      : /^word\/charts\/chart\d*\.xml$/i;
+    all.filter(e => chartPattern.test(e.entryName))
+       .forEach(e => {
+         const desc = parseChartXml(e.getData().toString('utf8'));
+         if (desc) descriptions.push(desc);
+       });
+
+    return descriptions.length
+      ? '\n\n--- Schémas, figures et graphiques ---\n' + descriptions.join('\n\n')
+      : '';
+  } catch { return ''; }
+}
 
 // Mistral OCR via l'API REST directe (pas de SDK ESM incompatible)
 async function ocrWithMistral(buffer, originalName) {
@@ -68,6 +200,75 @@ async function ocrWithMistral(buffer, originalName) {
       }).catch(() => {});
     }
   }
+}
+
+// ── Détection d'images dans un PDF (scan binaire, $0, ~0.1ms) ────────────────
+// Couvre : XObject images (/Subtype /Image), inline images (BI...ID...EI)
+function pdfHasImages(buffer) {
+  return buffer.includes(Buffer.from('/Subtype /Image'))  // XObject standard
+      || buffer.includes(Buffer.from('/Subtype/Image'))   // sans espace
+      || buffer.includes(Buffer.from('\nBI\n'))           // inline image begin
+      || buffer.includes(Buffer.from('\nBI '))            // inline image begin variante
+      || buffer.includes(Buffer.from(' BI\n'));           // inline image begin variante
+}
+
+// ── Gemini : extraction complète d'un PDF scanné (texte + figures) ────────────
+async function ocrPdfWithGemini(buffer) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const base64 = buffer.toString('base64');
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Extrais tout le texte de ce document en markdown. Inclus les tableaux, formules et légendes des figures. Sois exhaustif.' },
+              { inline_data: { mime_type: 'application/pdf', data: base64 } },
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 8192 },
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    return text.length > OCR_THRESHOLD ? text : null;
+  } catch { return null; }
+}
+
+// ── Gemini : description des figures d'un PDF texte (sans ré-extraire le texte)
+async function describePdfFiguresWithGemini(buffer) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const base64 = buffer.toString('base64');
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: 'Ce document contient du texte et des figures. Décris uniquement les figures, schémas, graphiques, tableaux visuels et formules mathématiques présents. Pour chaque élément visuel, donne une description détaillée en français (axes, labels, données, relations). Ignore le texte ordinaire. Si aucune figure significative, réponds "aucune figure".' },
+              { inline_data: { mime_type: 'application/pdf', data: base64 } },
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 4096 },
+        }),
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!text || text.toLowerCase().includes('aucune figure')) return null;
+    return text;
+  } catch { return null; }
 }
 
 const ROOT       = path.resolve(__dirname, '..');
@@ -142,24 +343,30 @@ async function extractText(filePath, originalName) {
   const ext = path.extname(originalName).toLowerCase();
   let text;
   if (ext === '.pdf') {
-    const buffer = fs.readFileSync(resolved);
-    const data   = await pdfParse(buffer);
+    const buffer  = fs.readFileSync(resolved);
+    const data    = await pdfParse(buffer);
     const rawText = data.text?.trim() || '';
-    if (rawText.length < OCR_THRESHOLD && process.env.MISTRAL_API_KEY) {
-      const ocrText = await ocrWithMistral(buffer, originalName);
+    if (rawText.length < OCR_THRESHOLD) {
+      // PDF scanné → extraction complète Gemini (texte + figures), Mistral en fallback
+      const ocrText = await ocrPdfWithGemini(buffer)
+        || (process.env.MISTRAL_API_KEY ? await ocrWithMistral(buffer, originalName) : null);
       text = ocrText || rawText;
+    } else if (pdfHasImages(buffer)) {
+      // PDF texte + figures → garder le texte pdf-parse, ajouter descriptions des figures
+      const figDesc = await describePdfFiguresWithGemini(buffer);
+      text = figDesc ? rawText + '\n\n--- Schémas et figures ---\n' + figDesc : rawText;
     } else {
+      // PDF texte pur → pdf-parse suffit, aucun appel Gemini
       text = rawText;
     }
   } else {
-    // Multer sauvegarde les fichiers SANS extension → officeparser ne peut pas
-    // déterminer le type depuis le chemin et échoue sur copyFileSync.
-    // Solution : lire le fichier en Buffer; officeparser utilise alors `file-type`
-    // (détection par magic bytes) pour identifier DOCX/PPTX/XLSX automatiquement.
     const buffer = fs.readFileSync(resolved);
-    const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
+    const ast    = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
     const { value: parsed } = await ast.to('md');
     text = parsed || '';
+    // Extraire et décrire les images/schémas embarqués (PPTX, DOCX)
+    const imageDesc = await extractAndDescribeOfficeImages(buffer, ext);
+    if (imageDesc) text += imageDesc;
   }
 
   textCache.set(resolved, text);
@@ -174,18 +381,25 @@ setInterval(() => {
 async function extractTextFromBuffer(buffer, originalName) {
   const ext = path.extname(originalName).toLowerCase();
   if (ext === '.pdf') {
-    const data = await pdfParse(buffer);
-    const text = data.text?.trim() || '';
-    // PDF scanné détecté → essayer l'OCR Mistral
-    if (text.length < OCR_THRESHOLD && process.env.MISTRAL_API_KEY) {
-      const ocrText = await ocrWithMistral(buffer, originalName);
-      if (ocrText) return ocrText;
+    const data    = await pdfParse(buffer);
+    const rawText = data.text?.trim() || '';
+    if (rawText.length < OCR_THRESHOLD) {
+      const ocrText = await ocrPdfWithGemini(buffer)
+        || (process.env.MISTRAL_API_KEY ? await ocrWithMistral(buffer, originalName) : null);
+      return ocrText || rawText;
     }
-    return text;
+    if (pdfHasImages(buffer)) {
+      const figDesc = await describePdfFiguresWithGemini(buffer);
+      return figDesc ? rawText + '\n\n--- Schémas et figures ---\n' + figDesc : rawText;
+    }
+    return rawText;
   }
   const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
   const { value: parsed } = await ast.to('md');
-  return parsed || '';
+  let text = parsed || '';
+  const imageDesc = await extractAndDescribeOfficeImages(buffer, ext);
+  if (imageDesc) text += imageDesc;
+  return text;
 }
 
 module.exports = { extractText, extractTextFromBuffer, textCache };

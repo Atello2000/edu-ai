@@ -10,19 +10,19 @@ const PLAN_INFO = {
   free: {
     jetons:   '40 jetons à l\'inscription (unique)',
     fileSize: '5 Mo max par fichier',
-    features: ['Résumés, quiz, flashcards', 'Chat avec le cours', 'Carte mentale & fiche d\'examen', 'Glossaire automatique'],
+    features: ['Résumés, quiz, flashcards', 'Chat avec le cours', 'Carte mentale & fiche d\'examen', 'Glossaire automatique', '10 sessions sauvegardées', 'Bibliothèque jusqu\'à 15 cours'],
     locked:   ['Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs', 'Export PDF fiche d\'examen'],
   },
   pro: {
     jetons:   '150 jetons / mois (rechargement automatique)',
     fileSize: '10 Mo max par fichier',
-    features: ['Tous les outils de base', 'Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs'],
+    features: ['Tous les outils de base', 'Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs', '30 sessions sauvegardées', 'Bibliothèque jusqu\'à 50 cours'],
     locked:   ['Export PDF fiche d\'examen'],
   },
   max: {
     jetons:   '400 jetons / mois (rechargement automatique)',
     fileSize: '20 Mo max par fichier',
-    features: ['Tout le plan Pro', 'Export PDF fiche d\'examen', 'Sessions illimitées'],
+    features: ['Tout le plan Pro', 'Export PDF fiche d\'examen', 'Sessions illimitées', 'Bibliothèque jusqu\'à 100 cours'],
     locked:   [],
   },
 };

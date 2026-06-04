@@ -197,6 +197,8 @@ export default function Landing() {
                 <div className="plan-feat">Carte mentale & fiche d'examen</div>
                 <div className="plan-feat">Préparer ma session inclus</div>
                 <div className="plan-feat">Fichiers jusqu'à 5 Mo · PDF, PPT, DOCX</div>
+                <div className="plan-feat">10 sessions sauvegardées</div>
+                <div className="plan-feat">Bibliothèque jusqu'à 15 cours</div>
               </div>
               <Link to="/login"><button className="plan-cta">Commencer gratuitement</button></Link>
             </div>
@@ -226,6 +228,8 @@ export default function Landing() {
                 <div className="plan-feat">Plan de révision & mode socratique</div>
                 <div className="plan-feat">Analyse des erreurs récurrentes</div>
                 <div className="plan-feat">Fichiers jusqu'à 10 Mo</div>
+                <div className="plan-feat">30 sessions sauvegardées</div>
+                <div className="plan-feat">Bibliothèque jusqu'à 50 cours</div>
                 <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
@@ -238,8 +242,9 @@ export default function Landing() {
                 <div className="plan-feat"><strong>400 jetons</strong> rechargés / mois</div>
                 <div className="plan-feat">Tout le plan Pro inclus</div>
                 <div className="plan-feat">Export PDF fiche d'examen</div>
-                <div className="plan-feat">Fichiers jusqu'à 20 Mo · sessions illimitées</div>
-                <div className="plan-feat">Stockage de cours étendu</div>
+                <div className="plan-feat">Fichiers jusqu'à 20 Mo</div>
+                <div className="plan-feat">Sessions illimitées</div>
+                <div className="plan-feat">Bibliothèque jusqu'à 100 cours</div>
                 <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
               </div>
               <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>

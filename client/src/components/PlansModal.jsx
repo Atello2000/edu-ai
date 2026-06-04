@@ -14,8 +14,11 @@ const PLANS = [
     features:[
       'Résumés, quiz, flashcards',
       'Chat avec le cours',
-      'Carte mentale & fiche exam',
+      'Carte mentale & fiche d\'examen',
+      'Préparer ma session inclus',
       'Fichiers jusqu\'à 5 Mo',
+      '10 sessions sauvegardées',
+      'Bibliothèque jusqu\'à 15 cours',
     ],
   },
   {
@@ -32,6 +35,8 @@ const PLANS = [
       'Mode socratique & analyse erreurs',
       'Résumés, quiz, flashcards, chat',
       'Fichiers jusqu\'à 10 Mo',
+      '30 sessions sauvegardées',
+      'Bibliothèque jusqu\'à 50 cours',
     ],
   },
   {
@@ -47,6 +52,7 @@ const PLANS = [
       'Export PDF fiche d\'examen',
       'Fichiers jusqu\'à 20 Mo',
       'Sessions illimitées',
+      'Bibliothèque jusqu\'à 100 cours',
     ],
   },
 ];

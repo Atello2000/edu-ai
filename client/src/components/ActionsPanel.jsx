@@ -9,6 +9,38 @@ const DEFAULT_COSTS = {
   socratic: 1, predict: 2, 'study-plan': 1, 'error-analysis': 1,
 };
 
+// Taille chunk Gemini (provider primaire — 80K chars, 1M TPM)
+const CHUNK_SIZE = 80_000;
+
+function chunkCount(textLen) {
+  return Math.max(1, Math.ceil(textLen / CHUNK_SIZE));
+}
+
+function chunkCost(base, chunks) {
+  return chunks <= 1 ? base : base + (chunks - 1) * 2;
+}
+
+// Coût estimé pour une action chunckée sur un ensemble de fichiers
+function estimateCost(base, files) {
+  if (!files || !files.length) return base;
+  return files.reduce((sum, f) => {
+    const c = chunkCount((f.text || '').length);
+    return sum + chunkCost(base, c);
+  }, 0);
+}
+
+// Session = résumé + quiz + flashcards (coûts cumulés par fichier)
+function estimateSessionCost(files, costs) {
+  const s = (costs ?? DEFAULT_COSTS).summarize   ?? 3;
+  const q = (costs ?? DEFAULT_COSTS).quiz        ?? 2;
+  const f = (costs ?? DEFAULT_COSTS).flashcards  ?? 2;
+  if (!files || !files.length) return s + q + f;
+  return files.reduce((sum, file) => {
+    const c = chunkCount((file.text || '').length);
+    return sum + chunkCost(s, c) + chunkCost(q, c) + chunkCost(f, c);
+  }, 0);
+}
+
 /**
  * Hexagone SVG — forme d'un jeton physique / crédit chip.
  */
@@ -33,13 +65,17 @@ function jetonColor(cost) {
   return 'rose';
 }
 
-function JetonBadge({ action, costs }) {
-  const cost  = (costs ?? DEFAULT_COSTS)[action] ?? DEFAULT_COSTS[action] ?? 1;
+function JetonBadge({ cost, baseCost }) {
+  const isEstimate = baseCost !== undefined && cost !== baseCost;
   const color = jetonColor(cost);
   return (
-    <span className={`jeton-badge jeton-badge-${color}`}>
+    <span
+      className={`jeton-badge jeton-badge-${color}`}
+      title={isEstimate ? `Estimation basée sur la taille du document (coût de base : ${baseCost} jeton${baseCost > 1 ? 's' : ''})` : undefined}
+    >
       <TokenHexSvg />
-      {cost} jeton{cost > 1 ? 's' : ''}
+      {isEstimate ? '~' : ''}{cost} jeton{cost > 1 ? 's' : ''}
+      {isEstimate && <span style={{ fontSize: '.68em', opacity: .75, marginLeft: '.2em' }}>volumineux</span>}
     </span>
   );
 }
@@ -96,6 +132,31 @@ export default function ActionsPanel({
 }) {
   const [showMore,  setShowMore]  = useState(false);
   const isPro = user?.plan === 'pro' || user?.plan === 'max';
+
+  // ── Coûts dynamiques basés sur la taille réelle des fichiers sélectionnés ──
+  const activeFiles = uploadedFiles.length === 0 ? [] :
+    (!selectedFileIds || selectedFileIds.size === uploadedFiles.length)
+      ? uploadedFiles
+      : uploadedFiles.filter(f => selectedFileIds?.has(f.id));
+
+  const base = action => (jetonCosts ?? DEFAULT_COSTS)[action] ?? DEFAULT_COSTS[action] ?? 1;
+  const dynCosts = {
+    session:        { cost: estimateSessionCost(activeFiles, jetonCosts), base: base('session') },
+    summarize:      { cost: estimateCost(base('summarize'),   activeFiles), base: base('summarize') },
+    quiz:           { cost: estimateCost(base('quiz'),        activeFiles), base: base('quiz') },
+    flashcards:     { cost: estimateCost(base('flashcards'),  activeFiles), base: base('flashcards') },
+    'exam-sheet':   { cost: estimateCost(base('exam-sheet'),  activeFiles), base: base('exam-sheet') },
+    mindmap:        { cost: estimateCost(base('mindmap'),     activeFiles.slice(0,1)), base: base('mindmap') },
+    glossary:       { cost: estimateCost(base('glossary'),    activeFiles), base: base('glossary') },
+    predict:        { cost: estimateCost(base('predict'),     activeFiles), base: base('predict') },
+    chat:           { cost: base('chat'),           base: base('chat') },
+    socratic:       { cost: base('socratic'),       base: base('socratic') },
+    'study-plan':   { cost: base('study-plan'),    base: base('study-plan') },
+    'error-analysis':{ cost: base('error-analysis'), base: base('error-analysis') },
+  };
+  const Badge = ({ action }) => (
+    <JetonBadge cost={dynCosts[action].cost} baseCost={hasFiles ? dynCosts[action].base : undefined} />
+  );
 
   // ── Sélection de fichiers ─────────────────────────────────────────────────
   const allSelected = uploadedFiles.length > 0 && (
@@ -213,7 +274,7 @@ export default function ActionsPanel({
                 sessionGoal === 'memorize'   ? 'Mémoriser' : "S'entraîner"
               }</span></>}
             </span>
-            <JetonBadge costs={jetonCosts} action="session" />
+            <Badge action="session" />
           </div>
           <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
             {prepLoading ? 'En cours…' : 'Lancer'}
@@ -266,7 +327,7 @@ export default function ActionsPanel({
                 <option value="30">30 min</option>
               </select>
             </label>
-            <JetonBadge costs={jetonCosts} action="quiz" />
+            <Badge action="quiz" />
           </div>
           <button className="act-btn blue" id="quiz-btn" disabled={!hasFiles} onClick={onQuiz}>
             {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
@@ -290,7 +351,7 @@ export default function ActionsPanel({
                 onChange={e => onFcCountChange?.(parseInt(e.target.value) || 10)}
               /> cartes
             </label>
-            <JetonBadge costs={jetonCosts} action="flashcards" />
+            <Badge action="flashcards" />
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
             {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
@@ -308,7 +369,7 @@ export default function ActionsPanel({
           <div className="act-card-body">
             <strong>Résumer</strong>
             <span>Résumé structuré en 5 sections</span>
-            <JetonBadge costs={jetonCosts} action="summarize" />
+            <Badge action="summarize" />
           </div>
           <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
             {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
@@ -330,7 +391,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Chat avec le cours</strong>
               <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-              <JetonBadge costs={jetonCosts} action="chat" />
+              <Badge action="chat" />
             </div>
             <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
@@ -344,7 +405,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Fiche d&apos;examen</strong>
               <span>Définitions, pièges, tableaux et questions probables</span>
-              <JetonBadge costs={jetonCosts} action="exam-sheet" />
+              <Badge action="exam-sheet" />
             </div>
             <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
               {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
@@ -362,7 +423,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Carte mentale</strong>
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-              <JetonBadge costs={jetonCosts} action="mindmap" />
+              <Badge action="mindmap" />
             </div>
             <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
           </div>
@@ -378,7 +439,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Glossaire automatique</strong>
               <span>Extrait les termes clés et leur définition</span>
-              <JetonBadge costs={jetonCosts} action="glossary" />
+              <Badge action="glossary" />
             </div>
             <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
@@ -435,7 +496,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Mode Socratique</strong>
               <span>L&apos;IA vous interroge sur votre cours comme un examinateur</span>
-              <JetonBadge costs={jetonCosts} action="socratic" />
+              <Badge action="socratic" />
             </div>
             <button className="act-btn blue" disabled={!hasFiles} onClick={onSocratic}>Démarrer</button>
           </div>
@@ -449,7 +510,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Questions probables</strong>
               <span>Prédit les questions susceptibles de tomber à l&apos;examen</span>
-              <JetonBadge costs={jetonCosts} action="predict" />
+              <Badge action="predict" />
             </div>
             <button className="act-btn purple" disabled={!hasFiles} onClick={onPredict}>
               {predictLoading ? 'Analyse…' : predictResults?.length > 0 ? 'Voir les prédictions' : 'Analyser'}
@@ -465,7 +526,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Plan de révision</strong>
               <span>Planning jour par jour jusqu&apos;à votre examen, basé sur vos points faibles</span>
-              <JetonBadge costs={jetonCosts} action="study-plan" />
+              <Badge action="study-plan" />
             </div>
             <div style={{ display: 'flex', gap: '.4rem' }}>
               <button className="act-btn gold" onClick={onStudyPlan}>Planifier</button>
@@ -484,7 +545,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Erreurs récurrentes</strong>
               <span>Analyse vos confusions et lacunes à partir de l&apos;historique de quiz</span>
-              <JetonBadge costs={jetonCosts} action="error-analysis" />
+              <Badge action="error-analysis" />
             </div>
             <button className="act-btn rose" onClick={onErrorAnalysis}>Analyser</button>
           </div>

@@ -68,7 +68,9 @@ function FolderIconBadge({ icon, size = 44 }) {
   );
 }
 
-export default function FoldersPanel({ onGoUpload, onUseFiles }) {
+const LIBRARY_LIMITS = { free: 15, pro: 50, max: 100 };
+
+export default function FoldersPanel({ onGoUpload, onUseFiles, userPlan }) {
   const confirm = useConfirm();
   const [folders, setFolders] = useState([]);
   const [view, setView] = useState('list');
@@ -266,8 +268,32 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
 
       <p className="panel-desc">Classez vos cours par matière pour les retrouver et les réutiliser facilement</p>
 
-      {view === 'list' && (
-        folders.length === 0 ? (
+      {view === 'list' && (() => {
+        const totalUsed  = folders.reduce((s, f) => s + Number(f.file_count || 0), 0);
+        const plan       = userPlan || 'free';
+        const limit      = LIBRARY_LIMITS[plan] ?? LIBRARY_LIMITS.free;
+        const pct        = Math.min(100, Math.round((totalUsed / limit) * 100));
+        const nearLimit  = totalUsed >= limit - 2;
+        return (
+          <>
+            {folders.length > 0 && (
+              <div className="lib-quota">
+                <div className="lib-quota-row">
+                  <span className="lib-quota-label">{totalUsed} / {limit} cours</span>
+                  <span className="lib-quota-plan">{plan === 'max' ? 'Max' : plan === 'pro' ? 'Pro' : 'Gratuit'}</span>
+                </div>
+                <div className="lib-quota-bar">
+                  <div
+                    className="lib-quota-fill"
+                    style={{ width: `${pct}%`, background: nearLimit ? 'var(--rose, #ff6b81)' : 'var(--blue, #3d7eff)' }}
+                  />
+                </div>
+                {totalUsed >= limit && (
+                  <p className="lib-quota-warn">Limite atteinte — supprimez des cours ou passez à un plan supérieur.</p>
+                )}
+              </div>
+            )}
+      {folders.length === 0 ? (
           <div className="folders-empty">
             Aucune matière créée.<br />
             Cliquez sur « + Nouvelle matière » pour commencer.
@@ -282,8 +308,10 @@ export default function FoldersPanel({ onGoUpload, onUseFiles }) {
               </div>
             ))}
           </div>
-        )
-      )}
+        )}
+          </>
+        );
+      })()}
 
       {view === 'detail' && currentFolder && (
         <>

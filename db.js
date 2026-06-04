@@ -175,6 +175,9 @@ async function initSchema() {
     // Migrer le provider global de groq → mistral si jamais touché
     "UPDATE app_config SET value = 'mistral' WHERE key = 'ai_provider' AND value = 'groq'",
     "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'",
+    // Migrer vers Gemini (primaire) — chunk 80K, TPM 1M, meilleur coût jetons
+    "UPDATE app_config SET value = 'gemini' WHERE key = 'ai_provider' AND value IN ('groq', 'mistral')",
+    "UPDATE app_config SET value = 'gemini-2.0-flash' WHERE key = 'ai_model' AND value IN ('llama-3.3-70b-versatile', 'mistral-small-latest')",
     // ── Système de jetons ─────────────────────────────────────────────────────
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 40",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons_reset_date TEXT",
