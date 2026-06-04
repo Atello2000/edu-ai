@@ -553,13 +553,17 @@ export default function AppPage() {
         const jetons   = isMax ? 400 : isTopup ? 50 : 150;
         const planLabel = isMax ? 'MAX' : isTopup ? null : 'PRO';
         const benefits = isTopup ? [
-          <><strong>+{jetons} jetons</strong> ajoutés à votre solde</>,
-          <>Votre plan reste inchangé</>,
-          <>Disponible à tout moment, sans engagement</>,
+          <><strong>+{jetons} jetons</strong> ajoutés immédiatement à votre solde</>,
+          <>Votre plan actuel reste inchangé</>,
+          <>Sans engagement, utilisable dès maintenant</>,
+        ] : isMax ? [
+          <><strong>{jetons} jetons</strong> rechargés automatiquement chaque mois</>,
+          <>Bibliothèque étendue à <strong>100 cours</strong> (vs 15 en gratuit)</>,
+          <>Fichiers jusqu&apos;à <strong>20 Mo</strong> par upload</>,
         ] : [
-          <><strong>{jetons} jetons</strong> alloués pour ce mois</>,
-          <>Rechargement automatique chaque mois</>,
-          <>Espace de cours et sessions illimités</>,
+          <><strong>{jetons} jetons</strong> rechargés automatiquement chaque mois</>,
+          <>Bibliothèque étendue à <strong>50 cours</strong> (vs 15 en gratuit)</>,
+          <>Fichiers jusqu&apos;à <strong>10 Mo</strong> par upload</>,
         ];
         return (
           <div className="modal-overlay" style={{ zIndex: 10000 }} onClick={() => setShowCongratsModal(false)}>
