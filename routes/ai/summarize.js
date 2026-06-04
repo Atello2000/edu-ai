@@ -1,5 +1,6 @@
 const express = require('express');
 const router  = express.Router();
+const crypto  = require('crypto');
 const { aiStream, aiComplete, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
 const { getAiConfigForAction }                 = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
@@ -7,11 +8,37 @@ const { logTokens }                            = require('../../services/tokens'
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
+const { prepare }                              = require('../../db');
 
-// POST /api/summarize — résumé pédagogique en streaming SSE (avec chunking)
+const CACHE_TTL_H    = 24; // heures
+const CHUNK_PARALLEL = 3;  // chunks traités simultanément
+
+function summarizeCacheKey(text, lang, user) {
+  const profile = `${user?.level || ''}|${Array.isArray(user?.domains) ? user.domains.join(',') : (user?.domains || '')}`;
+  return crypto.createHash('sha256').update(`summarize:v1:${lang}:${profile}:${text}`).digest('hex');
+}
+
+async function getCached(key) {
+  try {
+    const row = await prepare('SELECT result FROM ai_cache WHERE cache_key = ? AND expires_at > NOW()').get(key);
+    return row?.result || null;
+  } catch { return null; }
+}
+
+async function setCache(key, result) {
+  try {
+    const exp = new Date(Date.now() + CACHE_TTL_H * 3600 * 1000).toISOString();
+    await prepare(
+      `INSERT INTO ai_cache (cache_key, result, expires_at) VALUES (?, ?, ?)
+       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at`
+    ).run(key, result, exp);
+  } catch { /* best-effort */ }
+}
+
+// POST /api/summarize — résumé pédagogique en streaming SSE
 router.post('/summarize', async (req, res) => {
   const send = sseSetup(req, res);
-  let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
+  let deducted = 0;
 
   try {
     const { files } = req.body;
@@ -23,12 +50,12 @@ router.post('/summarize', async (req, res) => {
     const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang = langLabel(lang);
     const ctx    = userContext(req.user);
-    const aiCfg   = await getAiConfigForAction('summarize');
-    const cSize   = chunkSizeFor(aiCfg.provider); // 30K pour Groq, 80K sinon
+    const aiCfg  = await getAiConfigForAction('summarize');
+    const cSize  = chunkSizeFor(aiCfg.provider);
 
-    // ── 1. Charger textes + calculer coût total ───────────────────────────
-    const fileData  = [];
-    let   totalCost = 0;
+    // ── 1. Séparer fichiers cachés / fichiers à générer ───────────────────
+    const cached   = [];
+    const fileData = [];
 
     for (const file of files) {
       const text = await getFileText(file);
@@ -36,14 +63,27 @@ router.post('/summarize', async (req, res) => {
         send({ type: 'file_error', name: file.name, message: `Contenu de "${file.name}" vide ou indisponible.` });
         continue;
       }
-      const chunks = splitIntoChunks(text, cSize);
-      totalCost += chunkCost(JETON_COSTS.summarize, chunks.length);
-      fileData.push({ file, chunks });
+      const key  = summarizeCacheKey(text, lang, req.user);
+      const hit  = await getCached(key);
+      if (hit) {
+        cached.push({ file, hit });
+      } else {
+        const chunks = splitIntoChunks(text, cSize);
+        fileData.push({ file, chunks, key });
+      }
+    }
+
+    // ── 2. Retourner les résultats cachés immédiatement (0 jeton) ─────────
+    for (const { file, hit } of cached) {
+      send({ type: 'start',  name: file.name, cached: true });
+      send({ type: 'delta',  name: file.name, text: hit });
+      send({ type: 'done',   name: file.name });
     }
 
     if (!fileData.length) { send({ type: 'end' }); return res.end(); }
 
-    // ── 2. Vérifier et déduire les jetons ─────────────────────────────────
+    // ── 3. Déduire les jetons pour les fichiers non cachés ────────────────
+    const totalCost = fileData.reduce((s, { chunks }) => s + chunkCost(JETON_COSTS.summarize, chunks.length), 0);
     const jeton = await checkAndDeduct(req.user?.id, 'summarize', req.user?.plan || 'free', totalCost);
     if (!jeton.ok) {
       send({ type: 'error', message: `Solde insuffisant : ${jeton.needed} jeton${jeton.needed > 1 ? 's' : ''} requis, vous en avez ${jeton.balance}.` });
@@ -51,53 +91,59 @@ router.post('/summarize', async (req, res) => {
     }
     deducted = jeton.cost || 0;
 
-    // ── 3. Traiter chaque fichier ──────────────────────────────────────────
+    // ── 4. Traiter tous les fichiers en parallèle ─────────────────────────
     let streamModel = MODEL_LABEL;
 
-    for (const { file, chunks } of fileData) {
+    await Promise.all(fileData.map(async ({ file, chunks, key }) => {
 
       if (chunks.length === 1) {
-        // ── Fichier court : streaming direct ──────────────────────────────
+        // Fichier court : streaming direct
         send({ type: 'start', name: file.name });
-        const prompt = promptFull(ctx, inLang, file.name, chunks[0]);
-        for await (const c of aiStream(prompt, calcMaxTokens('summary', chunks[0].length), aiCfg)) {
+        let fullText = '';
+        for await (const c of aiStream(promptFull(ctx, inLang, file.name, chunks[0]), calcMaxTokens('summary', chunks[0].length), aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
+          fullText += c.text;
           send({ type: 'delta', name: file.name, text: c.text });
           streamModel = c.model;
         }
         send({ type: 'done', name: file.name });
+        setCache(key, fullText); // fire-and-forget
 
       } else {
-        // ── Fichier long : résumés partiels → fusion streamée ─────────────
+        // Fichier long : chunks analysés en parallèle (CHUNK_PARALLEL simultanés)
         send({ type: 'progress', name: file.name, step: 0, total: chunks.length,
                message: `Cours volumineux — analyse en ${chunks.length} parties…` });
 
-        // Passe 1 : résumer chaque chunk (non-streamé, collecte)
-        const partials = [];
-        for (let i = 0; i < chunks.length; i++) {
-          send({ type: 'progress', name: file.name, step: i + 1, total: chunks.length,
-                 message: `Partie ${i + 1}/${chunks.length}…` });
-
-          const { text: partial, usage } = await aiComplete(
-            promptPartial(ctx, inLang, file.name, chunks[i], i + 1, chunks.length),
-            1200,
-            aiCfg,
+        const partials = new Array(chunks.length);
+        for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
+          await Promise.all(
+            chunks.slice(i, i + CHUNK_PARALLEL).map(async (chunk, j) => {
+              const idx = i + j;
+              const { text: partial, usage } = await aiComplete(
+                promptPartial(ctx, inLang, file.name, chunk, idx + 1, chunks.length),
+                1200, aiCfg,
+              );
+              if (usage) logTokens(req.user?.id, 'summarize', usage.provider, usage.input, usage.output);
+              partials[idx] = partial;
+              send({ type: 'progress', name: file.name, step: idx + 1, total: chunks.length,
+                     message: `${idx + 1}/${chunks.length} parties analysées…` });
+            })
           );
-          if (usage) logTokens(req.user?.id, 'summarize', usage.provider, usage.input, usage.output);
-          partials.push(partial);
         }
 
-        // Passe 2 : fusionner et streamer le résumé final
+        // Fusion et streaming du résumé final
         send({ type: 'start', name: file.name });
-        const mergeP = promptMerge(ctx, inLang, file.name, partials);
-        for await (const c of aiStream(mergeP, 3500, aiCfg)) {
+        let fullText = '';
+        for await (const c of aiStream(promptMerge(ctx, inLang, file.name, partials), 3500, aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
+          fullText += c.text;
           send({ type: 'delta', name: file.name, text: c.text });
           streamModel = c.model;
         }
         send({ type: 'done', name: file.name });
+        setCache(key, fullText); // fire-and-forget
       }
-    }
+    }));
 
     send({ type: 'model', name: streamModel });
     send({ type: 'end' });

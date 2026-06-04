@@ -64,21 +64,26 @@ router.post('/quiz', async (req, res) => {
       difficile: "Privilégie les cas pratiques, nuances, erreurs courantes et raisonnements multi-étapes.",
     }[difficulty];
 
+    const CHUNK_PARALLEL = 3;
+
     for (const { file, chunks } of fileData) {
       send({ type: 'start', name: file.name });
 
-      const allQuestions = [];
-      // Distribuer les questions proportionnellement entre les chunks
+      const allQuestions = new Array(chunks.length);
       const perChunk = Math.ceil(count / chunks.length);
 
-      for (let i = 0; i < chunks.length; i++) {
-        if (chunks.length > 1) {
-          send({ type: 'progress', name: file.name, step: i + 1, total: chunks.length,
-                 message: `Partie ${i + 1}/${chunks.length}…` });
-        }
+      // Chunks traités en parallèle (CHUNK_PARALLEL simultanés)
+      for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
+        await Promise.all(
+          chunks.slice(i, i + CHUNK_PARALLEL).map(async (chunk, j) => {
+            const idx = i + j;
+            if (chunks.length > 1) {
+              send({ type: 'progress', name: file.name, step: idx + 1, total: chunks.length,
+                     message: `${idx + 1}/${chunks.length} parties…` });
+            }
 
-        const chunkLabel  = chunks.length > 1 ? ` (partie ${i + 1}/${chunks.length})` : '';
-        const questionTypes = `
+            const chunkLabel    = chunks.length > 1 ? ` (partie ${idx + 1}/${chunks.length})` : '';
+            const questionTypes = `
 Varie obligatoirement les types de questions parmi :
 - Définition (ex: "Que signifie X ?")
 - Application (ex: "Dans quel cas utilise-t-on X ?")
@@ -88,7 +93,7 @@ Varie obligatoirement les types de questions parmi :
 - Identification d'erreur (ex: "Laquelle de ces affirmations est incorrecte ?")
 N'utilise pas deux fois le même type de question consécutivement.`;
 
-        const prompt = `${userContext(req.user)}Génère ${perChunk} questions QCM de niveau ${difficulty} ${inLang} basées sur ce contenu de cours${chunkLabel}.${focusPart}
+            const prompt = `${userContext(req.user)}Génère ${perChunk} questions QCM de niveau ${difficulty} ${inLang} basées sur ce contenu de cours${chunkLabel}.${focusPart}
 ${difficultyGuide}
 ${questionTypes}
 
@@ -118,40 +123,42 @@ Règles :
 
 ---
 Contenu du cours "${file.name}"${chunkLabel} :
-${chunks[i]}`;
+${chunk}`;
 
-        let raw = '';
-        for await (const c of aiStream(prompt, calcMaxTokens('quiz', chunks[i].length, perChunk), aiCfg)) {
-          if (c.usage) { logTokens(req.user?.id, 'quiz', c.usage.provider, c.usage.input, c.usage.output); continue; }
-          raw += c.text;
-          streamModel = c.model;
-        }
+            let raw = '';
+            for await (const c of aiStream(prompt, calcMaxTokens('quiz', chunk.length, perChunk), aiCfg)) {
+              if (c.usage) { logTokens(req.user?.id, 'quiz', c.usage.provider, c.usage.input, c.usage.output); continue; }
+              raw += c.text;
+              streamModel = c.model;
+            }
 
-        let parsed = parseJsonResponse(raw, { questions: [] });
+            let parsed = parseJsonResponse(raw, { questions: [] });
 
-        // Retry avec prompt simplifié si le parsing échoue (provider non conforme)
-        if (!parsed.questions?.length) {
-          logger.warn('Quiz: 0 questions parsed, retrying with simple prompt', { file: file.name });
-          const simplePrompt = `Génère ${perChunk} QCM ${inLang} sur ce cours.${focusPart}
+            if (!parsed.questions?.length) {
+              logger.warn('Quiz: 0 questions parsed, retrying with simple prompt', { file: file.name });
+              const simplePrompt = `Génère ${perChunk} QCM ${inLang} sur ce cours.${focusPart}
 JSON strict, sans texte autour :
 {"questions":[{"question":"?","options":["A. ","B. ","C. ","D. "],"answer":"A","explanation":""}]}
 
 Cours :
-${chunks[i].slice(0, 12000)}`;
-          let rawRetry = '';
-          for await (const c of aiStream(simplePrompt, calcMaxTokens('quiz', 0, perChunk), aiCfg)) {
-            if (c.usage) continue;
-            rawRetry += c.text;
-            streamModel = c.model;
-          }
-          parsed = parseJsonResponse(rawRetry, { questions: [] });
-        }
+${chunk.slice(0, 12000)}`;
+              let rawRetry = '';
+              for await (const c of aiStream(simplePrompt, calcMaxTokens('quiz', 0, perChunk), aiCfg)) {
+                if (c.usage) continue;
+                rawRetry += c.text;
+                streamModel = c.model;
+              }
+              parsed = parseJsonResponse(rawRetry, { questions: [] });
+            }
 
-        allQuestions.push(...(parsed.questions || []));
+            allQuestions[idx] = parsed.questions || [];
+          })
+        );
       }
 
-      // Trimmer au nombre demandé
-      const finalQuestions = allQuestions.slice(0, count);
+      // Aplatir en préservant l'ordre des chunks
+
+      const finalQuestions = allQuestions.flat().slice(0, count);
       const result = { name: file.name, quiz: { questions: finalQuestions } };
       allResults.push(result);
       send({ type: 'done', name: file.name, questions: finalQuestions });
