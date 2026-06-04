@@ -233,6 +233,8 @@ async function initSchema() {
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false",
     // Révocation de session — permet d'invalider tous les tokens émis avant cette date
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_invalidated_at TIMESTAMPTZ",
+    // Expiration du plan payant — NULL = free, date = fin d'abonnement actif
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ",
     // ── Audit fixes ────────────────────────────────────────────────────────────
     // Index google_id — évite un full table scan à chaque login OAuth
     "CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)",

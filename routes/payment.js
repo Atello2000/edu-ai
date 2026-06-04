@@ -180,10 +180,10 @@ publicRouter.post('/', async (req, res) => {
       return res.status(404).send('User Not Found');
     }
 
-    // Écriture atomique : topup = jetons seuls, sub = plan + jetons
+    // Écriture atomique : topup = jetons seuls, sub = plan + jetons + expiration
     const updateSql = txType === 'topup'
       ? `UPDATE users SET jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance`
-      : `UPDATE users SET plan = ?, jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance`;
+      : `UPDATE users SET plan = ?, jetons = jetons + ?, plan_expires_at = NOW() + INTERVAL '31 days' WHERE id = ? RETURNING jetons AS balance`;
 
     const updateParams = txType === 'topup'
       ? [config.jetons, userId]

@@ -43,10 +43,20 @@ function getCurrentMonth() {
 
 /**
  * Recharge les jetons si le mois a changé.
- * Atomique : une seule requête par mois déclenche le rechargement.
+ * Vérifie d'abord que le plan payant est encore actif (plan_expires_at).
+ * Si expiré → downgrade automatique vers free + pas de rechargement.
+ * Retourne le plan effectivement actif après la vérification.
  */
 async function refillIfNeeded(userId, plan) {
-  if (plan === 'free') return; // allocation unique à l'inscription, pas de rechargement mensuel
+  if (plan === 'free') return 'free';
+
+  // Vérifier l'expiration de l'abonnement
+  const user = await prepare('SELECT plan_expires_at FROM users WHERE id = ?').get(userId);
+  if (user?.plan_expires_at && new Date(user.plan_expires_at) < new Date()) {
+    await prepare("UPDATE users SET plan = 'free', plan_expires_at = NULL WHERE id = ?").run(userId);
+    require('./logger').info('Plan expired — downgraded to free', { userId, was: plan });
+    return 'free';
+  }
 
   const month      = getCurrentMonth();
   const allocation = MONTHLY_JETONS[plan] ?? MONTHLY_JETONS.free;
@@ -56,6 +66,8 @@ async function refillIfNeeded(userId, plan) {
     SET jetons = ?, jetons_reset_date = ?
     WHERE id = ? AND (jetons_reset_date IS NULL OR jetons_reset_date < ?)
   `).run(allocation, month, userId, month);
+
+  return plan;
 }
 
 /**
