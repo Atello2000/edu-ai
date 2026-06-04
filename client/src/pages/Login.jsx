@@ -24,7 +24,7 @@ export default function Login() {
     const e = searchParams.get('error');
     if (e === 'beta_full')    return 'L\'accès est limité pendant la bêta. Revenez bientôt !';
     if (e === 'google_denied') return 'Connexion Google annulée.';
-    if (e === 'invalid_token') return 'Lien de vérification invalide.';
+    if (e === 'invalid_token') return 'Lien de vérification invalide ou déjà utilisé. Si vous avez confirmé depuis un autre appareil, connectez-vous.';
     if (e === 'token_expired') return 'Lien expiré. Reconnectez-vous pour en recevoir un nouveau.';
     if (e) return 'Une erreur est survenue lors de l\'authentification.';
     return '';

@@ -47,6 +47,17 @@ function VerifyEmailScreen({ user }) {
     } finally { setSending(false); }
   }
 
+  async function checkVerification() {
+    const updated = await refreshSession();
+    if (updated?.email_verified !== 0) {
+      toast.success('Email confirmé !');
+    } else if (!updated) {
+      toast.info('Reconnectez-vous pour finaliser la session sur cet appareil.');
+    } else {
+      toast.info('Email pas encore confirmé.');
+    }
+  }
+
   return (
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center',
@@ -143,6 +154,19 @@ function VerifyEmailScreen({ user }) {
           transition: 'all 0.2s',
         }}>
           {sending ? 'Envoi…' : sent ? '✓ Lien renvoyé' : 'Renvoyer le lien'}
+        </button>
+
+        <button onClick={checkVerification} style={{
+          width: '100%', background: 'transparent', color: '#334155',
+          border: '1px solid rgba(255,255,255,0.05)', borderRadius: '14px',
+          padding: '12px', fontSize: '13.5px', cursor: 'pointer',
+          marginBottom: '10px',
+          transition: 'color 0.2s',
+        }}
+          onMouseEnter={e => e.currentTarget.style.color = '#64748b'}
+          onMouseLeave={e => e.currentTarget.style.color = '#334155'}
+        >
+          J'ai déjà confirmé
         </button>
 
         <button onClick={logout} style={{
