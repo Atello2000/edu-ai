@@ -26,9 +26,6 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
   const [theme,        setTheme]        = useState(() => document.documentElement.getAttribute('data-theme') || 'light');
   const [reduceMotion, setReduceMotion] = useState(() => !!getPrefs().reduceMotion);
   const [lang,         setLang]         = useState(() => getPrefs().lang || 'fr');
-  const [quizCount,    setQuizCount]    = useState(() => getPrefs().quizCount || 5);
-  const [quizDiff,     setQuizDiff]     = useState(() => getPrefs().quizDifficulty || 'moyen');
-  const [fcCount,      setFcCount]      = useState(() => getPrefs().fcCount || 10);
 
   useEffect(() => {
     if (isOpen) {
@@ -58,9 +55,6 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
   function changeAIPref(patch) {
     const next = savePrefs(patch);
     setLang(next.lang || 'fr');
-    setQuizCount(next.quizCount || 5);
-    setQuizDiff(next.quizDifficulty || 'moyen');
-    setFcCount(next.fcCount || 10);
     eventBus.emit('prefs:changed');
   }
 
@@ -141,24 +135,6 @@ export default function SettingsDrawer({ isOpen, onClose, onResetOnboarding }) {
                 <option value="en">🇬🇧 English</option>
                 <option value="ar">🇸🇦 العربية</option>
               </select>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Questions quiz par défaut</span><small>Nombre pré-rempli au lancement</small></div>
-              <input type="number" className="settings-number" min="3" max="20" value={quizCount}
-                onChange={e => changeAIPref({ quizCount: parseInt(e.target.value) || 5 })} />
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Difficulté par défaut</span><small>Niveau pré-sélectionné</small></div>
-              <select className="settings-select" value={quizDiff} onChange={e => changeAIPref({ quizDifficulty: e.target.value })}>
-                <option value="facile">Facile</option>
-                <option value="moyen">Moyen</option>
-                <option value="difficile">Difficile</option>
-              </select>
-            </div>
-            <div className="settings-row">
-              <div className="settings-row-label"><span>Flashcards par défaut</span><small>Nombre de cartes générées</small></div>
-              <input type="number" className="settings-number" min="5" max="40" value={fcCount}
-                onChange={e => changeAIPref({ fcCount: parseInt(e.target.value) || 10 })} />
             </div>
           </section>
 
