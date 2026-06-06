@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator, rateLimit } = require('express-rate-limit');
 
 // Limite globale : 200 req/15 min par IP (protection anti-scraping)
 const globalLimiter = rateLimit({
@@ -16,7 +16,7 @@ const aiLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id ? `uid:${req.user.id}` : req.ip,
+  keyGenerator: (req) => req.user?.id ? `uid:${req.user.id}` : ipKeyGenerator(req.ip),
   message: { error: 'Limite de requêtes IA atteinte. Réessayez dans 15 minutes.' }
 });
 
