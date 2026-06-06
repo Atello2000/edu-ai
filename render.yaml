@@ -2,7 +2,7 @@ services:
   - type: web
     name: jangalai-api
     runtime: node
-    plan: standard
+    plan: free
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health

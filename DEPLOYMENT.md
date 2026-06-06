@@ -30,7 +30,7 @@ Service name: jangalai-api
 Build command: npm ci --include=dev && npm run build
 Start command: npm start
 Health check: /api/health
-Plan: Standard or higher
+Plan: Free for initial testing, then Starter/Standard when you have traffic
 ```
 
 Set the custom domain:
