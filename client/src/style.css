@@ -954,6 +954,30 @@ main {
   background: var(--blue-bg);
   border-color: rgba(61,126,255,.26);
 }
+.quiz-generation-steps span.completed {
+  color: var(--teal);
+  background: var(--teal-bg);
+  border-color: rgba(29, 209, 161, 0.25);
+}
+.quiz-generation-steps span.current {
+  position: relative;
+  font-weight: 600;
+  box-shadow: 0 0 12px var(--blue-glow);
+  border-color: var(--blue);
+  background: var(--blue-bg);
+  color: var(--blue);
+}
+.mini-spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  animation: spin 0.8s linear infinite;
+  vertical-align: middle;
+}
 .quiz-generation-track {
   height: 4px;
   overflow: hidden;

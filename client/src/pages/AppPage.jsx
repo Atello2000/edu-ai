@@ -886,13 +886,13 @@ export default function AppPage() {
                 'Préparation des cours...'
               }
               phase={
-                Object.keys(summaryStreaming || {}).length > 0 ? 'streaming' :
-                Object.keys(summaryProgress || {}).length > 0 ? 'generating' : 'preparing'
+                Object.values(summaryStreaming || {}).some(text => text.length > 0) ? 'streaming' :
+                (Object.keys(summaryProgress || {}).length > 0 || Object.keys(summaryStreaming || {}).length > 0) ? 'generating' : 'preparing'
               }
               steps={['Préparation', 'Analyse', 'Rédaction']}
               activeStepIndex={
-                Object.keys(summaryStreaming || {}).length > 0 ? 2 :
-                Object.keys(summaryProgress || {}).length > 0 ? 1 : 0
+                Object.values(summaryStreaming || {}).some(text => text.length > 0) ? 2 :
+                (Object.keys(summaryProgress || {}).length > 0 || Object.keys(summaryStreaming || {}).length > 0) ? 1 : 0
               }
             />
           )}

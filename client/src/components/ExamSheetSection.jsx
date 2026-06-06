@@ -12,17 +12,12 @@ import { exportExamSheetToPDF } from '../utils/examSheetPdf';
  */
 function cleanMarkdown(text) {
   if (!text) return '';
-  let cleaned = text.trim();
-  if (cleaned.startsWith('```markdown')) {
-    cleaned = cleaned.replace(/^```markdown\s*/i, '');
-  } else if (cleaned.startsWith('```')) {
-    cleaned = cleaned.replace(/^```\s*/, '');
-  }
-  if (cleaned.endsWith('```')) {
-    cleaned = cleaned.replace(/\s*```$/, '');
-  }
-  return cleaned;
+  return text
+    .replace(/^```markdown\s*$/gim, '')
+    .replace(/^```\s*$/gim, '')
+    .trim();
 }
+
 
 export default function ExamSheetSection({ md, streaming, fileName = 'fiche', onRegen, userPlan, onUpgrade }) {
   const [copying,    setCopying]    = useState(false);

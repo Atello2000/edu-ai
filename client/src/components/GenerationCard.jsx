@@ -25,8 +25,15 @@ export default function GenerationCard({
         <div className="quiz-generation-steps">
           {steps.map((s, idx) => {
             const isActive = idx <= activeStepIndex;
+            const isCurrent = idx === activeStepIndex;
+            const isCompleted = idx < activeStepIndex;
             return (
-              <span key={idx} className={isActive ? 'active' : ''}>
+              <span
+                key={idx}
+                className={`${isActive ? 'active' : ''} ${isCurrent ? 'current' : ''} ${isCompleted ? 'completed' : ''}`}
+              >
+                {isCompleted && '✓ '}
+                {isCurrent && <span className="mini-spinner" />}
                 {s}
               </span>
             );

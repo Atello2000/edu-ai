@@ -130,6 +130,11 @@ export function useFlashcards({ saveSession } = {}) {
       });
       if (!res.ok) throw new Error('Erreur serveur');
 
+      setProgress(prev => {
+        if (prev && prev.phase !== 'preparing') return prev;
+        return { phase: 'generating', message: 'Analyse du cours...', step: 0, total: 0 };
+      });
+
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
       let   buffer  = '';

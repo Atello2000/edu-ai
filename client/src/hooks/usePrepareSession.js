@@ -66,10 +66,25 @@ export function usePrepareSession({
     else if (genQuiz)       setActivePanel('quiz-section');
     else if (genFlashcards) setActivePanel('flashcard-section');
 
-    if (genSummary)    summarize(files);
-    if (genExam)       generateExam(files);
-    if (genQuiz)       generateQuiz(files, { count: quizCount, difficulty: quizDiff });
-    if (genFlashcards) generateFlashcards(files, { count: fcCount });
+    let delay = 0;
+    if (genSummary) {
+      summarize(files);
+      delay += 1500;
+    }
+    if (genExam) {
+      const d = delay;
+      setTimeout(() => generateExam(files), d);
+      delay += 1500;
+    }
+    if (genQuiz) {
+      const d = delay;
+      setTimeout(() => generateQuiz(files, { count: quizCount, difficulty: quizDiff }), d);
+      delay += 1500;
+    }
+    if (genFlashcards) {
+      const d = delay;
+      setTimeout(() => generateFlashcards(files, { count: fcCount }), d);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadedFiles, balance, summarize, generateExam, generateQuiz, generateFlashcards, setActivePanel]);
 
