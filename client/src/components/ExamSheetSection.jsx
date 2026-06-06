@@ -10,6 +10,20 @@ import { exportExamSheetToPDF } from '../utils/examSheetPdf';
  *   fileName  string      — nom de base pour le PDF
  *   onRegen   () => void  — callback régénérer
  */
+function cleanMarkdown(text) {
+  if (!text) return '';
+  let cleaned = text.trim();
+  if (cleaned.startsWith('```markdown')) {
+    cleaned = cleaned.replace(/^```markdown\s*/i, '');
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.replace(/^```\s*/, '');
+  }
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.replace(/\s*```$/, '');
+  }
+  return cleaned;
+}
+
 export default function ExamSheetSection({ md, streaming, fileName = 'fiche', onRegen, userPlan, onUpgrade }) {
   const [copying,    setCopying]    = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -17,8 +31,10 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
   const current = md || streaming;
   if (!current) return null;
 
+  const cleanedCurrent = cleanMarkdown(current);
+
   async function handleCopy() {
-    await navigator.clipboard.writeText(current);
+    await navigator.clipboard.writeText(cleanedCurrent);
     setCopying(true);
     setTimeout(() => setCopying(false), 2000);
   }
@@ -26,7 +42,7 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
   async function handlePdf() {
     if (!md) return;
     setPdfLoading(true);
-    try { await exportExamSheetToPDF(fileName, md); }
+    try { await exportExamSheetToPDF(fileName, cleanMarkdown(md)); }
     catch (err) { toast.error('Erreur PDF : ' + err.message); }
     finally { setPdfLoading(false); }
   }
@@ -77,13 +93,13 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
               Génération en cours…
             </p>
             <div dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(window.marked?.parse(streaming) ?? streaming),
+              __html: DOMPurify.sanitize(window.marked?.parse(cleanMarkdown(streaming)) ?? cleanMarkdown(streaming)),
             }} />
           </div>
         ) : md ? (
           <div
             className="exam-sheet-card"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(md) ?? md) }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(cleanMarkdown(md)) ?? cleanMarkdown(md)) }}
           />
         ) : null}
       </div>
