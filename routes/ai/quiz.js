@@ -7,7 +7,7 @@ const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/je
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
-const { splitIntoChunks, chunkCost }           = require('../../services/chunker');
+const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 const VALID_DIFF = ['facile', 'moyen', 'difficile'];
 
@@ -28,6 +28,9 @@ router.post('/quiz', async (req, res) => {
       ? `\nFocus OBLIGATOIRE sur ces concepts détectés comme probables à l'examen : ${focus_topics.slice(0, 8).map(t => String(t).slice(0, 150)).join(', ')}.`
       : '';
 
+    const aiCfg      = await getAiConfigForAction('quiz');
+    const cSize      = chunkSizeFor(aiCfg.provider);
+
     // ── 1. Charger textes + calculer coût total ───────────────────────────
     const fileData  = [];
     let   totalCost = 0;
@@ -38,7 +41,7 @@ router.post('/quiz', async (req, res) => {
         send({ type: 'file_error', name: file.name, message: `Contenu de "${file.name}" vide ou indisponible.` });
         continue;
       }
-      const chunks = splitIntoChunks(text);
+      const chunks = splitIntoChunks(text, cSize);
       totalCost += chunkCost(JETON_COSTS.quiz, chunks.length);
       fileData.push({ file, chunks });
     }
@@ -56,7 +59,6 @@ router.post('/quiz', async (req, res) => {
     // ── 3. Traiter chaque fichier ──────────────────────────────────────────
     const allResults  = [];
     let   streamModel = MODEL_LABEL;
-    const aiCfg       = await getAiConfigForAction('quiz');
 
     const difficultyGuide = {
       facile:    "Privilégie les questions de définition et de reconnaissance (ex: \"Qu'est-ce que X ?\").",

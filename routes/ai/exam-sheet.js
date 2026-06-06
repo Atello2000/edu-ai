@@ -1,6 +1,6 @@
 const express = require('express');
 const router  = express.Router();
-const { aiStream, aiComplete, MODEL_LABEL } = require('../../services/ai');
+const { aiStream, aiComplete, aiCompleteFast, MODEL_LABEL } = require('../../services/ai');
 const { getAiConfigForAction }   = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
@@ -61,21 +61,28 @@ router.post('/exam-sheet', async (req, res) => {
       } else {
         // Fichier long : résumés partiels → contexte condensé
         hasMultiChunk = true;
-        const partials = [];
-        for (let i = 0; i < chunks.length; i++) {
-          send({ type: 'progress', step: i + 1, total: chunks.length,
-                 message: `${file.name} — partie ${i + 1}/${chunks.length}…` });
+        const partials = new Array(chunks.length);
+        const CHUNK_PARALLEL = 3;
 
-          const { text: partial, usage } = await aiComplete(
-            `Voici la partie ${i + 1}/${chunks.length} du cours "${file.name}".
+        for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
+          await Promise.all(
+            chunks.slice(i, i + CHUNK_PARALLEL).map(async (chunk, j) => {
+              const idx = i + j;
+              send({ type: 'progress', step: idx + 1, total: chunks.length,
+                     message: `${file.name} — partie ${idx + 1}/${chunks.length}…` });
+
+              const { text: partial, usage } = await aiCompleteFast(
+                `Voici la partie ${idx + 1}/${chunks.length} du cours "${file.name}".
 Extrais les points essentiels : définitions, notions clés, formules, exemples importants.
 Sois concis (max 200 mots), bullets sans introduction.
 
-${chunks[i]}`,
-            800, aiCfg,
+${chunk}`,
+                800, aiCfg,
+              );
+              if (usage) logTokens(req.user?.id, 'exam-sheet', usage.provider, usage.input, usage.output);
+              partials[idx] = partial;
+            })
           );
-          if (usage) logTokens(req.user?.id, 'exam-sheet', usage.provider, usage.input, usage.output);
-          partials.push(partial);
         }
         context += `\n\n=== ${file.name} (synthèse de ${chunks.length} parties) ===\n${partials.join('\n\n')}`;
       }
