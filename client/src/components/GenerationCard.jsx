@@ -40,9 +40,6 @@ export default function GenerationCard({
         </div>
       )}
 
-      <p className="quiz-generation-note">
-        Sur Render Free, la première réponse peut prendre un peu plus longtemps après une mise en veille.
-      </p>
     </div>
   );
 }
