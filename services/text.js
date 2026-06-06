@@ -1,16 +1,20 @@
 const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
 const AdmZip       = require('adm-zip');
 
 const OFFICE_PARSER_CONFIG = { tempFilesLocation: os.tmpdir() };
+const execFileAsync = promisify(execFile);
 
 const OCR_THRESHOLD   = 200;   // PDF avec peu de texte → probablement scanné
 const MIN_IMAGE_BYTES = 5000;  // Ignorer les images < 5 Ko (icônes, décorations)
 const MAX_IMAGES      = 30;    // Max images analysées par document
 const BATCH_SIZE      = 5;     // Parallélisme par batch (respect Gemini 15 RPM gratuit)
+const PPT_TEXT_THRESHOLD = 80; // Minimum utile pour accepter un ancien .ppt
 
 // ── Gemini Vision — description d'une image via l'API REST ───────────────────
 async function describeImageWithGemini(base64, mimeType) {
@@ -141,6 +145,129 @@ async function extractAndDescribeOfficeImages(buffer, ext) {
       ? '\n\n--- Schémas, figures et graphiques ---\n' + descriptions.join('\n\n')
       : '';
   } catch { return ''; }
+}
+
+async function withTempDir(fn) {
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'jangalai-ppt-'));
+  try {
+    return await fn(dir);
+  } finally {
+    await fs.promises.rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+function possibleOfficeCommands() {
+  if (process.env.LIBREOFFICE_PATH) return [process.env.LIBREOFFICE_PATH];
+  return process.platform === 'win32'
+    ? ['soffice.exe', 'libreoffice.exe', 'soffice', 'libreoffice']
+    : ['soffice', 'libreoffice'];
+}
+
+async function convertPptWithLibreOffice(buffer, originalName) {
+  return withTempDir(async dir => {
+    const input = path.join(dir, path.basename(originalName || 'presentation.ppt'));
+    await fs.promises.writeFile(input, buffer);
+
+    for (const cmd of possibleOfficeCommands()) {
+      try {
+        await execFileAsync(
+          cmd,
+          ['--headless', '--convert-to', 'pptx', '--outdir', dir, input],
+          { timeout: 45000, windowsHide: true, maxBuffer: 1024 * 1024 }
+        );
+        const files = await fs.promises.readdir(dir);
+        const converted = files.find(name => path.extname(name).toLowerCase() === '.pptx');
+        if (!converted) continue;
+        const pptxBuffer = await fs.promises.readFile(path.join(dir, converted));
+        const text = await _extractCore(pptxBuffer, '.pptx', converted);
+        return text?.trim() || null;
+      } catch (_) {
+        // LibreOffice is optional. Try the next binary name, then use fallback.
+      }
+    }
+    return null;
+  });
+}
+
+function normalizeLegacyPptChunk(value) {
+  return value
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isUsefulLegacyPptChunk(value) {
+  if (value.length < 4 || value.length > 500) return false;
+  if (!/\p{L}/u.test(value)) return false;
+  if (/^[\d\s._,;:!?()[\]{}'"-]+$/.test(value)) return false;
+  if (/(PowerPoint Document|Current User|SummaryInformation|DocumentSummaryInformation|Root Entry|Ole10Native)/i.test(value)) {
+    return false;
+  }
+  const letters = (value.match(/\p{L}/gu) || []).length;
+  const controls = (value.match(/[\u0000-\u001f]/g) || []).length;
+  return letters >= 2 && controls === 0;
+}
+
+function extractLegacyPptStrings(buffer) {
+  const chunks = [];
+  const seen = new Set();
+
+  function push(value) {
+    const normalized = normalizeLegacyPptChunk(value);
+    const key = normalized.toLowerCase();
+    if (!isUsefulLegacyPptChunk(normalized) || seen.has(key)) return;
+    seen.add(key);
+    chunks.push(normalized);
+  }
+
+  const latin = buffer.toString('latin1');
+  for (const match of latin.matchAll(/[A-Za-zÀ-ÿ0-9][A-Za-zÀ-ÿ0-9\s.,;:!?'"()[\]{}%€$+\-/]{3,}/g)) {
+    push(match[0]);
+  }
+
+  function isLegacyPptTextCode(code) {
+    return code === 9 || code === 10 || code === 13 ||
+      (code >= 32 && code <= 126) ||
+      (code >= 160 && code <= 255) ||
+      [0x0152, 0x0153, 0x0178, 0x2013, 0x2014, 0x2018, 0x2019, 0x201c, 0x201d, 0x2026, 0x20ac].includes(code);
+  }
+
+  function scanUtf16(offset) {
+    let current = '';
+    for (let i = offset; i + 1 < buffer.length; i += 2) {
+      const code = buffer.readUInt16LE(i);
+      if (isLegacyPptTextCode(code)) {
+        current += String.fromCharCode(code);
+        if (current.length > 500) {
+          push(current);
+          current = '';
+        }
+      } else {
+        push(current);
+        current = '';
+      }
+    }
+    push(current);
+  }
+
+  scanUtf16(0);
+  scanUtf16(1);
+
+  return chunks.join('\n');
+}
+
+async function extractLegacyPpt(buffer, originalName) {
+  const converted = await convertPptWithLibreOffice(buffer, originalName);
+  if (converted && converted.trim().length >= PPT_TEXT_THRESHOLD) return converted;
+
+  const fallback = extractLegacyPptStrings(buffer);
+  if (fallback.trim().length >= PPT_TEXT_THRESHOLD) return fallback;
+
+  throw new Error(
+    'Impossible de lire suffisamment de texte dans cet ancien fichier .ppt. '
+    + 'Il est peut-être composé surtout d’images, protégé ou corrompu. '
+    + 'Essayez de l’exporter en PDF ou PPTX.'
+  );
 }
 
 // Mistral OCR via l'API REST directe (pas de SDK ESM incompatible)
@@ -348,7 +475,7 @@ async function _extractCore(buffer, ext, originalName) {
     return rawText;
   }
   if (ext === '.ppt') {
-    throw new Error('Les anciens fichiers PowerPoint .ppt ne sont pas pris en charge. Exportez le fichier en .pptx ou en PDF, puis réessayez.');
+    return extractLegacyPpt(buffer, originalName);
   }
   const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
   const { value: parsed } = await ast.to('md');

@@ -39,10 +39,10 @@ const upload = multer({
   dest: uploadsAbsDir + path.sep,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (['.pdf', '.pptx', '.docx'].includes(ext)) {
+    if (['.pdf', '.ppt', '.pptx', '.docx'].includes(ext)) {
       cb(null, true);
     } else {
-      req.fileTypeError = 'Seuls les fichiers PDF, PPTX et DOCX sont acceptés. Les anciens .ppt doivent être exportés en PPTX ou PDF.';
+      req.fileTypeError = 'Seuls les fichiers PDF, PPT, PPTX et DOCX sont acceptés.';
       cb(null, false);
     }
   },
@@ -147,7 +147,7 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
     let hint;
     if (first?.reason === 'Aucun texte lisible extrait') {
       hint = 'Le fichier semble scanné (image), vide ou protégé. '
-           + 'Utilisez un PDF avec texte sélectionnable, un DOCX ou PPTX. '
+           + 'Utilisez un PDF avec texte sélectionnable, un DOCX, PPT ou PPTX. '
            + 'Si votre PDF est scanné, l\'OCR Mistral peut l\'analyser — vérifiez que MISTRAL_API_KEY est configuré sur le serveur.';
     } else if (first?.reason?.includes('Accès non autorisé')) {
       hint = 'Erreur interne de chemin de fichier. Contactez le support.';

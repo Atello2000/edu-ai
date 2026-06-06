@@ -26,7 +26,7 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
       showError(`Certains fichiers depassent la taille maximale autorisee de ${maxMb} Mo pour votre plan.`);
     }
     if (unsupportedCount > 0) {
-      showError('Format non pris en charge. Utilisez PDF, PPTX ou DOCX. Les anciens fichiers .ppt doivent etre exportes en PPTX ou PDF.');
+      showError('Format non pris en charge. Utilisez PDF, PPT, PPTX ou DOCX.');
     }
     if (tooManyCount > 0) {
       showError(`Votre plan permet ${maxFiles} fichier${maxFiles > 1 ? 's' : ''} par import.`);
@@ -72,7 +72,7 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
     <>
       <h2 className="panel-title">Charger vos <em>fichiers</em></h2>
       <p className="panel-desc">
-        Importez vos cours en PDF, PPTX ou DOCX - jusqu&apos;a <span>{maxMb} Mo</span> par fichier,
+        Importez vos cours en PDF, PPT, PPTX ou DOCX - jusqu&apos;a <span>{maxMb} Mo</span> par fichier,
         {' '}<span>{maxFiles}</span> fichier{maxFiles > 1 ? 's' : ''} par import
       </p>
 
@@ -109,11 +109,11 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
           type="file"
           id="file-input-react"
           multiple
-          accept=".pdf,.pptx,.docx"
+          accept=".pdf,.ppt,.pptx,.docx"
           hidden
           onChange={e => handleFilesAdded(e.target.files)}
         />
-        <p className="drop-hint">PDF · PPTX · DOCX</p>
+        <p className="drop-hint">PDF · PPT · PPTX · DOCX</p>
       </div>
 
       {selectedFiles.length > 0 && (

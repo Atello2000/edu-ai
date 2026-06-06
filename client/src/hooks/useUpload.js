@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ensureCsrfToken } from '../utils/apiFetch';
 
-const ALLOWED_EXTS = ['pdf', 'pptx', 'docx'];
+const ALLOWED_EXTS = ['pdf', 'ppt', 'pptx', 'docx'];
 
 /**
  * Gere la selection de fichiers et l'appel a POST /api/upload.
