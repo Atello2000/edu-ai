@@ -19,6 +19,7 @@ export function usePredict() {
     if (!files.length) return;
     reset();
     setLoading(true);
+    eventBus.emit('nav:section', 'predict-section');
     setProgress({ phase: 'preparing', message: 'Préparation du cours...' });
     try {
       const res = await apiFetch('/api/predict', {

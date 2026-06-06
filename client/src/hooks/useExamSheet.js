@@ -27,6 +27,7 @@ export function useExamSheet({ saveSession } = {}) {
     if (!files.length) return;
     reset();
     setLoading(true);
+    eventBus.emit('nav:section', 'exam-sheet-section');
     setProgress({ phase: 'preparing', message: 'Préparation du cours...', step: 0, total: 0 });
     try {
       const res = await apiFetch('/api/exam-sheet', {

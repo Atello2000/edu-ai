@@ -81,6 +81,8 @@ export function useSummarize({ saveSession } = {}) {
     if (!files.length) return;
     reset();
     setLoading(true);
+    eventBus.emit('nav:section', 'summary-section');
+    let navigatedLocal = false; // local variable to avoid repeat if needed
 
     let buffer = '';
 

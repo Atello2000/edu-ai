@@ -43,6 +43,7 @@ export function useQuiz({ saveSession } = {}) {
     if (!files.length) return;
     reset();
     setLoading(true);
+    eventBus.emit('nav:section', 'quiz-section');
     setProgress({ phase: 'preparing', message: 'Préparation du cours...', generated: 0 });
     try {
       const res = await apiFetch('/api/quiz', {
