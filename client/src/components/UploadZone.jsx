@@ -2,58 +2,66 @@ import { useRef, useState } from 'react';
 import { useUpload } from '../hooks/useUpload';
 import toast from '../utils/toast';
 
-/**
- * Zone de dépôt + liste de fichiers + bouton upload.
- *
- * Props :
- *   onUploaded(files)  — appelé quand l'upload serveur réussit
- *   onError(msg)       — appelé en cas d'erreur
- *   userPlan           — plan actuel de l'utilisateur (free, pro, max)
- */
 const PLAN_MB = { free: 5, pro: 10, max: 20 };
+const PLAN_MAX_FILES = { free: 3, pro: 5, max: 10 };
 
 export default function UploadZone({ onUploaded, onError, userPlan }) {
   const { selectedFiles, uploading, progress, addFiles, removeFile, upload } = useUpload();
-  const inputRef   = useRef(null);
+  const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
   const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-  const maxMb   = isLocal ? 50 : (PLAN_MB[userPlan] ?? 20);
+  const maxMb = isLocal ? 50 : (PLAN_MB[userPlan] ?? PLAN_MB.free);
   const maxBytes = maxMb * 1024 * 1024;
+  const maxFiles = isLocal ? 20 : (PLAN_MAX_FILES[userPlan] ?? PLAN_MAX_FILES.free);
+
+  function showError(msg) {
+    if (onError) onError(msg);
+    else toast.error(msg);
+  }
 
   function handleFilesAdded(files) {
-    const tooLargeCount = addFiles(files, maxBytes);
+    const { tooLargeCount, unsupportedCount, tooManyCount } = addFiles(files, maxBytes, maxFiles);
     if (tooLargeCount > 0) {
-      const msg = `Certains fichiers dépassent la taille maximale autorisée de ${maxMb} Mo pour votre plan.`;
-      if (onError) onError(msg);
-      else toast.error(msg);
+      showError(`Certains fichiers depassent la taille maximale autorisee de ${maxMb} Mo pour votre plan.`);
+    }
+    if (unsupportedCount > 0) {
+      showError('Format non pris en charge. Utilisez PDF, PPTX ou DOCX. Les anciens fichiers .ppt doivent etre exportes en PPTX ou PDF.');
+    }
+    if (tooManyCount > 0) {
+      showError(`Votre plan permet ${maxFiles} fichier${maxFiles > 1 ? 's' : ''} par import.`);
     }
   }
 
-  // ── Drag-and-drop ──────────────────────────────────────────────────────────
-  function onDragOver(e)  { e.preventDefault(); setDragging(true);  }
-  function onDragLeave()  { setDragging(false); }
+  function onDragOver(e) {
+    e.preventDefault();
+    setDragging(true);
+  }
+
+  function onDragLeave() {
+    setDragging(false);
+  }
+
   function onDrop(e) {
-    e.preventDefault(); setDragging(false);
+    e.preventDefault();
+    setDragging(false);
     handleFilesAdded(e.dataTransfer.files);
   }
+
   function onZoneClick(e) {
     if (e.target === inputRef.current) return;
     inputRef.current?.click();
   }
 
-  // ── Upload ─────────────────────────────────────────────────────────────────
   async function handleUpload() {
     try {
       const files = await upload();
       if (files) onUploaded(files);
     } catch (err) {
-      if (onError) onError(err.message);
-      else toast.error(err.message);
+      showError(err.message);
     }
   }
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
   function formatSize(bytes) {
     return bytes > 1024 * 1024
       ? (bytes / 1024 / 1024).toFixed(1) + ' Mo'
@@ -64,21 +72,25 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
     <>
       <h2 className="panel-title">Charger vos <em>fichiers</em></h2>
       <p className="panel-desc">
-        Importez vos cours en PDF, PPT, PPTX ou DOCX —{' '}
-        jusqu&apos;à <span>{maxMb} Mo</span> par fichier
+        Importez vos cours en PDF, PPTX ou DOCX - jusqu&apos;a <span>{maxMb} Mo</span> par fichier,
+        {' '}<span>{maxFiles}</span> fichier{maxFiles > 1 ? 's' : ''} par import
       </p>
 
-      {/* Drop zone */}
       <div
         className={`drop-zone${dragging ? ' drag-over' : ''}`}
         role="button"
         tabIndex={0}
-        aria-label="Zone de dépôt de fichiers — cliquez ou appuyez sur Entrée pour parcourir"
+        aria-label="Zone de depot de fichiers - cliquez ou appuyez sur Entree pour parcourir"
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
         onClick={onZoneClick}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
       >
         <div className="drop-icon">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -97,20 +109,19 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
           type="file"
           id="file-input-react"
           multiple
-          accept=".pdf,.ppt,.pptx,.docx"
+          accept=".pdf,.pptx,.docx"
           hidden
           onChange={e => handleFilesAdded(e.target.files)}
         />
-        <p className="drop-hint">PDF · PPT · PPTX · DOCX</p>
+        <p className="drop-hint">PDF · PPTX · DOCX</p>
       </div>
 
-      {/* File list */}
       {selectedFiles.length > 0 && (
         <div id="file-list" style={{ marginTop: '1.25rem' }}>
           {selectedFiles.map((f, i) => {
             const ext = f.name.split('.').pop().toUpperCase();
             return (
-              <div key={f.name} className="file-item">
+              <div key={`${f.name}-${f.size}-${f.lastModified}`} className="file-item">
                 <div className="file-item-left">
                   <span className="file-ext">{ext}</span>
                   <span className="file-item-name">{f.name}</span>
@@ -122,7 +133,9 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
                     className="remove"
                     aria-label={`Retirer ${f.name}`}
                     onClick={() => removeFile(i)}
-                  >✕</button>
+                  >
+                    ×
+                  </button>
                 )}
               </div>
             );
@@ -130,7 +143,6 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
         </div>
       )}
 
-      {/* Upload button & Premium Progress Bar */}
       {selectedFiles.length > 0 && (
         <div className="upload-actions" style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {uploading ? (

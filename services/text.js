@@ -347,6 +347,9 @@ async function _extractCore(buffer, ext, originalName) {
     }
     return rawText;
   }
+  if (ext === '.ppt') {
+    throw new Error('Les anciens fichiers PowerPoint .ppt ne sont pas pris en charge. Exportez le fichier en .pptx ou en PDF, puis réessayez.');
+  }
   const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
   const { value: parsed } = await ast.to('md');
   let text = parsed || '';

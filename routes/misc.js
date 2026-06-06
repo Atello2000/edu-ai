@@ -39,10 +39,10 @@ const upload = multer({
   dest: uploadsAbsDir + path.sep,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (['.pdf', '.ppt', '.pptx', '.docx'].includes(ext)) {
+    if (['.pdf', '.pptx', '.docx'].includes(ext)) {
       cb(null, true);
     } else {
-      req.fileTypeError = 'Seuls les fichiers PDF, PPT/PPTX et DOCX sont acceptés';
+      req.fileTypeError = 'Seuls les fichiers PDF, PPTX et DOCX sont acceptés. Les anciens .ppt doivent être exportés en PPTX ou PDF.';
       cb(null, false);
     }
   },
