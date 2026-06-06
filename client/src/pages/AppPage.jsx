@@ -175,7 +175,7 @@ export default function AppPage() {
     // fiche d'examen
     examMd, examStreaming, examLoading, generateExam, resetExam,
     // quiz
-    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError,
+    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError, quizProgress,
     generateQuiz, resetQuiz, selectAnswer, quizGoTo, submitQuiz, retryWrong,
     // flashcards
     decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,
@@ -940,6 +940,36 @@ export default function AppPage() {
             <div className="loader-inline">
               <div className="spinner" style={{ width: 20, height: 20 }}></div>
               <span>{questions.length > 0 ? `${questions.length} question${questions.length > 1 ? 's' : ''} générée${questions.length > 1 ? 's' : ''}…` : 'Génération du quiz…'}</span>
+            </div>
+          )}
+          {quizLoading && (
+            <div className="quiz-generation-card" role="status" aria-live="polite">
+              <div className="quiz-generation-top">
+                <div className="spinner" style={{ width: 22, height: 22 }} />
+                <div>
+                  <div className="quiz-generation-title">
+                    {questions.length > 0
+                      ? `${questions.length} question${questions.length > 1 ? 's' : ''} déjà prête${questions.length > 1 ? 's' : ''}`
+                      : 'Génération du quiz en cours'}
+                  </div>
+                  <div className="quiz-generation-subtitle">
+                    {quizProgress?.message || 'Analyse du cours et création des QCM...'}
+                  </div>
+                </div>
+              </div>
+              <div className="quiz-generation-steps">
+                <span className="active">Préparation</span>
+                <span className={quizProgress?.phase === 'generating' || questions.length > 0 ? 'active' : ''}>Questions</span>
+                <span className={questions.length > 0 ? 'active' : ''}>Explications</span>
+              </div>
+              {quizProgress?.step && quizProgress?.total && (
+                <div className="quiz-generation-track">
+                  <div style={{ width: `${Math.min(100, (quizProgress.step / quizProgress.total) * 100)}%` }} />
+                </div>
+              )}
+              <p className="quiz-generation-note">
+                Sur Render Free, la première réponse peut prendre un peu plus longtemps après une mise en veille.
+              </p>
             </div>
           )}
           {quizError && !quizLoading && (

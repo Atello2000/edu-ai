@@ -26,10 +26,11 @@ export function useQuiz({ saveSession } = {}) {
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(null);
   const [model,     setModel]     = useState('');
+  const [progress,  setProgress]  = useState(null);
 
   function reset() {
     setQuestions([]); setAnswers({}); setIdx(0);
-    setSubmitted(false); setScore(null); setError(null); setModel('');
+    setSubmitted(false); setScore(null); setError(null); setModel(''); setProgress(null);
   }
 
   function restoreFrom(results) {
@@ -42,6 +43,7 @@ export function useQuiz({ saveSession } = {}) {
     if (!files.length) return;
     reset();
     setLoading(true);
+    setProgress({ phase: 'preparing', message: 'Préparation du cours...', generated: 0 });
     try {
       const res = await apiFetch('/api/quiz', {
         method:  'POST',
@@ -66,12 +68,36 @@ export function useQuiz({ saveSession } = {}) {
           if (!part.startsWith('data: ')) continue;
           let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
 
-          if (data.type === 'done') {
+          if (data.type === 'start') {
+            setProgress({
+              phase: 'generating',
+              name: data.name,
+              message: `Analyse de ${data.name}...`,
+              generated: allResults.reduce((n, r) => n + (r.quiz?.questions?.length || 0), 0),
+            });
+          } else if (data.type === 'progress') {
+            setProgress(prev => ({
+              ...(prev || {}),
+              phase: 'generating',
+              name: data.name,
+              step: data.step,
+              total: data.total,
+              message: data.message || `Génération ${data.step}/${data.total}...`,
+              generated: allResults.reduce((n, r) => n + (r.quiz?.questions?.length || 0), 0),
+            }));
+          } else if (data.type === 'done') {
             // Questions d'un fichier prêtes — les ajouter au fur et à mesure
             const newQs = (data.questions || []).map(q => ({ ...q, sourceName: data.name }));
             if (newQs.length) {
               setQuestions(prev => [...prev, ...newQs]);
               allResults.push({ name: data.name, quiz: { questions: data.questions } });
+              const generated = allResults.reduce((n, r) => n + (r.quiz?.questions?.length || 0), 0);
+              setProgress({
+                phase: 'received',
+                name: data.name,
+                message: `${generated} question${generated > 1 ? 's' : ''} prête${generated > 1 ? 's' : ''}`,
+                generated,
+              });
             }
           } else if (data.type === 'end') {
             if (data.model) setModel(data.model);
@@ -79,6 +105,7 @@ export function useQuiz({ saveSession } = {}) {
             saveSession?.({ quiz: allResults });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'quiz-section');
+            setProgress(null);
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }
@@ -164,7 +191,7 @@ export function useQuiz({ saveSession } = {}) {
 
   return {
     questions, answers, idx, submitted, score,
-    loading, error, model,
+    loading, error, model, progress,
     generate, reset, restoreFrom,
     selectAnswer, goTo, submit, retryWrong,
   };

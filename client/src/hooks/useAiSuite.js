@@ -37,7 +37,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
 
   const {
     questions, answers: quizAnswers, idx: quizIdx, submitted: quizSubmitted,
-    score: quizScore, loading: quizLoading, error: quizError,
+    score: quizScore, loading: quizLoading, error: quizError, progress: quizProgress,
     generate: generateQuiz, reset: resetQuiz, restoreFrom: restoreQuizFrom,
     selectAnswer, goTo: quizGoTo, submit: submitQuiz, retryWrong,
   } = useQuiz({ saveSession });
@@ -86,7 +86,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
     // fiche d'examen
     examMd, examStreaming, examLoading, generateExam, resetExam, restoreExamFrom,
     // quiz
-    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError,
+    questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError, quizProgress,
     generateQuiz, resetQuiz, restoreQuizFrom, selectAnswer, quizGoTo, submitQuiz, retryWrong,
     // flashcards
     decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,
