@@ -17,15 +17,17 @@ export function useExamSheet({ saveSession } = {}) {
   const [md,        setMd]        = useState('');
   const [streaming, setStreaming] = useState('');
   const [loading,   setLoading]   = useState(false);
+  const [progress,  setProgress]  = useState(null);
   const [error,     setError]     = useState(null);
 
-  function reset()         { setMd(''); setStreaming(''); setError(null); }
-  function restoreFrom(md) { setMd(md); setStreaming(''); setError(null); }
+  function reset()         { setMd(''); setStreaming(''); setError(null); setProgress(null); }
+  function restoreFrom(md) { setMd(md); setStreaming(''); setError(null); setProgress(null); }
 
   const generate = useCallback(async (files) => {
     if (!files.length) return;
     reset();
     setLoading(true);
+    setProgress({ phase: 'preparing', message: 'Préparation du cours...', step: 0, total: 0 });
     try {
       const res = await apiFetch('/api/exam-sheet', {
         method:  'POST',
@@ -48,12 +50,24 @@ export function useExamSheet({ saveSession } = {}) {
         for (const part of parts) {
           if (!part.startsWith('data: ')) continue;
           let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
-          if (data.type === 'delta') {
+          if (data.type === 'progress') {
+            setProgress({
+              phase: 'generating',
+              step: data.step,
+              total: data.total,
+              message: data.message || `Synthèse ${data.step}/${data.total}...`,
+            });
+          } else if (data.type === 'delta') {
             text += data.text;
             setStreaming(text);
+            setProgress({
+              phase: 'streaming',
+              message: 'Création de la fiche de révision...',
+            });
           } else if (data.type === 'end') {
             setMd(text);
             setStreaming('');
+            setProgress(null);
             saveSession?.({ examSheet: { sheet: text } });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'exam-sheet-section');
@@ -65,10 +79,11 @@ export function useExamSheet({ saveSession } = {}) {
       }
     } catch (err) {
       setError(err.message);
+      setProgress(null);
     } finally {
       setLoading(false);
     }
   }, [saveSession]);
 
-  return { md, streaming, loading, error, generate, reset, restoreFrom };
+  return { md, streaming, loading, progress, error, generate, reset, restoreFrom };
 }

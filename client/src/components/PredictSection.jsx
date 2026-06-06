@@ -1,7 +1,9 @@
+import GenerationCard from './GenerationCard.jsx';
+
 const PROB_COLORS = { haute: '#e53935', moyenne: '#f5a623', faible: '#9e9e9e' };
 const PROB_LABELS = { haute: '🔴 Haute', moyenne: '🟡 Moyenne', faible: '⚪ Faible' };
 
-export default function PredictSection({ results, loading, error, onQuizFromPredict }) {
+export default function PredictSection({ results, loading, progress, error, onQuizFromPredict }) {
   // Concepts haute/moyenne probabilité pour le quiz ciblé
   const hotConcepts = results.flatMap(r =>
     (r.predictions || [])
@@ -30,11 +32,17 @@ export default function PredictSection({ results, loading, error, onQuizFromPred
 
       {error && <div className="error-notice">{error}</div>}
 
-      {loading && results.length === 0 && (
-        <div className="loader-inline">
-          <div className="spinner" style={{width:16,height:16}} />
-          <span>Analyse du cours en cours…</span>
-        </div>
+      {loading && (
+        <GenerationCard
+          title="Prédiction des questions d'examen"
+          subtitle={progress?.message || 'Analyse du cours en cours...'}
+          phase={progress?.phase || 'preparing'}
+          steps={['Préparation', 'Analyse', 'Prédictions']}
+          activeStepIndex={
+            progress?.phase === 'receiving' ? 2 :
+            progress?.phase === 'generating' ? 1 : 0
+          }
+        />
       )}
 
       {results.map(({ name, predictions }) => (

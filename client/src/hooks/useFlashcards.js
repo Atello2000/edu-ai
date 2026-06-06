@@ -90,12 +90,13 @@ export function useFlashcards({ saveSession } = {}) {
   const [cardStates, setCardStates] = useState({});
   const [srsOnlyDue, setSrsOnlyDue] = useState(false);
   const [loading,    setLoading]    = useState(false);
+  const [progress,   setProgress]   = useState(null);
   const [error,      setError]      = useState(null);
   const [model,      setModel]      = useState('');
 
   function reset() {
     setDecks([]); setDeckIdx(0); setCards([]); setCardStates({});
-    setSrsOnlyDue(false); setError(null); setModel('');
+    setSrsOnlyDue(false); setError(null); setModel(''); setProgress(null);
   }
 
   function loadDeck(idx, allDecks) {
@@ -119,6 +120,7 @@ export function useFlashcards({ saveSession } = {}) {
     if (!files.length) return;
     reset();
     setLoading(true);
+    setProgress({ phase: 'preparing', message: 'Préparation du cours...', step: 0, total: 0 });
     try {
       const res = await apiFetch('/api/flashcards', {
         method:  'POST',
@@ -144,19 +146,40 @@ export function useFlashcards({ saveSession } = {}) {
           if (!part.startsWith('data: ')) continue;
           let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
 
-          if (data.type === 'done') {
+          if (data.type === 'start') {
+            setProgress({
+              phase: 'generating',
+              name: data.name,
+              message: `Analyse de ${data.name}...`,
+            });
+          } else if (data.type === 'progress') {
+            setProgress(prev => ({
+              ...(prev || {}),
+              phase: 'generating',
+              name: data.name,
+              step: data.step,
+              total: data.total,
+              message: data.message || `Génération ${data.step}/${data.total}...`,
+            }));
+          } else if (data.type === 'done') {
             // Cartes d'un fichier prêtes — créer le deck et l'ajouter
             const deck = { name: data.name, cards: data.cards || [] };
             allDecks.push(deck);
             allResults.push({ name: data.name, flashcards: data.cards || [] });
             setDecks([...allDecks]);
             if (allDecks.length === 1) loadDeck(0, allDecks); // charger le 1er deck dès qu'il arrive
+            setProgress({
+              phase: 'receiving',
+              name: data.name,
+              message: `Flashcards de ${data.name} prêtes`,
+            });
           } else if (data.type === 'end') {
             if (data.model) setModel(data.model);
             if (!allDecks.length) throw new Error('Aucune flashcard générée');
             saveSession?.({ flashcards: allResults });
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'flashcard-section');
+            setProgress(null);
           } else if (data.type === 'error') {
             throw new Error(data.message);
           }
@@ -164,6 +187,7 @@ export function useFlashcards({ saveSession } = {}) {
       }
     } catch (err) {
       setError(err.message);
+      setProgress(null);
     } finally {
       setLoading(false);
     }
@@ -203,7 +227,7 @@ export function useFlashcards({ saveSession } = {}) {
 
   return {
     decks, deckIdx, cards, cardStates, srsOnlyDue,
-    loading, error, model,
+    loading, error, model, progress,
     generate, reset, restoreFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
   };

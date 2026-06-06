@@ -1,3 +1,5 @@
+import GenerationCard from './GenerationCard.jsx';
+
 const TYPE_ICONS = {
   confusion: '🔄',
   lacune: '⚠️',
@@ -41,10 +43,13 @@ export default function ErrorAnalysisSection({ patterns, message, loading, error
       )}
 
       {loading && (
-        <div className="loader-inline">
-          <div className="spinner" style={{width:16,height:16}} />
-          <span>Analyse de vos erreurs en cours…</span>
-        </div>
+        <GenerationCard
+          title="Analyse des erreurs récurrentes"
+          subtitle="Recherche des confusions et lacunes dans votre historique..."
+          phase="generating"
+          steps={['Collecte', 'Analyse', 'Conseils']}
+          activeStepIndex={1}
+        />
       )}
 
       {patterns && patterns.length > 0 && (

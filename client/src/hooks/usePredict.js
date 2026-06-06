@@ -10,14 +10,16 @@ function getLang() {
 export function usePredict() {
   const [results, setResults] = useState([]); // [{ name, predictions }]
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(null);
   const [error,   setError]   = useState(null);
 
-  function reset() { setResults([]); setError(null); }
+  function reset() { setResults([]); setError(null); setProgress(null); }
 
   const generate = useCallback(async (files) => {
     if (!files.length) return;
     reset();
     setLoading(true);
+    setProgress({ phase: 'preparing', message: 'Préparation du cours...' });
     try {
       const res = await apiFetch('/api/predict', {
         method: 'POST',
@@ -39,9 +41,21 @@ export function usePredict() {
         for (const part of parts) {
           if (!part.startsWith('data: ')) continue;
           let data; try { data = JSON.parse(part.slice(6)); } catch { continue; }
-          if (data.type === 'file_done') {
+          if (data.type === 'file_start') {
+            setProgress({
+              phase: 'generating',
+              name: data.name,
+              message: `Analyse de ${data.name}...`,
+            });
+          } else if (data.type === 'file_done') {
             setResults(prev => [...prev, { name: data.name, predictions: data.predictions || [] }]);
+            setProgress({
+              phase: 'receiving',
+              name: data.name,
+              message: `Questions probables de ${data.name} prêtes`,
+            });
           } else if (data.type === 'end') {
+            setProgress(null);
             eventBus.emit('quota:refresh');
             eventBus.emit('nav:section', 'predict-section');
           } else if (data.type === 'error') {
@@ -51,10 +65,11 @@ export function usePredict() {
       }
     } catch (err) {
       setError(err.message);
+      setProgress(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { results, loading, error, generate, reset };
+  return { results, loading, progress, error, generate, reset };
 }

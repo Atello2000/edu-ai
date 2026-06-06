@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import GenerationCard from './GenerationCard.jsx';
 
 /* ── Icônes par type de tâche ────────────────────────────────────────────── */
 const IcoWeak   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".6" fill="currentColor"/></svg>;
@@ -314,12 +315,13 @@ export default function StudyPlanSection({ plan, loading, progress, error, files
 
       {/* ── Loading ──────────────────────────────────────────────────────── */}
       {loading && (
-        <div className="sp-loading">
-          <div className="sp-loading-spinner">
-            <div className="spinner" style={{ width: 18, height: 18 }} />
-          </div>
-          <span>{progress || 'Génération de votre plan personnalisé…'}</span>
-        </div>
+        <GenerationCard
+          title="Génération du plan de révision"
+          subtitle={progress || 'Création du plan jour par jour...'}
+          phase={progress ? 'generating' : 'preparing'}
+          steps={['Préparation', 'Planification', 'Conseils']}
+          activeStepIndex={progress ? 1 : 0}
+        />
       )}
 
       {/* ── Plan ─────────────────────────────────────────────────────────── */}

@@ -1,4 +1,5 @@
-﻿import { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import GenerationCard from './GenerationCard.jsx';
 
 const CONF_KEY = 'jangalai-glossary-conf';
 
@@ -40,7 +41,7 @@ function groupByLetter(terms) {
   return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'fr'));
 }
 
-export default function GlossarySection({ terms = [], loading, error, onRegen }) {
+export default function GlossarySection({ terms = [], loading, progress, error, onRegen }) {
   const [search,   setSearch]   = useState('');
   const [conf,     setConf]     = useState(loadConf);
   const [filterK,  setFilterK]  = useState('all'); // 'all' | 'unknown' | 'learning' | 'known'
@@ -98,10 +99,13 @@ export default function GlossarySection({ terms = [], loading, error, onRegen })
       </div>
 
       {loading && (
-        <div className="loader-inline">
-          <div className="spinner" style={{ width: 20, height: 20 }} />
-          <span>Extraction du vocabulaire…</span>
-        </div>
+        <GenerationCard
+          title="Extraction du vocabulaire"
+          subtitle={progress || 'Extraction des termes en cours...'}
+          phase={progress ? 'generating' : 'preparing'}
+          steps={['Préparation', 'Extraction', 'Définitions']}
+          activeStepIndex={progress ? 1 : 0}
+        />
       )}
 
       {error && <div className="error-banner">{error}</div>}

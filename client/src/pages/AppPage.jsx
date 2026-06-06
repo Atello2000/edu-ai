@@ -23,6 +23,7 @@ import { useSessions } from '../hooks/useSessions.js';
 import { usePrepareSession } from '../hooks/usePrepareSession.js';
 import { useJetons } from '../hooks/useJetons.js';
 import { useAiSuite } from '../hooks/useAiSuite.js';
+import GenerationCard from '../components/GenerationCard.jsx';
 
 // Sections lourdes — chargées à la demande (lazy, mount-once)
 const SummaryResults       = lazy(() => import('../components/SummarySection.jsx'));
@@ -173,16 +174,16 @@ export default function AppPage() {
     // résumé
     summaryResults, summaryStreaming, summaryProgress, summarizing, summaryError, summarize, resetSummary,
     // fiche d'examen
-    examMd, examStreaming, examLoading, generateExam, resetExam,
+    examMd, examStreaming, examLoading, examProgress, generateExam, resetExam,
     // quiz
     questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError, quizProgress,
     generateQuiz, resetQuiz, selectAnswer, quizGoTo, submitQuiz, retryWrong,
     // flashcards
-    decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,
+    decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading, fcProgress,
     generateFlashcards, resetFlashcards, restoreFcFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
     // glossaire
-    glossaryTerms, glossaryLoading, glossaryError, generateGlossary, resetGlossary,
+    glossaryTerms, glossaryLoading, glossaryError, glossaryProgress, generateGlossary, resetGlossary,
     // chat
     chatMessages, chatLoading, sendChat, resetChat,
     // socratique
@@ -191,7 +192,7 @@ export default function AppPage() {
     // plan de révision
     studyPlan, studyPlanLoading, studyPlanProgress, studyPlanError, generateStudyPlan, resetStudyPlan,
     // prédicteur
-    predictResults, predictLoading, predictError, generatePredict,
+    predictResults, predictLoading, predictProgress, predictError, generatePredict,
     // analyse d'erreurs
     errorPatterns, errorMessage, errorLoading, errorAnalysisError,
     analyzeErrors, getWrongAnswers,
@@ -877,10 +878,23 @@ export default function AppPage() {
         {/* RÉSUMÉS */}
         {mountedPanels.has('summary-section') && <div className={`panel${activePanel !== 'summary-section' ? ' hidden' : ''}`} id="summary-section">
           {summarizing && (
-            <div className="loader-inline">
-              <div className="spinner" style={{ width: 20, height: 20 }}></div>
-              <span>Génération en cours…</span>
-            </div>
+            <GenerationCard
+              title="Génération des résumés"
+              subtitle={
+                Object.values(summaryProgress || {}).filter(Boolean).join(', ') ||
+                Object.keys(summaryStreaming || {}).map(name => `Rédaction de ${name}`).join(', ') ||
+                'Préparation des cours...'
+              }
+              phase={
+                Object.keys(summaryStreaming || {}).length > 0 ? 'streaming' :
+                Object.keys(summaryProgress || {}).length > 0 ? 'generating' : 'preparing'
+              }
+              steps={['Préparation', 'Analyse', 'Rédaction']}
+              activeStepIndex={
+                Object.keys(summaryStreaming || {}).length > 0 ? 2 :
+                Object.keys(summaryProgress || {}).length > 0 ? 1 : 0
+              }
+            />
           )}
           {summaryError && !summarizing && (
             <div className="error-banner" role="alert">⚠ {summaryError}</div>
@@ -906,10 +920,18 @@ export default function AppPage() {
         {/* FICHE D'EXAMEN */}
         {mountedPanels.has('exam-sheet-section') && <div className={`panel${activePanel !== 'exam-sheet-section' ? ' hidden' : ''}`} id="exam-sheet-section">
           {examLoading && (
-            <div className="loader-inline">
-              <div className="spinner" style={{ width: 20, height: 20 }}></div>
-              <span>Création de la fiche…</span>
-            </div>
+            <GenerationCard
+              title="Création de la fiche d'examen"
+              subtitle={examProgress?.message || 'Génération de la fiche...'}
+              phase={examProgress?.phase || 'preparing'}
+              steps={['Préparation', 'Synthèse', 'Rédaction']}
+              activeStepIndex={
+                examProgress?.phase === 'streaming' ? 2 :
+                examProgress?.phase === 'generating' ? 1 : 0
+              }
+              step={examProgress?.step}
+              total={examProgress?.total}
+            />
           )}
           <ErrorBoundary>
             <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
@@ -937,40 +959,22 @@ export default function AppPage() {
             </span>
           </div>
           {quizLoading && (
-            <div className="loader-inline">
-              <div className="spinner" style={{ width: 20, height: 20 }}></div>
-              <span>{questions.length > 0 ? `${questions.length} question${questions.length > 1 ? 's' : ''} générée${questions.length > 1 ? 's' : ''}…` : 'Génération du quiz…'}</span>
-            </div>
-          )}
-          {quizLoading && (
-            <div className="quiz-generation-card" role="status" aria-live="polite">
-              <div className="quiz-generation-top">
-                <div className="spinner" style={{ width: 22, height: 22 }} />
-                <div>
-                  <div className="quiz-generation-title">
-                    {questions.length > 0
-                      ? `${questions.length} question${questions.length > 1 ? 's' : ''} déjà prête${questions.length > 1 ? 's' : ''}`
-                      : 'Génération du quiz en cours'}
-                  </div>
-                  <div className="quiz-generation-subtitle">
-                    {quizProgress?.message || 'Analyse du cours et création des QCM...'}
-                  </div>
-                </div>
-              </div>
-              <div className="quiz-generation-steps">
-                <span className="active">Préparation</span>
-                <span className={quizProgress?.phase === 'generating' || questions.length > 0 ? 'active' : ''}>Questions</span>
-                <span className={questions.length > 0 ? 'active' : ''}>Explications</span>
-              </div>
-              {quizProgress?.step && quizProgress?.total && (
-                <div className="quiz-generation-track">
-                  <div style={{ width: `${Math.min(100, (quizProgress.step / quizProgress.total) * 100)}%` }} />
-                </div>
-              )}
-              <p className="quiz-generation-note">
-                Sur Render Free, la première réponse peut prendre un peu plus longtemps après une mise en veille.
-              </p>
-            </div>
+            <GenerationCard
+              title={
+                questions.length > 0
+                  ? `${questions.length} question${questions.length > 1 ? 's' : ''} déjà prête${questions.length > 1 ? 's' : ''}`
+                  : 'Génération du quiz en cours'
+              }
+              subtitle={quizProgress?.message || 'Analyse du cours et création des QCM...'}
+              phase={quizProgress?.phase || 'preparing'}
+              steps={['Préparation', 'Questions', 'Explications']}
+              activeStepIndex={
+                questions.length > 0 ? 2 :
+                quizProgress?.phase === 'generating' ? 1 : 0
+              }
+              step={quizProgress?.step}
+              total={quizProgress?.total}
+            />
           )}
           {quizError && !quizLoading && (
             <div className="error-banner" role="alert">⚠ {quizError}</div>
@@ -1006,10 +1010,18 @@ export default function AppPage() {
             </div>
           </div>
           {fcLoading && (
-            <div className="loader-inline">
-              <div className="spinner" style={{ width: 20, height: 20 }}></div>
-              <span>Génération des flashcards…</span>
-            </div>
+            <GenerationCard
+              title="Génération des flashcards"
+              subtitle={fcProgress?.message || 'Génération des flashcards...'}
+              phase={fcProgress?.phase || 'preparing'}
+              steps={['Préparation', 'Création', 'Versos']}
+              activeStepIndex={
+                fcProgress?.phase === 'receiving' ? 2 :
+                fcProgress?.phase === 'generating' ? 1 : 0
+              }
+              step={fcProgress?.step}
+              total={fcProgress?.total}
+            />
           )}
           <ErrorBoundary>
             <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
@@ -1037,6 +1049,7 @@ export default function AppPage() {
               <GlossarySection
                 terms={glossaryTerms}
                 loading={glossaryLoading}
+                progress={glossaryProgress}
                 error={glossaryError}
                 onRegen={glossaryTerms.length > 0 ? handleGlossaryRegen : undefined}
               />
@@ -1107,6 +1120,7 @@ export default function AppPage() {
               <PredictSection
                 results={predictResults}
                 loading={predictLoading}
+                progress={predictProgress}
                 error={predictError}
                 onQuizFromPredict={handleQuizFromPredict}
               />

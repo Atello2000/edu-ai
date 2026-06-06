@@ -31,7 +31,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
           loading: summarizing, error: summaryError, summarize, reset: resetSummary,
           restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
 
-  const { md: examMd, streaming: examStreaming, loading: examLoading,
+  const { md: examMd, streaming: examStreaming, loading: examLoading, progress: examProgress,
           generate: generateExam, reset: resetExam,
           restoreFrom: restoreExamFrom } = useExamSheet({ saveSession });
 
@@ -44,7 +44,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
 
   const {
     decks, deckIdx, cards, cardStates, srsOnlyDue,
-    loading: fcLoading,
+    loading: fcLoading, progress: fcProgress,
     generate: generateFlashcards, reset: resetFlashcards, restoreFrom: restoreFcFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
   } = useFlashcards({ saveSession });
@@ -59,7 +59,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
       restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef]);
 
   // ── Glossaire ──────────────────────────────────────────────────────────────
-  const { terms: glossaryTerms, loading: glossaryLoading, error: glossaryError,
+  const { terms: glossaryTerms, loading: glossaryLoading, error: glossaryError, progress: glossaryProgress,
           generate: generateGlossary, reset: resetGlossary } = useGlossary();
 
   // ── Chat ───────────────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
   const { plan: studyPlan, loading: studyPlanLoading, progress: studyPlanProgress,
           error: studyPlanError, generate: generateStudyPlan, reset: resetStudyPlan } = useStudyPlan();
 
-  const { results: predictResults, loading: predictLoading, error: predictError,
+  const { results: predictResults, loading: predictLoading, error: predictError, progress: predictProgress,
           generate: generatePredict, reset: resetPredict } = usePredict();
 
   const { patterns: errorPatterns, message: errorMessage, loading: errorLoading,
@@ -84,16 +84,16 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
     // résumé
     summaryResults, summaryStreaming, summaryProgress, summarizing, summaryError, summarize, resetSummary, restoreSummaryFrom,
     // fiche d'examen
-    examMd, examStreaming, examLoading, generateExam, resetExam, restoreExamFrom,
+    examMd, examStreaming, examLoading, examProgress, generateExam, resetExam, restoreExamFrom,
     // quiz
     questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError, quizProgress,
     generateQuiz, resetQuiz, restoreQuizFrom, selectAnswer, quizGoTo, submitQuiz, retryWrong,
     // flashcards
-    decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading,
+    decks, deckIdx, cards, cardStates, srsOnlyDue, fcLoading, fcProgress,
     generateFlashcards, resetFlashcards, restoreFcFrom,
     markCard, shuffle, restart, redoWrong, switchDeck, toggleSrs,
     // glossaire
-    glossaryTerms, glossaryLoading, glossaryError, generateGlossary, resetGlossary,
+    glossaryTerms, glossaryLoading, glossaryError, glossaryProgress, generateGlossary, resetGlossary,
     // chat
     chatMessages, chatLoading, sendChat, resetChat,
     // socratique
@@ -102,7 +102,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
     // plan de révision
     studyPlan, studyPlanLoading, studyPlanProgress, studyPlanError, generateStudyPlan, resetStudyPlan,
     // prédicteur
-    predictResults, predictLoading, predictError, generatePredict, resetPredict,
+    predictResults, predictLoading, predictProgress, predictError, generatePredict, resetPredict,
     // analyse d'erreurs
     errorPatterns, errorMessage, errorLoading, errorAnalysisError,
     analyzeErrors, resetErrorAnalysis, getWrongAnswers,
