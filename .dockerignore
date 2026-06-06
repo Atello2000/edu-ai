@@ -1,0 +1,15 @@
+.git
+.codex
+.agents
+.env
+.env.*
+node_modules
+client/node_modules
+client/dist
+coverage
+uploads
+tmp
+logs
+npm-debug.log*
+yarn-error.log*
+public/landing-prerender.html
