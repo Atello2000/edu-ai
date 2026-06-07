@@ -66,7 +66,7 @@ router.post('/quiz', async (req, res) => {
       difficile: "Privilégie les cas pratiques, nuances, erreurs courantes et raisonnements multi-étapes.",
     }[difficulty];
 
-    const CHUNK_PARALLEL = 3;
+    const CHUNK_PARALLEL = 1;
 
     for (const { file, chunks } of fileData) {
       send({ type: 'start', name: file.name });

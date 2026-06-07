@@ -11,7 +11,7 @@ const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chu
 const { prepare }                              = require('../../db');
 
 const CACHE_TTL_H    = 24; // heures
-const CHUNK_PARALLEL = 3;  // chunks traités simultanément
+const CHUNK_PARALLEL = 1;  // chunks traités séquentiellement pour respecter les quotas
 
 function summarizeCacheKey(text, lang, user) {
   const profile = `${user?.level || ''}|${Array.isArray(user?.domains) ? user.domains.join(',') : (user?.domains || '')}`;

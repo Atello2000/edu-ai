@@ -58,7 +58,7 @@ router.post('/flashcards', async (req, res) => {
       const allCards = new Array(chunks.length);
       // Distribuer les cartes entre les chunks
       const perChunk = Math.ceil(count / chunks.length);
-      const CHUNK_PARALLEL = 3;
+      const CHUNK_PARALLEL = 1;
 
       for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
         await Promise.all(
