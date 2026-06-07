@@ -200,14 +200,14 @@ body {
 /* ════════════════════════════════ HEADER ════════════════════════════════ */
 
 /* ── COMPACT APP HEADER ── */
-header {
+header.app-header {
   position: sticky;
   top: 0;
   z-index: var(--z-dropdown);
-  height: 56px;
+  height: 56px !important;
   display: flex;
   align-items: center;
-  padding: 0 1rem;
+  padding: 0 1rem !important;
   gap: .5rem;
   background: var(--card);
   border-bottom: 1px solid var(--border);
@@ -251,7 +251,7 @@ header {
 .header-right {
   display: flex;
   align-items: center;
-  gap: .35rem;
+  gap: .5rem;
   margin-left: auto;
 }
 
@@ -2530,10 +2530,13 @@ main {
 .jeton-widget:hover { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
 
 /* urgence : solde < 20 % → pulse rouge */
-.jeton-widget.jeton-urgent { border-color: var(--rose); animation: jw-pulse 2s ease-in-out infinite; }
-@keyframes jw-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,129,.0); }
-  50%       { box-shadow: 0 0 0 5px rgba(255,107,129,.22); }
+.jeton-widget.jeton-urgent {
+  border-color: var(--rose);
+  animation: jeton-urgent-pulse 2s ease-in-out infinite;
+}
+@keyframes jeton-urgent-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,129,0); }
+  50%       { box-shadow: 0 0 0 3px rgba(255,107,129,0.3), inset 0 0 4px rgba(255,107,129,0.15); }
 }
 
 /* Arc SVG */
@@ -4336,9 +4339,14 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
 .pomo-pill-dot {
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--gold); flex-shrink: 0;
-  animation: jw-pulse 1.2s ease-in-out infinite;
+  animation: pomo-dot-pulse 1.2s ease-in-out infinite;
 }
 .pomo-mode-break .pomo-pill-dot { background: var(--teal); }
+
+@keyframes pomo-dot-pulse {
+  0%, 100% { transform: scale(0.85); opacity: .55; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
 
 /* Handle de déplacement */
 .pomo-drag-handle {
@@ -4875,10 +4883,10 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   height: 24px;
   border-radius: 50%;
   background: var(--blue, #3d7eff);
-  animation: jw-pulse 1.6s ease-in-out infinite;
+  animation: payment-waiting-pulse 1.6s ease-in-out infinite;
 }
 
-@keyframes jw-pulse {
+@keyframes payment-waiting-pulse {
   0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }
   50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }

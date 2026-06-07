@@ -75,7 +75,7 @@ export default function AppHeader({
   }, [user]);
 
   return (
-    <header>
+    <header className="app-header">
       <button
         className={`back-home-btn${activePanel === 'dashboard-panel' ? ' hidden' : ''}`}
         id="back-home-btn"
