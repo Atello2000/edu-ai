@@ -3,7 +3,12 @@ const { OpenAI }    = require('openai');
 const Anthropic     = require('@anthropic-ai/sdk');
 const logger        = require('./logger');
 const { getAiConfig } = require('./aiConfig');
-const { getGeminiApiKey } = require('./geminiKey');
+const {
+  getGeminiApiKey,
+  getGeminiCooldownMs,
+  isGeminiCoolingDown,
+  markGeminiRateLimited,
+} = require('./geminiKey');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -38,6 +43,13 @@ const gemini = geminiApiKey
   : null;
 
 const MODEL_LABEL = 'IA';
+
+function geminiCooldownError() {
+  const seconds = Math.ceil(getGeminiCooldownMs() / 1000);
+  const err = new Error(`Gemini temporarily cooling down (${seconds}s remaining)`);
+  err.status = 429;
+  return err;
+}
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
 
@@ -156,6 +168,7 @@ async function* streamMistral(model, messages, maxTokens) {
 
 async function* streamGemini(model, messages, maxTokens) {
   if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
+  if (isGeminiCoolingDown()) throw geminiCooldownError();
   const label = model.includes('2.5') ? 'Gemini 2.5 Flash'
               : model.includes('2.0') ? 'Gemini 2.0 Flash'
               : 'Gemini 1.5 Flash';
@@ -178,16 +191,22 @@ async function* streamGemini(model, messages, maxTokens) {
         delay *= 2;
         continue;
       }
+      if (isRateLimit) markGeminiRateLimited();
       throw err;
     }
   }
 
-  for await (const chunk of stream) {
-    const text = chunk.choices?.[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
-    if (chunk.usage) {
-      yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+  try {
+    for await (const chunk of stream) {
+      const text = chunk.choices?.[0]?.delta?.content || '';
+      if (text) yield { text, model: label };
+      if (chunk.usage) {
+        yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+      }
     }
+  } catch (err) {
+    if (err?.status === 429 || err?.status === 503) markGeminiRateLimited();
+    throw err;
   }
 }
 
@@ -282,6 +301,7 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
     }
     if (provider === 'gemini') {
       if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
+      if (isGeminiCoolingDown()) throw geminiCooldownError();
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
       let r;
       let retries = 2;
@@ -298,6 +318,7 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
             delay *= 2;
             continue;
           }
+          if (isRateLimit) markGeminiRateLimited();
           throw err;
         }
       }
@@ -332,9 +353,13 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
       logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
       if (gemini) {
         try {
+          if (isGeminiCoolingDown()) throw geminiCooldownError();
           const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages });
           return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying Mistral`); }
+        } catch (e) {
+          if (e?.status === 429 || e?.status === 503) markGeminiRateLimited();
+          logger.warn(`Gemini fallback failed (${e.message}), trying Mistral`);
+        }
       }
       if (mistral) {
         try {
@@ -434,6 +459,7 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
     }
     if (provider === 'gemini') {
       if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
+      if (isGeminiCoolingDown()) throw geminiCooldownError();
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
       let r;
       let retries = 2;
@@ -450,6 +476,7 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
             delay *= 2;
             continue;
           }
+          if (isRateLimit) markGeminiRateLimited();
           throw err;
         }
       }
@@ -467,9 +494,13 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
       logger.warn(`Groq ${err.status} (chat), fallback cascade`);
       if (gemini) {
         try {
+          if (isGeminiCoolingDown()) throw geminiCooldownError();
           const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages: oaiMsgs });
           return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Gemini chat fallback failed (${e.message}), trying Mistral`); }
+        } catch (e) {
+          if (e?.status === 429 || e?.status === 503) markGeminiRateLimited();
+          logger.warn(`Gemini chat fallback failed (${e.message}), trying Mistral`);
+        }
       }
       if (mistral) {
         try {

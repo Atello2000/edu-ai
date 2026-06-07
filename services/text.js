@@ -6,19 +6,23 @@ const { promisify } = require('util');
 const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
 const AdmZip       = require('adm-zip');
-const { getGeminiApiKey } = require('./geminiKey');
+const {
+  getGeminiApiKey,
+  isGeminiCoolingDown,
+  markGeminiRateLimited,
+} = require('./geminiKey');
 const logger = require('./logger');
 
 async function fetchGeminiWithRetry(url, options, retries = 2) {
+  if (isGeminiCoolingDown()) return null;
   let delay = 1500;
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, options);
-      if ((res.status === 429 || res.status === 503) && attempt < retries) {
-        logger.warn(`Gemini REST API rate-limited (${res.status}, attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
-        await new Promise(r => setTimeout(r, delay));
-        delay *= 2;
-        continue;
+      if (res.status === 429 || res.status === 503) {
+        markGeminiRateLimited();
+        logger.warn(`Gemini REST API rate-limited (${res.status}); cooling down before fallback.`);
+        return res;
       }
       return res;
     } catch (err) {
@@ -39,7 +43,7 @@ const execFileAsync = promisify(execFile);
 const OCR_THRESHOLD   = 200;   // PDF avec peu de texte → probablement scanné
 const MIN_IMAGE_BYTES = 5000;  // Ignorer les images < 5 Ko (icônes, décorations)
 const MAX_IMAGES      = 30;    // Max images analysées par document
-const BATCH_SIZE      = 5;     // Parallélisme par batch (respect Gemini 15 RPM gratuit)
+const BATCH_SIZE      = 1;     // Gemini free tier is RPM-sensitive; avoid request bursts.
 const PPT_TEXT_THRESHOLD = 80; // Minimum utile pour accepter un ancien .ppt
 
 // ── Gemini Vision — description d'une image via l'API REST ───────────────────

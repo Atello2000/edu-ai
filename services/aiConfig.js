@@ -5,7 +5,7 @@
  */
 require('dotenv').config();
 const { prepare } = require('../db');
-const { hasGeminiApiKey } = require('./geminiKey');
+const { hasUsableGeminiApiKey } = require('./geminiKey');
 
 let _cache = null;
 const CACHE_TTL = 30_000; // 30 s
@@ -112,7 +112,7 @@ async function getJsonAiConfig() {
 
 // Gemini en premier (tier gratuit généreux : 1M TPM) → Groq → Mistral en fallback
 const CHEAP_PRIORITY = [
-  { available: hasGeminiApiKey,
+  { available: hasUsableGeminiApiKey,
     provider: 'gemini',  model: 'gemini-2.5-flash' },
   { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
     provider: 'groq',    model: 'llama-3.3-70b-versatile' },
