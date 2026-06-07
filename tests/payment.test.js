@@ -7,6 +7,7 @@ process.env.SESSION_SECRET   = 'test-session-secret-min32chars!!';
 process.env.NODE_ENV         = 'test';
 process.env.PAYTECH_API_KEY    = 'test-api-key';
 process.env.PAYTECH_API_SECRET = 'test-api-secret';
+process.env.PAYMENTS_LOCKED    = 'true';
 
 const crypto = require('crypto');
 
@@ -29,6 +30,7 @@ jest.mock('../middleware/csrf', () => ({
 }));
 
 const request = require('supertest');
+const express = require('express');
 let app;
 beforeAll(() => { app = require('../app'); });
 
@@ -89,5 +91,26 @@ describe('POST /api/payment/ipn', () => {
       type_event:  'sale_complete',
     });
     expect(r.status).toBe(200);
+  });
+});
+
+describe('POST /api/payment/checkout', () => {
+  it('bloque les nouveaux checkouts quand les paiements sont verrouilles', async () => {
+    const { protectedRouter } = require('../routes/payment');
+    const checkoutApp = express();
+
+    checkoutApp.use(express.json());
+    checkoutApp.use((req, res, next) => {
+      req.user = { id: 1, email: 'test@example.com' };
+      next();
+    });
+    checkoutApp.use('/api/payment', protectedRouter);
+
+    const r = await request(checkoutApp)
+      .post('/api/payment/checkout')
+      .send({ plan: 'pro' });
+
+    expect(r.status).toBe(503);
+    expect(r.body).toMatchObject({ paymentsLocked: true });
   });
 });

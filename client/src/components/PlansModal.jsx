@@ -2,6 +2,9 @@ import { useEffect } from 'react';
 import { apiFetch } from '../utils/apiFetch';
 import toast from '../utils/toast';
 
+const PAYMENTS_LOCKED = import.meta.env.VITE_PAYMENTS_LOCKED !== 'false';
+const PAYMENTS_LOCKED_MESSAGE = 'Paiements temporairement verrouilles pendant la stabilisation.';
+
 const PLANS = [
   {
     key:     'free',
@@ -94,6 +97,11 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
     : PLANS;
 
   const handleInternalSelectPlan = async (planKey) => {
+    if (PAYMENTS_LOCKED) {
+      toast.error(PAYMENTS_LOCKED_MESSAGE);
+      return;
+    }
+
     if (onSelectPlan) {
       onSelectPlan(planKey);
       return;
@@ -138,6 +146,12 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
         </div>
 
         {/* ── Cartes abonnements + Recharge dans la même grille ── */}
+        {PAYMENTS_LOCKED && (
+          <div className="plans-payment-lock">
+            Paiements temporairement verrouilles pendant la stabilisation de Jangalai.
+          </div>
+        )}
+
         <div className="plans-cards-row">
           {displayedPlans.map(plan => {
             const isCurrent = plan.key === (currentPlan || 'free');
@@ -173,12 +187,14 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                     ))}
                   </ul>
                   <button
-                    className="plan-tile-cta"
+                    className={`plan-tile-cta${PAYMENTS_LOCKED ? ' plan-tile-cta-locked' : ''}`}
                     style={isCurrent && plan.key === 'free' ? {} : { background: plan.accent, color: '#fff', borderColor: plan.accent }}
-                    disabled={isCurrent && plan.key === 'free'}
+                    disabled={PAYMENTS_LOCKED || (isCurrent && plan.key === 'free')}
                     onClick={() => handleInternalSelectPlan(plan.key)}
                   >
-                    {isCurrent
+                    {PAYMENTS_LOCKED
+                      ? 'Paiements verrouilles'
+                      : isCurrent
                       ? (plan.key === 'free' ? '✓ Plan actuel' : 'Renouveler le plan')
                       : `S'abonner au plan ${plan.name}`}
                   </button>
@@ -217,11 +233,12 @@ export default function PlansModal({ currentPlan = 'free', onClose, onSelectPlan
                 ))}
               </ul>
               <button
-                className="plan-tile-cta"
+                className={`plan-tile-cta${PAYMENTS_LOCKED ? ' plan-tile-cta-locked' : ''}`}
                 style={{ background: TOPUP.accent, color: '#fff', borderColor: TOPUP.accent }}
+                disabled={PAYMENTS_LOCKED}
                 onClick={() => handleInternalSelectPlan(TOPUP.key)}
               >
-                Recharger mes jetons
+                {PAYMENTS_LOCKED ? 'Paiements verrouilles' : 'Recharger mes jetons'}
               </button>
             </div>
           </div>

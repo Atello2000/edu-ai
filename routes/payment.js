@@ -13,6 +13,9 @@ const publicRouter = express.Router();
 const protectedRouter = express.Router();
 
 const PAYTECH_CHECKOUT_URL = 'https://paytech.sn/api/payment/request-payment';
+const PAYMENTS_LOCKED = process.env.PAYMENTS_LOCKED !== 'false';
+const PAYMENTS_LOCKED_MESSAGE =
+  'Les paiements sont temporairement verrouilles pendant la stabilisation de Jangalai.';
 
 // Tarification et quotas alloués en Francs CFA (XOF)
 const PLAN_CONFIG = {
@@ -26,6 +29,17 @@ const PLAN_CONFIG = {
  */
 protectedRouter.post('/checkout', async (req, res) => {
   const { plan } = req.body || {};
+
+  if (PAYMENTS_LOCKED) {
+    logger.warn('Checkout PayTech bloque: paiements temporairement verrouilles', {
+      userId: req.user?.id,
+      plan,
+    });
+    return res.status(503).json({
+      error: PAYMENTS_LOCKED_MESSAGE,
+      paymentsLocked: true,
+    });
+  }
 
   if (!plan || !PLAN_CONFIG[plan]) {
     return res.status(400).json({ error: 'Plan d\'abonnement invalide ou manquant.' });
@@ -225,5 +239,7 @@ publicRouter.post('/', async (req, res) => {
 
 module.exports = {
   publicRouter,
-  protectedRouter
+  protectedRouter,
+  PAYMENTS_LOCKED,
+  PAYMENTS_LOCKED_MESSAGE,
 };
