@@ -97,12 +97,11 @@ async function* streamGroq(model, messages, maxTokens) {
   });
   const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
   for await (const chunk of stream) {
+    const text = chunk.choices?.[0]?.delta?.content || '';
+    if (text) yield { text, model: label };
     if (chunk.usage) {
       yield { usage: { provider: 'Groq', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-      continue;
     }
-    const text = chunk.choices[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
   }
 }
 
@@ -129,12 +128,11 @@ async function* streamDeepSeek(model, messages, maxTokens) {
     stream_options: { include_usage: true },
   });
   for await (const chunk of stream) {
+    const text = chunk.choices?.[0]?.delta?.content || '';
+    if (text) yield { text, model: 'DeepSeek · Chat' };
     if (chunk.usage) {
       yield { usage: { provider: 'DeepSeek', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-      continue;
     }
-    const text = chunk.choices[0]?.delta?.content || '';
-    if (text) yield { text, model: 'DeepSeek · Chat' };
   }
 }
 
@@ -148,12 +146,11 @@ async function* streamMistral(model, messages, maxTokens) {
     stream_options: { include_usage: true },
   });
   for await (const chunk of stream) {
+    const text = chunk.choices?.[0]?.delta?.content || '';
+    if (text) yield { text, model: label };
     if (chunk.usage) {
       yield { usage: { provider: 'Mistral', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-      continue;
     }
-    const text = chunk.choices[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
   }
 }
 
@@ -186,12 +183,11 @@ async function* streamGemini(model, messages, maxTokens) {
   }
 
   for await (const chunk of stream) {
+    const text = chunk.choices?.[0]?.delta?.content || '';
+    if (text) yield { text, model: label };
     if (chunk.usage) {
       yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-      continue;
     }
-    const text = chunk.choices[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
   }
 }
 

@@ -115,9 +115,10 @@ router.post('/summarize', async (req, res) => {
                message: `Cours volumineux — analyse en ${chunks.length} parties…` });
 
         const partials = new Array(chunks.length);
-        for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
+        const chunkParallel = aiCfg.provider === 'gemini' ? 1 : 3;
+        for (let i = 0; i < chunks.length; i += chunkParallel) {
           await Promise.all(
-            chunks.slice(i, i + CHUNK_PARALLEL).map(async (chunk, j) => {
+            chunks.slice(i, i + chunkParallel).map(async (chunk, j) => {
               const idx = i + j;
               const { text: partial, usage } = await aiComplete(
                 promptPartial(ctx, inLang, file.name, chunk, idx + 1, chunks.length),

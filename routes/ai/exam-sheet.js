@@ -62,7 +62,7 @@ router.post('/exam-sheet', async (req, res) => {
         // Fichier long : résumés partiels → contexte condensé
         hasMultiChunk = true;
         const partials = new Array(chunks.length);
-        const CHUNK_PARALLEL = 1;
+        const CHUNK_PARALLEL = aiCfg.provider === 'gemini' ? 1 : 3;
 
         for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
           await Promise.all(
