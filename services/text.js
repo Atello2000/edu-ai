@@ -9,8 +9,8 @@ const AdmZip       = require('adm-zip');
 const { getGeminiApiKey } = require('./geminiKey');
 const logger = require('./logger');
 
-async function fetchGeminiWithRetry(url, options, retries = 5) {
-  let delay = 2000;
+async function fetchGeminiWithRetry(url, options, retries = 2) {
+  let delay = 1500;
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, options);
