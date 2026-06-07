@@ -1,35 +1,40 @@
 const CACHE = 'jangalai-ffad3a1-1780765430713';
 
-// IMPORTANT: never cache HTML entry points (/ or index.html) —
-// their hashed asset references change on every deploy and a stale
-// cached HTML causes a blank page (old JS hash → 404 → React never mounts).
+// IMPORTANT: never cache HTML entry points (/ or index.html).
+// Their hashed asset references change on every deploy and stale HTML can
+// point to missing JS/CSS files.
 const ASSETS = [
-  '/manifest.json', '/icon.svg',
+  '/manifest.json',
+  '/icon.svg',
   'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600;700&display=swap',
 ];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(() => {})));
-  self.skipWaiting(); // activate immediately so the new SW takes over right away
+const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache => cache.addAll(ASSETS))
+      .catch(() => {})
+  );
+  self.skipWaiting();
 });
 
-self.addEventListener('message', e => {
-  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
+self.addEventListener('activate', event => {
+  event.waitUntil(
     caches.keys()
       .then(keys => {
-        const stale = keys.filter(k => k !== CACHE);
-        return Promise.all(stale.map(k => caches.delete(k)))
-          .then(() => stale.length > 0); // true = this is an update, not first install
+        const stale = keys.filter(key => key !== CACHE);
+        return Promise.all(stale.map(key => caches.delete(key)))
+          .then(() => stale.length > 0);
       })
       .then(async isUpdate => {
         await self.clients.claim();
-        // Only force-reload open windows when replacing a previous version.
-        // On first install there is no stale content — skipping the forced
-        // navigate prevents a reload that could land on an old CDN edge node.
+
         if (!isUpdate) return;
         const openClients = await self.clients.matchAll({ type: 'window' });
         for (const client of openClients) {
@@ -39,24 +44,22 @@ self.addEventListener('activate', e => {
   );
 });
 
-self.addEventListener('push', e => {
-  const data = e.data?.json() || {};
-  e.waitUntil(
+self.addEventListener('push', event => {
+  const data = event.data?.json() || {};
+  event.waitUntil(
     self.registration.showNotification(data.title || 'Jangalai', {
-      body:  data.body  || 'Vous avez des flashcards à réviser.',
-      icon:  data.icon  || '/icon.svg',
+      body: data.body || 'Vous avez des flashcards a reviser.',
+      icon: data.icon || '/icon.svg',
       badge: '/icon.svg',
-      data:  { url: data.url || '/app' }
+      data: { url: data.url || '/app' },
     })
   );
 });
 
-self.addEventListener('notificationclick', e => {
-  e.notification.close();
-  e.waitUntil(clients.openWindow(e.notification.data?.url || '/app'));
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  event.waitUntil(clients.openWindow(event.notification.data?.url || '/app'));
 });
-
-const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
 
 function networkErrorResponse(request) {
   if (request.mode === 'navigate') {
@@ -76,45 +79,42 @@ function networkErrorResponse(request) {
   });
 }
 
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  if (e.request.url.includes('/api/')) return;
+function cacheResponse(request, response) {
+  const clone = response.clone();
+  caches.open(CACHE)
+    .then(cache => cache.put(request, clone))
+    .catch(() => {});
+}
 
-  const url = new URL(e.request.url);
-  const isExternal = EXTERNAL.some(h => url.hostname.includes(h));
+async function handleFetch(request) {
+  const url = new URL(request.url);
+  const isExternal = EXTERNAL.some(host => url.hostname.includes(host));
 
-  if (isExternal) {
-    // Cache-first pour les ressources CDN/fonts
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => networkErrorResponse(e.request)))
-    );
-  } else {
-    // Network-first pour les assets locaux (/assets/… du build Vite)
-    // IMPORTANT: never cache HTML responses — they are SPA entry points whose
-    // hashed asset references change on every deploy. Caching them causes a
-    // blank page when the old HTML references asset filenames that no longer exist.
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) {
-          const ct = res.headers.get('content-type') || '';
-          if (!ct.includes('text/html')) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-        }
-        return res;
-      }).catch(err => {
-        return caches.match(e.request).then(cached => {
-          if (cached) return cached;
-          return networkErrorResponse(e.request);
-        });
-      })
-    );
+  try {
+    if (isExternal) {
+      const cached = await caches.match(request);
+      if (cached) return cached;
+
+      const response = await fetch(request);
+      if (response.ok) cacheResponse(request, response);
+      return response;
+    }
+
+    const response = await fetch(request);
+    if (response.ok) {
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('text/html')) cacheResponse(request, response);
+    }
+    return response;
+  } catch (_) {
+    const cached = await caches.match(request).catch(() => null);
+    return cached || networkErrorResponse(request);
   }
+}
+
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.includes('/api/')) return;
+
+  event.respondWith(handleFetch(event.request));
 });
