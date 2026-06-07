@@ -5,9 +5,51 @@ const { PROVIDERS, getAiConfig, setAiConfig, setUserAiConfig, getUserAiConfig } 
 const { addJetons, getBalance, JETON_COSTS, MONTHLY_JETONS } = require('../services/jetons');
 const logger = require('../services/logger');
 
+const TOKEN_PROVIDER_LABELS = {
+  groq: 'Groq',
+  mistral: 'Mistral',
+  anthropic: 'Anthropic',
+  gemini: 'Gemini',
+  deepseek: 'DeepSeek',
+};
+
 function parseId(str) {
   const n = parseInt(str, 10);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function providerKey(provider) {
+  const raw = String(provider || '').trim().toLowerCase();
+  if (raw.includes('gemini')) return 'gemini';
+  if (raw.includes('mistral')) return 'mistral';
+  if (raw.includes('anthropic') || raw.includes('claude')) return 'anthropic';
+  if (raw.includes('groq')) return 'groq';
+  if (raw.includes('deepseek')) return 'deepseek';
+  return raw.replace(/[^a-z0-9]/g, '');
+}
+
+function withKnownTokenProviders(rows, numericFields, sortField) {
+  const byProvider = new Map(
+    Object.entries(TOKEN_PROVIDER_LABELS).map(([id, label]) => {
+      const row = { provider: label };
+      numericFields.forEach(field => { row[field] = 0; });
+      return [id, row];
+    })
+  );
+
+  rows.forEach(source => {
+    const key = providerKey(source.provider);
+    if (!key) return;
+
+    const row = byProvider.get(key) || { provider: source.provider };
+    numericFields.forEach(field => {
+      row[field] = Number(row[field] || 0) + Number(source[field] || 0);
+    });
+    byProvider.set(key, row);
+  });
+
+  return Array.from(byProvider.values())
+    .sort((a, b) => Number(b[sortField] || 0) - Number(a[sortField] || 0));
 }
 
 function requireAdmin(req, res, next) {
@@ -101,7 +143,12 @@ router.get('/tokens', requireAdmin, async (req, res) => {
     FROM token_usage GROUP BY action ORDER BY total DESC
   `).all();
 
-  res.json({ today: todayRow, allTime: allRow, byProvider, byAction });
+  res.json({
+    today: todayRow,
+    allTime: allRow,
+    byProvider: withKnownTokenProviders(byProvider, ['input', 'output'], 'output'),
+    byAction,
+  });
 });
 
 // ── GET /api/admin/messages ───────────────────────────────────────────────────
@@ -259,7 +306,13 @@ router.get('/analytics', requireAdmin, async (req, res) => {
     `).all(),
   ]);
 
-  res.json({ features, providers, conversion, revenue, growth });
+  res.json({
+    features,
+    providers: withKnownTokenProviders(providers, ['nb_calls', 'tokens_in', 'tokens_out'], 'tokens_out'),
+    conversion,
+    revenue,
+    growth,
+  });
 });
 
 module.exports = router;
