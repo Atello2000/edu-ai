@@ -58,6 +58,24 @@ self.addEventListener('notificationclick', e => {
 
 const EXTERNAL = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdn.jsdelivr.net'];
 
+function networkErrorResponse(request) {
+  if (request.mode === 'navigate') {
+    return new Response(
+      '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jangalai hors ligne</title></head><body><main style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:36rem;margin:12vh auto;padding:0 1rem;line-height:1.5"><h1>Connexion indisponible</h1><p>Jangalai ne peut pas charger cette page pour le moment. Verifiez votre connexion puis rechargez la page.</p></main></body></html>',
+      {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      }
+    );
+  }
+
+  return new Response('', {
+    status: 504,
+    statusText: 'Gateway Timeout',
+  });
+}
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   if (e.request.url.includes('/api/')) return;
@@ -74,7 +92,7 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return res;
-      }))
+      }).catch(() => networkErrorResponse(e.request)))
     );
   } else {
     // Network-first pour les assets locaux (/assets/… du build Vite)
@@ -94,7 +112,7 @@ self.addEventListener('fetch', e => {
       }).catch(err => {
         return caches.match(e.request).then(cached => {
           if (cached) return cached;
-          throw err; // Rethrow original fetch error on cache miss to let the browser handle it cleanly
+          return networkErrorResponse(e.request);
         });
       })
     );
