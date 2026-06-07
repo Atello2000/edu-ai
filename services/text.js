@@ -6,6 +6,7 @@ const { promisify } = require('util');
 const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
 const AdmZip       = require('adm-zip');
+const { getGeminiApiKey } = require('./geminiKey');
 
 const OFFICE_PARSER_CONFIG = { tempFilesLocation: os.tmpdir() };
 const execFileAsync = promisify(execFile);
@@ -18,7 +19,7 @@ const PPT_TEXT_THRESHOLD = 80; // Minimum utile pour accepter un ancien .ppt
 
 // ── Gemini Vision — description d'une image via l'API REST ───────────────────
 async function describeImageWithGemini(base64, mimeType) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
   try {
     const res = await fetch(
@@ -343,7 +344,7 @@ const GEMINI_INLINE_LIMIT = 15 * 1024 * 1024; // 15 Mo — marge sous la limite 
 
 // ── Gemini : extraction complète d'un PDF scanné (texte + figures) ────────────
 async function ocrPdfWithGemini(buffer) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
   if (buffer.length > GEMINI_INLINE_LIMIT) return null; // trop grand pour inline data
   try {
@@ -373,7 +374,7 @@ async function ocrPdfWithGemini(buffer) {
 
 // ── Gemini : description des figures d'un PDF texte (sans ré-extraire le texte)
 async function describePdfFiguresWithGemini(buffer) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
   if (buffer.length > GEMINI_INLINE_LIMIT) return null;
   try {

@@ -196,7 +196,7 @@ router.get('/health', async (req, res) => {
       env: process.env.NODE_ENV || 'development',
       ai_config: cfg,
       providers_configured: {
-        gemini:    !!process.env.GEMINI_API_KEY,
+        gemini:    !!(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY),
         groq:      !!(process.env.GROQ_API_KEY || process.env.GROQ_API_KEY_2 || process.env.GROQ_API_KEY_3),
         anthropic: !!process.env.ANTHROPIC_API_KEY,
         mistral:   !!process.env.MISTRAL_API_KEY,

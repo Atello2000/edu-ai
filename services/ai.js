@@ -3,6 +3,7 @@ const { OpenAI }    = require('openai');
 const Anthropic     = require('@anthropic-ai/sdk');
 const logger        = require('./logger');
 const { getAiConfig } = require('./aiConfig');
+const { getGeminiApiKey } = require('./geminiKey');
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -28,9 +29,10 @@ const mistral = process.env.MISTRAL_API_KEY
   : null;
 
 // Gemini via endpoint compatible OpenAI (pas besoin de SDK séparé)
-const gemini = process.env.GEMINI_API_KEY
+const geminiApiKey = getGeminiApiKey();
+const gemini = geminiApiKey
   ? new OpenAI({
-      apiKey:  process.env.GEMINI_API_KEY,
+      apiKey:  geminiApiKey,
       baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
     })
   : null;
@@ -156,7 +158,7 @@ async function* streamMistral(model, messages, maxTokens) {
 }
 
 async function* streamGemini(model, messages, maxTokens) {
-  if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY)');
+  if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
   const label = model.includes('2.5') ? 'Gemini 2.5 Flash'
               : model.includes('2.0') ? 'Gemini 2.0 Flash'
               : 'Gemini 1.5 Flash';
@@ -264,7 +266,7 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
       return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
     }
     if (provider === 'gemini') {
-      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY)');
+      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
       const r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages });
       return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
@@ -399,7 +401,7 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
       return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
     }
     if (provider === 'gemini') {
-      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY)');
+      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
       const r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
       return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };

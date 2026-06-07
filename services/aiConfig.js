@@ -5,6 +5,7 @@
  */
 require('dotenv').config();
 const { prepare } = require('../db');
+const { hasGeminiApiKey } = require('./geminiKey');
 
 let _cache = null;
 const CACHE_TTL = 30_000; // 30 s
@@ -111,7 +112,7 @@ async function getJsonAiConfig() {
 
 // Gemini en premier (tier gratuit généreux : 1M TPM) → Groq → Mistral en fallback
 const CHEAP_PRIORITY = [
-  { keys: ['GEMINI_API_KEY'],
+  { available: hasGeminiApiKey,
     provider: 'gemini',  model: 'gemini-2.0-flash' },
   { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
     provider: 'groq',    model: 'llama-3.3-70b-versatile' },
@@ -139,8 +140,8 @@ const STRUCTURED_ACTIONS = new Set(['summarize', 'exam-sheet', 'compare']);
 async function getAiConfigForAction(action) {
   if (CHEAP_ACTIONS.has(action)) {
     // Actions JSON légères : Groq → Mistral → erreur (jamais Claude)
-    for (const { keys, provider, model } of CHEAP_PRIORITY) {
-      if (keys.some(k => process.env[k])) return { provider, model };
+    for (const { keys, available, provider, model } of CHEAP_PRIORITY) {
+      if ((available && available()) || keys?.some(k => process.env[k])) return { provider, model };
     }
     throw new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
   }
@@ -148,8 +149,8 @@ async function getAiConfigForAction(action) {
   if (STRUCTURED_ACTIONS.has(action)) {
     // Actions Markdown structurées : Groq 70B → Gemini 2.0 Flash → Claude (dernier recours)
     // Mistral Small exclu : trop petit pour du Markdown sectionné fiable
-    for (const { keys, provider, model } of CHEAP_PRIORITY) {
-      if (keys.some(k => process.env[k])) return { provider, model };
+    for (const { keys, available, provider, model } of CHEAP_PRIORITY) {
+      if ((available && available()) || keys?.some(k => process.env[k])) return { provider, model };
     }
     return getAiConfig(); // Claude ou provider admin
   }

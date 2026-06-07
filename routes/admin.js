@@ -3,6 +3,7 @@ const router  = express.Router();
 const { prepare } = require('../db');
 const { PROVIDERS, getAiConfig, setAiConfig, setUserAiConfig, getUserAiConfig } = require('../services/aiConfig');
 const { addJetons, getBalance, JETON_COSTS, MONTHLY_JETONS } = require('../services/jetons');
+const { hasGeminiApiKey } = require('../services/geminiKey');
 const logger = require('../services/logger');
 
 const TOKEN_PROVIDER_LABELS = {
@@ -189,7 +190,7 @@ router.get('/ai-config', requireAdmin, async (req, res) => {
   const providers = Object.entries(PROVIDERS).map(([id, p]) => ({
     id,
     label:     p.label,
-    available: !!process.env[p.envKey],
+    available: id === 'gemini' ? hasGeminiApiKey() : !!process.env[p.envKey],
     models:    p.models,
   }));
   res.json({ ...cfg, providers });
