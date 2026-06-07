@@ -161,8 +161,8 @@ async function* streamGemini(model, messages, maxTokens) {
               : 'Gemini 1.5 Flash';
 
   let stream;
-  let retries = 5;
-  let delay = 2000;
+  let retries = 2;
+  let delay = 1500;
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       stream = await gemini.chat.completions.create({
@@ -284,8 +284,8 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
       if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
       let r;
-      let retries = 5;
-      let delay = 2000;
+      let retries = 2;
+      let delay = 1500;
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
           r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages });
@@ -436,8 +436,8 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
       if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
       let r;
-      let retries = 5;
-      let delay = 2000;
+      let retries = 2;
+      let delay = 1500;
       for (let attempt = 1; attempt <= retries; attempt++) {
         try {
           r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
