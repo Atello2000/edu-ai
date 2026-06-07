@@ -7,6 +7,31 @@ const pdfParse     = require('pdf-parse');
 const officeParser = require('officeparser');
 const AdmZip       = require('adm-zip');
 const { getGeminiApiKey } = require('./geminiKey');
+const logger = require('./logger');
+
+async function fetchGeminiWithRetry(url, options, retries = 3) {
+  let delay = 1000;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if ((res.status === 429 || res.status === 503) && attempt < retries) {
+        logger.warn(`Gemini REST API rate-limited (${res.status}, attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt < retries) {
+        logger.warn(`Gemini REST API network error (${err.message}, attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+        delay *= 2;
+        continue;
+      }
+      throw err;
+    }
+  }
+}
 
 const OFFICE_PARSER_CONFIG = { tempFilesLocation: os.tmpdir() };
 const execFileAsync = promisify(execFile);
@@ -22,7 +47,7 @@ async function describeImageWithGemini(base64, mimeType) {
   const apiKey = getGeminiApiKey();
   if (!apiKey) return null;
   try {
-    const res = await fetch(
+    const res = await fetchGeminiWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
@@ -38,7 +63,7 @@ async function describeImageWithGemini(base64, mimeType) {
         }),
       }
     );
-    if (!res.ok) return null;
+    if (!res || !res.ok) return null;
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     return text.toLowerCase() === 'décoratif' || !text ? null : text;
@@ -349,7 +374,7 @@ async function ocrPdfWithGemini(buffer) {
   if (buffer.length > GEMINI_INLINE_LIMIT) return null; // trop grand pour inline data
   try {
     const base64 = buffer.toString('base64');
-    const res = await fetch(
+    const res = await fetchGeminiWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
@@ -365,7 +390,7 @@ async function ocrPdfWithGemini(buffer) {
         }),
       }
     );
-    if (!res.ok) return null;
+    if (!res || !res.ok) return null;
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     return text.length > OCR_THRESHOLD ? text : null;
@@ -379,7 +404,7 @@ async function describePdfFiguresWithGemini(buffer) {
   if (buffer.length > GEMINI_INLINE_LIMIT) return null;
   try {
     const base64 = buffer.toString('base64');
-    const res = await fetch(
+    const res = await fetchGeminiWithRetry(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
@@ -395,7 +420,7 @@ async function describePdfFiguresWithGemini(buffer) {
         }),
       }
     );
-    if (!res.ok) return null;
+    if (!res || !res.ok) return null;
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
     if (!text || text.toLowerCase().includes('aucune figure')) return null;

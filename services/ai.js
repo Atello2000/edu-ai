@@ -162,10 +162,29 @@ async function* streamGemini(model, messages, maxTokens) {
   const label = model.includes('2.5') ? 'Gemini 2.5 Flash'
               : model.includes('2.0') ? 'Gemini 2.0 Flash'
               : 'Gemini 1.5 Flash';
-  const stream = await gemini.chat.completions.create({
-    model, max_tokens: maxTokens, stream: true, messages,
-    stream_options: { include_usage: true },
-  });
+
+  let stream;
+  let retries = 3;
+  let delay = 1000;
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      stream = await gemini.chat.completions.create({
+        model, max_tokens: maxTokens, stream: true, messages,
+        stream_options: { include_usage: true },
+      });
+      break;
+    } catch (err) {
+      const isRateLimit = err?.status === 429 || err?.status === 503;
+      if (isRateLimit && attempt < retries) {
+        logger.warn(`Gemini stream creation rate-limited (attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+        continue;
+      }
+      throw err;
+    }
+  }
+
   for await (const chunk of stream) {
     if (chunk.usage) {
       yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
@@ -268,7 +287,24 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
     if (provider === 'gemini') {
       if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
-      const r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages });
+      let r;
+      let retries = 3;
+      let delay = 1000;
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages });
+          break;
+        } catch (err) {
+          const isRateLimit = err?.status === 429 || err?.status === 503;
+          if (isRateLimit && attempt < retries) {
+            logger.warn(`Gemini complete rate-limited (attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
+            continue;
+          }
+          throw err;
+        }
+      }
       return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
     }
     // groq
@@ -403,7 +439,24 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
     if (provider === 'gemini') {
       if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
       const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
-      const r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
+      let r;
+      let retries = 3;
+      let delay = 1000;
+      for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+          r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
+          break;
+        } catch (err) {
+          const isRateLimit = err?.status === 429 || err?.status === 503;
+          if (isRateLimit && attempt < retries) {
+            logger.warn(`Gemini chat rate-limited (attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            delay *= 2;
+            continue;
+          }
+          throw err;
+        }
+      }
       return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
     }
     // groq (défaut)
