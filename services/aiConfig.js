@@ -47,9 +47,9 @@ const PROVIDERS = {
     label: 'Google Gemini',
     envKey: 'GEMINI_API_KEY',
     models: [
-      { id: 'gemini-2.0-flash',        label: 'Gemini 2.0 Flash — recommandé' },
-      { id: 'gemini-2.5-flash-preview-05-20', label: 'Gemini 2.5 Flash — le plus capable' },
-      { id: 'gemini-1.5-flash-latest', label: 'Gemini 1.5 Flash — stable' },
+      { id: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash — recommandé' },
+      { id: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro — performant' },
+      { id: 'gemini-flash-latest',     label: 'Gemini 1.5 Flash — stable' },
     ],
   },
 };
@@ -113,7 +113,7 @@ async function getJsonAiConfig() {
 // Gemini en premier (tier gratuit généreux : 1M TPM) → Groq → Mistral en fallback
 const CHEAP_PRIORITY = [
   { available: hasGeminiApiKey,
-    provider: 'gemini',  model: 'gemini-2.0-flash' },
+    provider: 'gemini',  model: 'gemini-2.5-flash' },
   { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
     provider: 'groq',    model: 'llama-3.3-70b-versatile' },
   { keys: ['MISTRAL_API_KEY'],

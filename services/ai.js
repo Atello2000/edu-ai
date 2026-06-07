@@ -209,7 +209,7 @@ async function* aiStream(prompt, maxTokens = 4096, config = null) {
     if (isGroqQuota) {
       logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
       if (gemini) {
-        try { yield* streamGemini('gemini-2.0-flash', messages, maxTokens); return; }
+        try { yield* streamGemini('gemini-2.5-flash', messages, maxTokens); return; }
         catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying Mistral`); }
       }
       if (mistral) {
@@ -300,8 +300,8 @@ async function aiComplete(prompt, maxTokens = 3000, config = null) {
       logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
       if (gemini) {
         try {
-          const r = await gemini.chat.completions.create({ model: 'gemini-2.0-flash', max_tokens: maxTokens, messages });
-          return { text: r.choices[0].message.content, model: 'Gemini 2.0 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+          const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages });
+          return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
         } catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying Mistral`); }
       }
       if (mistral) {
@@ -418,8 +418,8 @@ async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false
       logger.warn(`Groq ${err.status} (chat), fallback cascade`);
       if (gemini) {
         try {
-          const r = await gemini.chat.completions.create({ model: 'gemini-2.0-flash', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'Gemini 2.0 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+          const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages: oaiMsgs });
+          return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
         } catch (e) { logger.warn(`Gemini chat fallback failed (${e.message}), trying Mistral`); }
       }
       if (mistral) {
@@ -466,7 +466,7 @@ async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage 
     if (isGroqQuota) {
       logger.warn(`Groq ${err.status} (chat stream), fallback cascade`);
       if (gemini) {
-        try { yield* streamGemini('gemini-2.0-flash', oaiMsgs, maxTokens); return; }
+        try { yield* streamGemini('gemini-2.5-flash', oaiMsgs, maxTokens); return; }
         catch (e) { logger.warn(`Gemini chat-stream fallback failed (${e.message}), trying Mistral`); }
       }
       if (mistral) {

@@ -36,14 +36,14 @@ describe('getAiConfigForAction - cheap actions', () => {
     process.env.GOOGLE_API_KEY = 'x';
     const cfg = await getAiConfigForAction('quiz');
     expect(cfg.provider).toBe('gemini');
-    expect(cfg.model).toBe('gemini-2.0-flash');
+    expect(cfg.model).toBe('gemini-2.5-flash');
   });
 
   it('routes to Gemini when GEMINI_API_KEY is present', async () => {
     process.env.GEMINI_API_KEY = 'x';
     const cfg = await getAiConfigForAction('quiz');
     expect(cfg.provider).toBe('gemini');
-    expect(cfg.model).toBe('gemini-2.0-flash');
+    expect(cfg.model).toBe('gemini-2.5-flash');
   });
 
   it('routes to Groq when Groq is present and Gemini is absent', async () => {
@@ -86,7 +86,7 @@ describe('getAiConfigForAction - structured actions', () => {
       process.env.GOOGLE_API_KEY = 'x';
       const cfg = await getAiConfigForAction(action);
       expect(cfg.provider).toBe('gemini');
-      expect(cfg.model).toBe('gemini-2.0-flash');
+      expect(cfg.model).toBe('gemini-2.5-flash');
     }
   );
 });
