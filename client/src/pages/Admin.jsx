@@ -236,7 +236,7 @@ export default function Admin() {
               <h4>Par provider</h4>
               {tokens.byProvider?.length ? tokens.byProvider.map(p => (
                 <div className="breakdown-item" key={p.provider}>
-                  <span className={p.provider === 'Groq' ? 'provider-groq' : p.provider === 'DeepSeek' ? 'provider-deepseek' : ''} style={{fontWeight:600}}>
+                  <span className={p.provider === 'Groq' ? 'provider-groq' : p.provider === 'DeepSeek' ? 'provider-deepseek' : p.provider === 'GitHub Models' ? 'provider-github' : ''} style={{fontWeight:600}}>
                     {p.provider || 'Inconnu'}
                   </span>
                   <span className="breakdown-val">

@@ -104,6 +104,7 @@ tr:hover td { background: rgba(255,255,255,.025); }
 .breakdown-val { font-weight: 600; color: var(--blue); font-size: .82rem; }
 .provider-groq    { color: #f97316; }
 .provider-deepseek { color: #818cf8; }
+.provider-github   { color: #a371f7; }
 
 /* ── Token per user ────────────────────────────────────────────────────────── */
 .token-cell { min-width: 90px; }

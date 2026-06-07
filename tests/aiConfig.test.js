@@ -12,6 +12,7 @@ const PROVIDER_KEYS = [
   'DEEPSEEK_API_KEY',
   'GEMINI_API_KEY',
   'GOOGLE_API_KEY',
+  'GITHUB_TOKEN',
 ];
 
 let saved = {};
@@ -51,6 +52,13 @@ describe('getAiConfigForAction - cheap actions', () => {
     const cfg = await getAiConfigForAction('quiz');
     expect(cfg.provider).toBe('groq');
     expect(cfg.model).toBe('llama-3.3-70b-versatile');
+  });
+
+  it('routes to GitHub when GITHUB_TOKEN is present and Gemini/Groq are absent', async () => {
+    process.env.GITHUB_TOKEN = 'x';
+    const cfg = await getAiConfigForAction('quiz');
+    expect(cfg.provider).toBe('github');
+    expect(cfg.model).toBe('gpt-4o-mini');
   });
 
   it('falls back to Mistral when only MISTRAL_API_KEY is present', async () => {

@@ -201,6 +201,7 @@ router.get('/health', async (req, res) => {
         anthropic: !!process.env.ANTHROPIC_API_KEY,
         mistral:   !!process.env.MISTRAL_API_KEY,
         deepseek:  !!process.env.DEEPSEEK_API_KEY,
+        github:    !!process.env.GITHUB_TOKEN,
       },
     });
   } catch (err) {

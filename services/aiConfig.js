@@ -40,7 +40,9 @@ const PROVIDERS = {
     label: 'DeepSeek',
     envKey: 'DEEPSEEK_API_KEY',
     models: [
-      { id: 'deepseek-chat', label: 'DeepSeek Chat' },
+      { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash' },
+      { id: 'deepseek-v4-pro',   label: 'DeepSeek V4 Pro (Raisonnement)' },
+      { id: 'deepseek-chat',     label: 'DeepSeek Chat (Déprécié)' },
     ],
   },
   gemini: {
@@ -50,6 +52,15 @@ const PROVIDERS = {
       { id: 'gemini-2.5-flash',        label: 'Gemini 2.5 Flash — recommandé' },
       { id: 'gemini-2.5-pro',          label: 'Gemini 2.5 Pro — performant' },
       { id: 'gemini-flash-latest',     label: 'Gemini 1.5 Flash — stable' },
+    ],
+  },
+  github: {
+    label: 'GitHub Models',
+    envKey: 'GITHUB_TOKEN',
+    models: [
+      { id: 'gpt-4o-mini',             label: 'GPT-4o Mini — rapide & structuré' },
+      { id: 'gpt-4o',                  label: 'GPT-4o — très performant' },
+      { id: 'phi-4',                   label: 'Phi-4 — équilibré & rapide' },
     ],
   },
 };
@@ -110,12 +121,14 @@ async function getJsonAiConfig() {
 // Règle : Claude/DeepSeek ne sont jamais utilisés automatiquement pour les
 // actions standard. Le x50 de surcoût par rapport à Mistral est trop risqué.
 
-// Gemini en premier (tier gratuit généreux : 1M TPM) → Groq → Mistral en fallback
+// Gemini en premier (tier gratuit généreux : 1M TPM) → Groq → GitHub (gpt-4o-mini) → Mistral en fallback
 const CHEAP_PRIORITY = [
   { available: hasUsableGeminiApiKey,
     provider: 'gemini',  model: 'gemini-2.5-flash' },
   { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
     provider: 'groq',    model: 'llama-3.3-70b-versatile' },
+  { keys: ['GITHUB_TOKEN'],
+    provider: 'github',  model: 'gpt-4o-mini' },
   { keys: ['MISTRAL_API_KEY'],
     provider: 'mistral', model: 'mistral-small-latest' },
 ];

@@ -12,6 +12,7 @@ const TOKEN_PROVIDER_LABELS = {
   anthropic: 'Anthropic',
   gemini: 'Gemini',
   deepseek: 'DeepSeek',
+  github: 'GitHub Models',
 };
 
 function parseId(str) {
@@ -26,6 +27,7 @@ function providerKey(provider) {
   if (raw.includes('anthropic') || raw.includes('claude')) return 'anthropic';
   if (raw.includes('groq')) return 'groq';
   if (raw.includes('deepseek')) return 'deepseek';
+  if (raw.includes('github')) return 'github';
   return raw.replace(/[^a-z0-9]/g, '');
 }
 
