@@ -188,23 +188,55 @@ export function buildSummaryDoc(fileName, summaryMd) {
 
       if (/^[-*+]\s/.test(line)) {
         const inner = line.replace(/^[-*+]\s/, '');
-        const innerClean = inner.replace(/\*\*(.+?)\*\*/g, '$1');
-        const lines = wrap(innerClean, bodW - 7);
-        need(lines.length * LH + 2);
+        need(LH + 2);
         setFill(col); pdf.circle(PL + 1.5, y + LH - 1.2, 1, 'F');
+
         if (/^\*\*[^*]+\*\*/.test(inner)) {
           const m = inner.match(/^\*\*([^*]+)\*\*\s*:?\s*(.*)/s);
           if (m) {
+            const term    = sanitizePdf(m[1].replace(/→/g, '->').trim());
+            const rest    = sanitizePdf(m[2].trim());
+            const termStr = term + ':';
+
             pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9.5); setRgb(C.text);
-            const tw = pdf.getTextWidth(m[1] + ': ');
-            pdf.text(m[1] + ':', PL + 5, y + LH);
-            pdf.setFont('helvetica', 'normal');
-            const dl = wrap(m[2], bodW - 7 - tw);
-            pdf.text(dl, PL + 5 + tw, y + LH);
-            y += Math.max(1, dl.length) * LH + 2;
+            const tw       = pdf.getTextWidth(termStr + ' ');
+            const restMaxW = bodW - 7 - tw;
+
+            if (!rest || restMaxW < 10) {
+              // Pas de définition ou trop étroit : terme seul sur sa ligne
+              const tl = wrap(termStr, bodW - 7);
+              need(tl.length * LH + 2);
+              pdf.text(tl, PL + 5, y + LH);
+              y += tl.length * LH + 2;
+              if (rest) {
+                pdf.setFont('helvetica', 'normal');
+                const dl = wrap(rest, bodW - 7);
+                need(dl.length * LH + 2);
+                pdf.text(dl, PL + 5, y + LH);
+                y += dl.length * LH + 2;
+              }
+            } else {
+              // Première ligne : terme gras + début de la définition sur la même ligne
+              pdf.text(termStr, PL + 5, y + LH);
+              pdf.setFont('helvetica', 'normal'); setRgb(C.text);
+              const dl = wrap(rest, restMaxW);
+              // Ligne 1 : suite de la définition après le terme
+              pdf.text(dl[0], PL + 5 + tw, y + LH);
+              // Lignes suivantes : retour à la marge du bullet (PL+5)
+              if (dl.length > 1) {
+                need((dl.length - 1) * LH);
+                pdf.text(dl.slice(1), PL + 5, y + LH * 2);
+              }
+              y += dl.length * LH + 2;
+            }
             continue;
           }
         }
+
+        // Bullet simple (sans bold)
+        const innerClean = sanitizePdf(inner.replace(/\*\*(.+?)\*\*/g, '$1').replace(/→/g, '->'));
+        const lines = wrap(innerClean, bodW - 7);
+        need(lines.length * LH + 2);
         pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9.5); setRgb(C.text);
         pdf.text(lines, PL + 5, y + LH);
         y += lines.length * LH + 2;
