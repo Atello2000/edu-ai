@@ -19,16 +19,17 @@ function cleanMarkdown(text) {
 }
 
 
-export default function ExamSheetSection({ md, streaming, fileName = 'fiche', onRegen, userPlan, onUpgrade }) {
+export default function ExamSheetSection({ md, streaming, fileName = 'fiche', onRegen, userPlan, onUpgrade, error }) {
   const [copying,    setCopying]    = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const current = md || streaming;
-  if (!current) return null;
+  if (!current && !error) return null;
 
   const cleanedCurrent = cleanMarkdown(current);
 
   async function handleCopy() {
+    if (!cleanedCurrent) return;
     await navigator.clipboard.writeText(cleanedCurrent);
     setCopying(true);
     setTimeout(() => setCopying(false), 2000);
@@ -80,6 +81,8 @@ export default function ExamSheetSection({ md, streaming, fileName = 'fiche', on
           </button>
         </div>
       </div>
+
+      {error && <div className="error-notice" style={{ marginBottom: '1rem' }}>{error}</div>}
 
       <div id="exam-sheet-result">
         {streaming && !md ? (

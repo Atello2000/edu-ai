@@ -32,7 +32,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
           restoreFrom: restoreSummaryFrom } = useSummarize({ saveSession });
 
   const { md: examMd, streaming: examStreaming, loading: examLoading, progress: examProgress,
-          generate: generateExam, reset: resetExam,
+          error: examError, generate: generateExam, reset: resetExam,
           restoreFrom: restoreExamFrom } = useExamSheet({ saveSession });
 
   const {
@@ -84,7 +84,7 @@ export function useAiSuite({ saveSession, restoreSummaryRef, restoreExamRef, res
     // résumé
     summaryResults, summaryStreaming, summaryProgress, summarizing, summaryError, summarize, resetSummary, restoreSummaryFrom,
     // fiche d'examen
-    examMd, examStreaming, examLoading, examProgress, generateExam, resetExam, restoreExamFrom,
+    examMd, examStreaming, examLoading, examProgress, examError, generateExam, resetExam, restoreExamFrom,
     // quiz
     questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError, quizProgress,
     generateQuiz, resetQuiz, restoreQuizFrom, selectAnswer, quizGoTo, submitQuiz, retryWrong,

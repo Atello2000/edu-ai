@@ -174,7 +174,7 @@ export default function AppPage() {
     // résumé
     summaryResults, summaryStreaming, summaryProgress, summarizing, summaryError, summarize, resetSummary,
     // fiche d'examen
-    examMd, examStreaming, examLoading, examProgress, generateExam, resetExam,
+    examMd, examStreaming, examLoading, examProgress, examError, generateExam, resetExam,
     // quiz
     questions, quizAnswers, quizIdx, quizSubmitted, quizScore, quizLoading, quizError, quizProgress,
     generateQuiz, resetQuiz, selectAnswer, quizGoTo, submitQuiz, retryWrong,
@@ -933,11 +933,15 @@ export default function AppPage() {
               total={examProgress?.total}
             />
           )}
+          {examError && !examLoading && (
+            <div className="error-banner" role="alert">⚠ {examError}</div>
+          )}
           <ErrorBoundary>
             <Suspense fallback={<div className="loader-inline"><div className="spinner" style={{width:20,height:20}}/></div>}>
               <ExamSheetSection
                 md={examMd}
                 streaming={examStreaming}
+                error={examError}
                 fileName={uploadedFiles[0]?.name?.replace(/\.[^.]+$/, '') || 'fiche'}
                 onRegen={examMd ? handleExamRegen : undefined}
                 userPlan={user?.plan}
