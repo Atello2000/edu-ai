@@ -3,7 +3,7 @@ const { ipKeyGenerator, rateLimit } = require('express-rate-limit');
 // Limite globale : 200 req/15 min par IP (protection anti-scraping)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 200,
+  max: 1500,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de requêtes. Réessayez dans 15 minutes.' }
