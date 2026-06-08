@@ -735,48 +735,60 @@ main {
 }
 
 /* Sections — design unifié, neutre */
-.section-objectifs,.section-points,.section-resume,
-.section-concepts,.section-retenir,.section-autre { border-left:none; }
+.section-objectifs,.section-structure,.section-points,.section-resume,
+.section-concepts,.section-liens,.section-retenir,.section-autre { border-left:none; }
 
 .section-objectifs .summary-section-header,
+.section-structure .summary-section-header,
 .section-points    .summary-section-header,
 .section-resume    .summary-section-header,
 .section-concepts  .summary-section-header,
+.section-liens     .summary-section-header,
 .section-retenir   .summary-section-header { background:transparent; }
 
 .section-objectifs .section-icon,
+.section-structure .section-icon,
 .section-points    .section-icon,
 .section-resume    .section-icon,
 .section-concepts  .section-icon,
+.section-liens     .section-icon,
 .section-retenir   .section-icon {
   background:rgba(255,255,255,.05);
   color:var(--muted);
 }
 
 .section-objectifs .section-title,
+.section-structure .section-title,
 .section-points    .section-title,
 .section-resume    .section-title,
 .section-concepts  .section-title,
+.section-liens     .section-title,
 .section-retenir   .section-title { color:var(--text); }
 
 .section-objectifs .summary-section-body,
+.section-structure .summary-section-body,
 .section-points    .summary-section-body,
 .section-resume    .summary-section-body,
 .section-concepts  .summary-section-body,
+.section-liens     .summary-section-body,
 .section-retenir   .summary-section-body { background:transparent; }
 
 /* Bullets gold unifié */
 .section-objectifs .summary-section-body li::before,
+.section-structure .summary-section-body li::before,
 .section-points    .summary-section-body li::before,
 .section-resume    .summary-section-body li::before,
 .section-concepts  .summary-section-body li::before,
+.section-liens     .summary-section-body li::before,
 .section-retenir   .summary-section-body li::before { background:var(--gold); }
 
 /* Strong neutre */
 .section-objectifs .summary-section-body strong,
+.section-structure .summary-section-body strong,
 .section-points    .summary-section-body strong,
 .section-resume    .summary-section-body strong,
 .section-concepts  .summary-section-body strong,
+.section-liens     .summary-section-body strong,
 .section-retenir   .summary-section-body strong { color:var(--text); }
 
 /* Markdown custom bullets */
@@ -1800,9 +1812,11 @@ kbd {
 [data-theme="light"] .summary-section-body blockquote { background:rgba(0,0,0,.03); color:#444; border-color:#ccc; }
 [data-theme="light"] .summary-section-body code { background:#f0fdf4; color:var(--teal); border-color:#d1fae5; }
 [data-theme="light"] .section-objectifs .summary-section-body,
+[data-theme="light"] .section-structure .summary-section-body,
 [data-theme="light"] .section-points    .summary-section-body,
 [data-theme="light"] .section-resume    .summary-section-body,
 [data-theme="light"] .section-concepts  .summary-section-body,
+[data-theme="light"] .section-liens     .summary-section-body,
 [data-theme="light"] .section-retenir   .summary-section-body { background:transparent; }
 [data-theme="light"] .section-icon { background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.1); }
 [data-theme="light"] .section-chevron { background:rgba(0,0,0,.05); }

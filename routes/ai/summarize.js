@@ -15,7 +15,7 @@ const CHUNK_PARALLEL = 1;  // chunks traités séquentiellement pour respecter l
 
 function summarizeCacheKey(text, lang, user) {
   const profile = `${user?.level || ''}|${Array.isArray(user?.domains) ? user.domains.join(',') : (user?.domains || '')}`;
-  return crypto.createHash('sha256').update(`summarize:v1:${lang}:${profile}:${text}`).digest('hex');
+  return crypto.createHash('sha256').update(`summarize:v2:${lang}:${profile}:${text}`).digest('hex');
 }
 
 async function getCached(key) {
@@ -101,7 +101,7 @@ router.post('/summarize', async (req, res) => {
         // Fichier court : streaming direct
         send({ type: 'start', name: file.name });
         let fullText = '';
-        for await (const c of aiStream(promptFull(ctx, inLang, file.name, chunks[0]), calcMaxTokens('summary', chunks[0].length), aiCfg)) {
+        for await (const c of aiStream(promptSummaryFull(ctx, inLang, file.name, chunks[0], file.truncated), calcMaxTokens('summary', chunks[0].length), aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
           fullText += c.text;
           send({ type: 'delta', name: file.name, text: c.text });
@@ -122,7 +122,7 @@ router.post('/summarize', async (req, res) => {
             chunks.slice(i, i + chunkParallel).map(async (chunk, j) => {
               const idx = i + j;
               const { text: partial, usage } = await aiComplete(
-                promptPartial(ctx, inLang, file.name, chunk, idx + 1, chunks.length),
+                promptSummaryPartial(ctx, inLang, file.name, chunk, idx + 1, chunks.length),
                 1200, aiCfg,
               );
               if (usage) logTokens(req.user?.id, 'summarize', usage.provider, usage.input, usage.output);
@@ -136,7 +136,7 @@ router.post('/summarize', async (req, res) => {
         // Fusion et streaming du résumé final
         send({ type: 'start', name: file.name });
         let fullText = '';
-        for await (const c of aiStream(promptMerge(ctx, inLang, file.name, partials), 3500, aiCfg)) {
+        for await (const c of aiStream(promptSummaryMerge(ctx, inLang, file.name, partials, file.truncated), 4500, aiCfg)) {
           if (c.usage) { logTokens(req.user?.id, 'summarize', c.usage.provider, c.usage.input, c.usage.output); continue; }
           fullText += c.text;
           send({ type: 'delta', name: file.name, text: c.text });
@@ -160,6 +160,73 @@ router.post('/summarize', async (req, res) => {
 
 // ── Helpers de prompt ──────────────────────────────────────────────────────────
 
+function extractionNote(truncated) {
+  return truncated
+    ? "Le texte fourni a ete tronque par la limite technique de l'application. Signale-le clairement dans \"A retenir\" en une phrase courte, sans dramatiser."
+    : 'Si le texte fourni semble incomplet, mal extrait ou peu lisible, signale-le clairement dans "A retenir" en une phrase courte.';
+}
+
+function summaryFormatRules(truncated) {
+  return `Objectif: donner une comprehension structuree du cours, sans refaire les modules quiz, flashcards, fiche d'examen ou references.
+
+Regles:
+- Chaque section commence par une ligne "## " (deux dieses + espace + titre).
+- N'utilise pas d'emojis dans les titres.
+- Ne cree pas de section "References".
+- Adapte la densite au contenu: cours court = concis; cours long/theorique = plus structure et explicatif.
+- ${extractionNote(truncated)}
+
+Les 7 sections obligatoires, dans l'ordre:
+1. "## Objectifs du cours" - 2-3 phrases sur ce que l'etudiant va comprendre.
+2. "## Structure du cours" - plan logique du document en 3-7 points, sans inventer de partie absente.
+3. "## Points cles" - 5-8 idees essentielles sous forme de bullets.
+4. "## Resume detaille" - developpement en paragraphes, avec sous-titres ### si utile.
+5. "## Concepts importants" - pour chaque notion: definition simple, pourquoi c'est important, exemple court si possible.
+6. "## Liens entre les idees" - 3-5 relations qui expliquent comment les notions s'enchainent.
+7. "## A retenir" - blockquote (ligne commencant par >) avec la lecon principale et, si necessaire, la note de qualite d'extraction.`;
+}
+
+function promptSummaryFull(ctx, inLang, name, text, truncated = false) {
+  return `${ctx}Tu es un assistant pedagogique expert. Resume le cours ci-dessous ${inLang} en 7 sections Markdown.
+
+${summaryFormatRules(truncated)}
+
+Cours "${name}" :
+${text}
+
+---
+Resume :`;
+}
+
+function promptSummaryPartial(ctx, inLang, name, text, part, total) {
+  return `${ctx}Voici la partie ${part}/${total} du cours "${name}".
+Extrais les points essentiels de CETTE PARTIE UNIQUEMENT ${inLang}: titres ou structure visible, definitions, concepts cles, mecanismes, exemples importants et liens logiques entre notions.
+Sois concis (max 300 mots), structure en bullets sans introduction ni conclusion generique.
+
+Partie ${part}/${total} :
+${text}`;
+}
+
+function promptSummaryMerge(ctx, inLang, name, partials, truncated = false) {
+  const body = partials
+    .map((p, i) => `--- Partie ${i + 1}/${partials.length} ---\n${p}`)
+    .join('\n\n');
+
+  return `${ctx}Tu es un assistant pedagogique expert. A partir des notes ci-dessous, produis un resume final complet et coherent ${inLang} en 7 sections Markdown.
+
+${summaryFormatRules(truncated)}
+
+Regle de fusion: couvre toutes les parties sans juxtaposer les notes; regroupe les idees proches, clarifie la structure et evite les repetitions.
+
+Notes des ${partials.length} parties du cours "${name}" :
+
+${body}
+
+---
+Resume :`;
+}
+
+/*
 function promptFull(ctx, inLang, name, text) {
   return `${ctx}Tu es un assistant pédagogique expert. Résume le cours ci-dessous ${inLang} en 5 sections Markdown.
 
@@ -210,4 +277,5 @@ ${body}
 Résumé :`;
 }
 
+*/
 module.exports = router;

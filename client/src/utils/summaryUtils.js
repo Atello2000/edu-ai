@@ -5,9 +5,11 @@
 
 export const SECTION_CONFIG = [
   { match: /objectif/i,     icon: '🎯', cls: 'section-objectifs' },
+  { match: /structure/i,    icon: '☰', cls: 'section-structure' },
   { match: /points?\s*cl/i, icon: '📌', cls: 'section-points'    },
   { match: /r[eé]sum[eé]/i, icon: '📖', cls: 'section-resume'    },
   { match: /concept/i,      icon: '🔑', cls: 'section-concepts'  },
+  { match: /liens?.*id[eé]es?|relations?/i, icon: '↔', cls: 'section-liens' },
   { match: /retenir/i,      icon: '💡', cls: 'section-retenir'   },
 ];
 

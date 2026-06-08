@@ -29,9 +29,11 @@ export function buildSummaryDoc(fileName, summaryMd) {
 
   const SEC_COL = {
     'section-objectifs': C.blue,
+    'section-structure': C.muted,
     'section-points':    C.purple,
     'section-resume':    C.emerald,
     'section-concepts':  C.gold,
+    'section-liens':     C.blue,
     'section-retenir':   C.teal,
   };
 

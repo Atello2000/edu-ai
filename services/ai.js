@@ -744,10 +744,10 @@ async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage 
 
 function calcMaxTokens(type, textLen, count = 0) {
   if (type === 'summary') {
-    if (textLen < 5000)  return 1200;
-    if (textLen < 15000) return 2000;
-    if (textLen < 40000) return 3000;
-    return 3500;
+    if (textLen < 5000)  return 1600;
+    if (textLen < 15000) return 2600;
+    if (textLen < 40000) return 3800;
+    return 4500;
   }
   if (type === 'quiz')  return Math.min(count * 2000 + 1000, 8000);
   if (type === 'flash') return Math.min(count * 250 + 500, 4000);
