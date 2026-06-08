@@ -10,6 +10,7 @@ export function useUpload() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [status, setStatus] = useState('idle'); // 'idle' | 'uploading' | 'processing'
 
   function addFiles(files, maxSizeBytes = null, maxFiles = null) {
     let tooLargeCount = 0;
@@ -52,6 +53,7 @@ export function useUpload() {
   }
 
   function uploadOne(file, index, total) {
+    setStatus('uploading');
     return new Promise((resolve, reject) => {
       const form = new FormData();
       form.append('files', file);
@@ -65,6 +67,10 @@ export function useUpload() {
           const pct = Math.round(((index + (e.loaded / e.total)) / total) * 100);
           setProgress(pct);
         }
+      };
+      
+      xhr.upload.onload = () => {
+        setStatus('processing');
       };
 
       xhr.onload = () => {
@@ -102,12 +108,14 @@ export function useUpload() {
       }
       setSelectedFiles([]);
       setProgress(100);
+      setStatus('idle');
       return uploaded;
     } finally {
       setUploading(false);
       setProgress(0);
+      setStatus('idle');
     }
   }
 
-  return { selectedFiles, uploading, progress, addFiles, removeFile, upload };
+  return { selectedFiles, uploading, progress, status, addFiles, removeFile, upload };
 }

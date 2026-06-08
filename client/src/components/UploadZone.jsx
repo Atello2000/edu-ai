@@ -6,7 +6,7 @@ const PLAN_MB = { free: 5, pro: 10, max: 20 };
 const PLAN_MAX_FILES = { free: 3, pro: 5, max: 10 };
 
 export default function UploadZone({ onUploaded, onError, userPlan }) {
-  const { selectedFiles, uploading, progress, addFiles, removeFile, upload } = useUpload();
+  const { selectedFiles, uploading, progress, status, addFiles, removeFile, upload } = useUpload();
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
@@ -150,7 +150,7 @@ export default function UploadZone({ onUploaded, onError, userPlan }) {
               <div className="progress-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--muted)', marginBottom: '0.5rem', fontFamily: 'DM Mono, monospace' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span className="spinner" style={{ width: '12px', height: '12px', border: '1.5px solid var(--muted)', borderTopColor: 'var(--gold)', animation: 'spin 0.8s linear infinite' }} />
-                  Analyse et transmission...
+                  {status === 'processing' ? 'Extraction du texte par le serveur...' : 'Transmission du fichier...'}
                 </span>
                 <span>{progress}%</span>
               </div>
