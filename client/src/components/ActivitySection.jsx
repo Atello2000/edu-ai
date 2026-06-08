@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import './ActivitySection.css';
 
 const IconChart   = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="1"/><rect x="12" y="7" width="3" height="11" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg>;
@@ -60,7 +61,7 @@ export default function ActivitySection({ refreshKey }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
-    fetch('/api/activity/summary', { credentials: 'include' })
+    apiFetch('/api/activity/summary')
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && data.totalSessions !== undefined) setSummary(data);
@@ -72,7 +73,7 @@ export default function ActivitySection({ refreshKey }) {
   async function handleReset() {
     setResetting(true);
     try {
-      const res = await fetch('/api/activity', { method: 'DELETE', credentials: 'include' });
+      const res = await apiFetch('/api/activity', { method: 'DELETE' });
       if (res.ok) {
         setSummary({ streak: 0, totalSessions: 0, recentActivity: [], topTopics: [], bestScores: [] });
       }

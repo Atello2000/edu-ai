@@ -93,7 +93,7 @@ export default function ForYouSection({ onActivity }) {
   // ── Charger les scores d'activité ─────────────────────────────────
   useEffect(() => {
     if (!user?.onboarding_done) return;
-    fetch('/api/activity/summary', { credentials: 'include' })
+    apiFetch('/api/activity/summary')
       .then(r => r.json())
       .then(d => setActivityData(d))
       .catch(() => {});
@@ -145,7 +145,7 @@ export default function ForYouSection({ onActivity }) {
     postActivity(resultTopic, 'quiz', score, total).then(() => {
       onActivity?.();
       setActivityData(null);
-      fetch('/api/activity/summary', { credentials: 'include' })
+      apiFetch('/api/activity/summary')
         .then(r => r.json()).then(d => setActivityData(d)).catch(() => {});
     });
   }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
 
 // Coûts par défaut (fallback si l'API est indisponible)
@@ -18,7 +19,7 @@ export function useJetons() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch('/api/jetons');
+      const res  = await apiFetch('/api/jetons');
       if (!res.ok) return;
       const data = await res.json();
       setBalance(data.balance ?? 0);
@@ -35,13 +36,13 @@ export function useJetons() {
       setLoading(true);
       try {
         // Charger les coûts publics d'abord (pas d'auth requise)
-        const pricesRes = await fetch('/api/jetons/prices');
+        const pricesRes = await apiFetch('/api/jetons/prices');
         if (pricesRes.ok && active) {
           const p = await pricesRes.json();
           setCosts({ ...DEFAULT_COSTS, ...p.costs, session: p.session ?? DEFAULT_COSTS.session });
         }
         // Puis charger le solde utilisateur
-        const res  = await fetch('/api/jetons');
+        const res  = await apiFetch('/api/jetons');
         if (!res.ok || !active) return;
         const data = await res.json();
         if (active) {

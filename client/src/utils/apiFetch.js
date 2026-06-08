@@ -25,14 +25,36 @@ export async function ensureCsrfToken() {
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+const pendingRequests = new Map();
+
 export async function apiFetch(url, options = {}) {
   const method = (options.method || 'GET').toUpperCase();
   const headers = { ...(options.headers || {}) };
+  const credentials = options.credentials || 'include';
 
   if (!SAFE_METHODS.has(method)) {
     const csrf = await ensureCsrfToken();
     if (csrf) headers['X-CSRF-Token'] = csrf;
+    return fetch(url, { ...options, headers, credentials });
   }
 
-  return fetch(url, { ...options, headers, credentials: 'same-origin' });
+  // GET / HEAD / OPTIONS request deduplication
+  const cacheKey = `${method}:${url}:${JSON.stringify(headers)}:${credentials}`;
+  if (pendingRequests.has(cacheKey)) {
+    const promise = pendingRequests.get(cacheKey);
+    const res = await promise;
+    return res.clone();
+  }
+
+  const promise = fetch(url, { ...options, headers, credentials });
+  pendingRequests.set(cacheKey, promise);
+
+  try {
+    const res = await promise;
+    pendingRequests.delete(cacheKey);
+    return res.clone();
+  } catch (err) {
+    pendingRequests.delete(cacheKey);
+    throw err;
+  }
 }

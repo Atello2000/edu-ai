@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
 import { useConfirm } from './ConfirmModal';
 
@@ -53,7 +54,7 @@ export default function StatsPanel() {
   useEffect(() => eventBus.on('stats:refresh', refresh), [refresh]);
 
   useEffect(() => {
-    fetch('/api/activity/summary', { credentials: 'include' })
+    apiFetch('/api/activity/summary')
       .then(r => r.json())
       .then(d => setMastery(d.bestScores || []))
       .catch(() => {});
