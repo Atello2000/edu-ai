@@ -15,7 +15,7 @@ const CHUNK_PARALLEL = 1;  // chunks traités séquentiellement pour respecter l
 
 function summarizeCacheKey(text, lang, user) {
   const profile = `${user?.level || ''}|${Array.isArray(user?.domains) ? user.domains.join(',') : (user?.domains || '')}`;
-  return crypto.createHash('sha256').update(`summarize:v3:${lang}:${profile}:${text}`).digest('hex');
+  return crypto.createHash('sha256').update(`summarize:v4:${lang}:${profile}:${text}`).digest('hex');
 }
 
 async function getCached(key) {
@@ -162,8 +162,8 @@ router.post('/summarize', async (req, res) => {
 
 function extractionNote(truncated) {
   return truncated
-    ? "Le texte fourni a ete tronque par la limite technique de l'application. Signale-le clairement dans \"A retenir\" en une phrase courte, sans dramatiser."
-    : 'Si le texte fourni semble incomplet, mal extrait ou peu lisible, signale-le clairement dans "A retenir" en une phrase courte.';
+    ? "Le texte a ete tronque par la limite technique de l'application. Indique-le dans \"A retenir\" en une phrase factuelle et courte (ex: \"Note : le cours a ete partiellement analyse en raison de sa longueur.\"). N'ajoute rien d'autre sur la qualite."
+    : "N'ajoute une note de qualite dans \"A retenir\" QUE si le texte est clairement illisible, corrompu ou trop fragmentaire pour produire un resume utile. Si le contenu semble complet, utilisable ou seulement partiel, n'ecris aucune note de qualite.";
 }
 
 function summaryFormatRules(truncated) {
