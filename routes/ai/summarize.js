@@ -30,7 +30,8 @@ async function setCache(key, result) {
     const exp = new Date(Date.now() + CACHE_TTL_H * 3600 * 1000).toISOString();
     await prepare(
       `INSERT INTO ai_cache (cache_key, result, expires_at) VALUES (?, ?, ?)
-       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at`
+       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at
+       RETURNING cache_key`
     ).run(key, result, exp);
   } catch { /* best-effort */ }
 }

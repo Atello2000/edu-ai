@@ -68,9 +68,12 @@ function chunkCost(baseCost, numChunks) {
   return baseCost + (numChunks - 1) * 2;
 }
 
-/** Taille de chunk adaptée au provider (Groq free = 12K TPM). */
+/** Taille de chunk adaptée au provider (limites de token et de payload pour les tiers gratuits). */
 function chunkSizeFor(provider) {
-  return provider === 'groq' ? CHUNK_SIZE_GROQ : CHUNK_SIZE;
+  if (provider === 'groq' || provider === 'gemini' || provider === 'github') {
+    return 25_000;
+  }
+  return CHUNK_SIZE;
 }
 
 module.exports = { CHUNK_SIZE, CHUNK_SIZE_GROQ, splitIntoChunks, chunkCost, chunkSizeFor };

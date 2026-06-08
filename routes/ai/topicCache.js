@@ -24,7 +24,8 @@ async function setCachedTopic(key, data) {
     const expiresAt = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString();
     await db.prepare(
       `INSERT INTO ai_cache (cache_key, result, expires_at) VALUES (?, ?, ?)
-       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at`
+       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at
+       RETURNING cache_key`
     ).run(key, JSON.stringify(data), expiresAt);
   } catch { /* cache non critique */ }
 }
