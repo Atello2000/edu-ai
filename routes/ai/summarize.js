@@ -15,7 +15,7 @@ const CHUNK_PARALLEL = 1;  // chunks traités séquentiellement pour respecter l
 
 function summarizeCacheKey(text, lang, user) {
   const profile = `${user?.level || ''}|${Array.isArray(user?.domains) ? user.domains.join(',') : (user?.domains || '')}`;
-  return crypto.createHash('sha256').update(`summarize:v2:${lang}:${profile}:${text}`).digest('hex');
+  return crypto.createHash('sha256').update(`summarize:v3:${lang}:${profile}:${text}`).digest('hex');
 }
 
 async function getCached(key) {
@@ -167,23 +167,25 @@ function extractionNote(truncated) {
 }
 
 function summaryFormatRules(truncated) {
-  return `Objectif: donner une comprehension structuree du cours, sans refaire les modules quiz, flashcards, fiche d'examen ou references.
+  return `Objectif: donner une comprehension structuree et actionnable du cours pour un etudiant.
+Ne remplace pas les modules quiz, flashcards ou fiche d'examen — reste sur la comprehension.
 
-Regles:
+Regles de forme:
 - Chaque section commence par une ligne "## " (deux dieses + espace + titre).
-- N'utilise pas d'emojis dans les titres.
-- Ne cree pas de section "References".
-- Adapte la densite au contenu: cours court = concis; cours long/theorique = plus structure et explicatif.
+- N'utilise pas d'emojis dans les titres de section.
+- Ne cree pas de section "References" ni de conclusion generique.
+- Regle anti-remplissage : si le cours ne fournit pas de matiere suffisante pour une section, reduis-la a 1-2 lignes plutot que d'inventer du contenu.
+- Adapte la densite : cours court ou simple = concis ; cours long ou theorique = structure et explicatif.
 - ${extractionNote(truncated)}
 
 Les 7 sections obligatoires, dans l'ordre:
-1. "## Objectifs du cours" - 2-3 phrases sur ce que l'etudiant va comprendre.
-2. "## Structure du cours" - plan logique du document en 3-7 points, sans inventer de partie absente.
-3. "## Points cles" - 5-8 idees essentielles sous forme de bullets.
-4. "## Resume detaille" - developpement en paragraphes, avec sous-titres ### si utile.
-5. "## Concepts importants" - pour chaque notion: definition simple, pourquoi c'est important, exemple court si possible.
-6. "## Liens entre les idees" - 3-5 relations qui expliquent comment les notions s'enchainent.
-7. "## A retenir" - blockquote (ligne commencant par >) avec la lecon principale et, si necessaire, la note de qualite d'extraction.`;
+1. "## Objectifs du cours" — 2-3 phrases sur ce que l'etudiant va comprendre et savoir faire apres ce cours.
+2. "## Structure du cours" — plan logique du document en 3-7 points refletant la progression reelle, sans inventer de partie absente.
+3. "## Points cles" — 5-8 idees essentielles en bullets; chaque bullet = 1 idee complete (pas un mot seul).
+4. "## Resume detaille" — developpement en paragraphes couvrant tout le cours. Utilise obligatoirement des sous-titres ### pour chaque theme ou partie si le contenu depasse 3 paragraphes.
+5. "## Concepts importants" — pour chaque notion: **Terme** : definition simple + pourquoi c'est important + exemple concret si disponible dans le cours.
+6. "## Liens entre les idees" — 3-5 relations causales ou logiques entre notions, chacune au format "**A → B** : explication en 1 phrase" (ex: "**Loi de l'offre → prix d'equilibre** : une hausse de l'offre fait baisser le prix si la demande reste stable").
+7. "## A retenir" — blockquote (ligne commencant par >) avec la lecon principale en 2-3 phrases, puis si necessaire la note de qualite d'extraction.`;
 }
 
 function promptSummaryFull(ctx, inLang, name, text, truncated = false) {
@@ -200,8 +202,20 @@ Resume :`;
 
 function promptSummaryPartial(ctx, inLang, name, text, part, total) {
   return `${ctx}Voici la partie ${part}/${total} du cours "${name}".
-Extrais les points essentiels de CETTE PARTIE UNIQUEMENT ${inLang}: titres ou structure visible, definitions, concepts cles, mecanismes, exemples importants et liens logiques entre notions.
-Sois concis (max 300 mots), structure en bullets sans introduction ni conclusion generique.
+Extrais les points essentiels de CETTE PARTIE UNIQUEMENT ${inLang}.
+
+Ce que tu dois capturer:
+- Titres ou structure visible de cette partie
+- Definitions et termes techniques introduits
+- Concepts cles, mecanismes ou principes expliques
+- Exemples concrets mentionnes dans le texte
+- Relations logiques ou causales entre notions (format "A → B")
+
+Contraintes:
+- Max 350 mots, structure en bullets numerotes
+- Commence directement par le contenu, sans phrase d'introduction ni conclusion
+- Si une notion est incomplete dans cette partie (suite probable dans la suivante), note-le avec [suite...]
+- N'invente rien : reste strictement sur le contenu de cette partie
 
 Partie ${part}/${total} :
 ${text}`;
@@ -212,13 +226,18 @@ function promptSummaryMerge(ctx, inLang, name, partials, truncated = false) {
     .map((p, i) => `--- Partie ${i + 1}/${partials.length} ---\n${p}`)
     .join('\n\n');
 
-  return `${ctx}Tu es un assistant pedagogique expert. A partir des notes ci-dessous, produis un resume final complet et coherent ${inLang} en 7 sections Markdown.
+  return `${ctx}Tu es un assistant pedagogique expert. A partir des notes extraites des ${partials.length} parties du cours "${name}", produis un resume final unifie ${inLang} en 7 sections Markdown.
 
 ${summaryFormatRules(truncated)}
 
-Regle de fusion: couvre toutes les parties sans juxtaposer les notes; regroupe les idees proches, clarifie la structure et evite les repetitions.
+Instructions de fusion (applique-les dans l'ordre):
+1. Deduplication : si la meme notion apparait dans plusieurs parties, n'ecris qu'une seule definition, la plus complete.
+2. Regroupement : rassemble les idees du meme theme sous le meme sous-titre ### dans le Resume detaille, meme si elles viennent de parties differentes.
+3. Couverture : verifie que chaque partie contribue au moins 1 element au resume — n'oublie aucune section du cours.
+4. Coherence : assure-toi que les Liens entre les idees couvrent des relations entre parties differentes (pas seulement intra-partie).
+5. Longueur cible par section : Objectifs=3-5 lignes, Structure=5-10 lignes, Points cles=8-12 lignes, Resume detaille=40-80% du total, Concepts=5-12 notions, Liens=3-5 relations, A retenir=2-4 lignes.
 
-Notes des ${partials.length} parties du cours "${name}" :
+Notes des ${partials.length} parties :
 
 ${body}
 
