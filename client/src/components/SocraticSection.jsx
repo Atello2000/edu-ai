@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 
 function renderMd(text) {
-  if (window.marked) return { __html: window.marked.parse(text) };
+  if (window.marked) return { __html: DOMPurify.sanitize(window.marked.parse(text)) };
   return null;
 }
 

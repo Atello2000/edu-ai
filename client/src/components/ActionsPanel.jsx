@@ -64,6 +64,12 @@ function JetonBadge({ cost, baseCost }) {
   );
 }
 
+function Badge({ action, dynCosts, hasFiles }) {
+  return (
+    <JetonBadge cost={dynCosts[action].cost} baseCost={hasFiles ? dynCosts[action].base : undefined} />
+  );
+}
+
 export default function ActionsPanel({
   user,
   jetonCosts,
@@ -138,9 +144,7 @@ export default function ActionsPanel({
     'study-plan':   { cost: base('study-plan'),    base: base('study-plan') },
     'error-analysis':{ cost: base('error-analysis'), base: base('error-analysis') },
   };
-  const Badge = ({ action }) => (
-    <JetonBadge cost={dynCosts[action].cost} baseCost={hasFiles ? dynCosts[action].base : undefined} />
-  );
+
 
   // ── Sélection de fichiers ─────────────────────────────────────────────────
   const allSelected = uploadedFiles.length > 0 && (
@@ -258,7 +262,7 @@ export default function ActionsPanel({
                 sessionGoal === 'memorize'   ? 'Mémoriser' : "S'entraîner"
               }</span></>}
             </span>
-            <Badge action="session" />
+            <Badge action="session" dynCosts={dynCosts} hasFiles={hasFiles} />
           </div>
           <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
             {prepLoading ? 'En cours…' : 'Lancer'}
@@ -311,7 +315,7 @@ export default function ActionsPanel({
                 <option value="30">30 min</option>
               </select>
             </label>
-            <Badge action="quiz" />
+            <Badge action="quiz" dynCosts={dynCosts} hasFiles={hasFiles} />
           </div>
           <button className="act-btn blue" id="quiz-btn" disabled={!hasFiles} onClick={onQuiz}>
             {quizLoading ? 'Génération…' : questions.length > 0 ? 'Voir le quiz' : 'Lancer'}
@@ -335,7 +339,7 @@ export default function ActionsPanel({
                 onChange={e => onFcCountChange?.(parseInt(e.target.value) || 10)}
               /> cartes
             </label>
-            <Badge action="flashcards" />
+            <Badge action="flashcards" dynCosts={dynCosts} hasFiles={hasFiles} />
           </div>
           <button className="act-btn teal" id="flashcard-btn" disabled={!hasFiles} onClick={onFlashcards}>
             {fcLoading ? 'Génération…' : decks.length > 0 ? 'Voir les cartes' : 'Lancer'}
@@ -353,7 +357,7 @@ export default function ActionsPanel({
           <div className="act-card-body">
             <strong>Résumer</strong>
             <span>Résumé structuré en 5 sections</span>
-            <Badge action="summarize" />
+            <Badge action="summarize" dynCosts={dynCosts} hasFiles={hasFiles} />
           </div>
           <button className="act-btn purple" id="summarize-btn" disabled={!hasFiles} onClick={onSummarize}>
             {summaryResults.length > 0 ? 'Voir le résumé' : 'Lancer'}
@@ -375,7 +379,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Chat avec le cours</strong>
               <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-              <Badge action="chat" />
+              <Badge action="chat" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
@@ -389,7 +393,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Fiche d&apos;examen</strong>
               <span>Définitions, pièges, tableaux et questions probables</span>
-              <Badge action="exam-sheet" />
+              <Badge action="exam-sheet" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn purple" id="exam-sheet-btn" disabled={!hasFiles} onClick={onExamSheet}>
               {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
@@ -407,7 +411,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Carte mentale</strong>
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-              <Badge action="mindmap" />
+              <Badge action="mindmap" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
           </div>
@@ -423,7 +427,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Glossaire automatique</strong>
               <span>Extrait les termes clés et leur définition</span>
-              <Badge action="glossary" />
+              <Badge action="glossary" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn gold" disabled={!hasFiles} onClick={onGlossary}>
               {glossaryLoading ? 'Extraction…' : glossaryTerms?.length > 0 ? 'Voir le glossaire' : 'Lancer'}
@@ -480,7 +484,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Mode Socratique</strong>
               <span>L&apos;IA vous interroge sur votre cours comme un examinateur</span>
-              <Badge action="socratic" />
+              <Badge action="socratic" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn blue" disabled={!hasFiles} onClick={onSocratic}>Démarrer</button>
           </div>
@@ -494,7 +498,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Questions probables</strong>
               <span>Prédit les questions susceptibles de tomber à l&apos;examen</span>
-              <Badge action="predict" />
+              <Badge action="predict" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn purple" disabled={!hasFiles} onClick={onPredict}>
               {predictLoading ? 'Analyse…' : predictResults?.length > 0 ? 'Voir les prédictions' : 'Analyser'}
@@ -510,7 +514,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Plan de révision</strong>
               <span>Planning jour par jour jusqu&apos;à votre examen, basé sur vos points faibles</span>
-              <Badge action="study-plan" />
+              <Badge action="study-plan" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <div style={{ display: 'flex', gap: '.4rem' }}>
               <button className="act-btn gold" onClick={onStudyPlan}>Planifier</button>
@@ -529,7 +533,7 @@ export default function ActionsPanel({
             <div className="act-card-body">
               <strong>Erreurs récurrentes</strong>
               <span>Analyse vos confusions et lacunes à partir de l&apos;historique de quiz</span>
-              <Badge action="error-analysis" />
+              <Badge action="error-analysis" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
             <button className="act-btn rose" onClick={onErrorAnalysis}>Analyser</button>
           </div>

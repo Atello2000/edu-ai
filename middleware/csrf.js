@@ -38,6 +38,10 @@ const {
 
   // ── CRIT-02 : Liaison session → le token CSRF est propre à chaque userId ──
   getSessionIdentifier: (req) => {
+    // Priorité à req.user si requireAuth a déjà été exécuté (token éventuellement rafraîchi).
+    // Sans ce guard : un token expiré juste rafraîchi par requireAuth cause un faux 403 CSRF
+    // car req.cookies contient encore l'ancien token avant que Set-Cookie soit appliqué.
+    if (req.user?.id) return String(req.user.id);
     try {
       const token = req.cookies?.['jangalai.token'];
       if (!token || !JWT_SECRET) return '';

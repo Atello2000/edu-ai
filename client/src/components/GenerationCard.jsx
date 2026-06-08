@@ -1,7 +1,7 @@
 export default function GenerationCard({
   title,
   subtitle,
-  phase, // 'preparing' | 'generating' | 'streaming' | 'receiving'
+
   steps = [],
   activeStepIndex = 0,
   step,

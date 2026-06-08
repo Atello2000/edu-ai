@@ -79,6 +79,28 @@ const OFFICE_MEDIA = { '.pptx': 'ppt/media/', '.docx': 'word/media/', '.ppt': nu
 const IMAGE_EXTS   = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp']);
 const MIME_MAP     = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.bmp': 'image/bmp', '.webp': 'image/webp' };
 
+// ── Protection ZIP bomb ───────────────────────────────────────────────────────
+const MAX_ZIP_ENTRIES    = 1000;              // entrées max dans l'archive
+const MAX_UNZIPPED_BYTES = 50 * 1024 * 1024; // 50 Mo décompressé max
+
+/**
+ * Valide les métadonnées ZIP sans décompresser aucune entrée.
+ * entry.header.size = uncompressedSize déclaré dans le Central Directory.
+ * Lève une erreur si l'archive est trop complexe ou trop volumineuse.
+ */
+function assertSafeZip(entries) {
+  if (entries.length > MAX_ZIP_ENTRIES) {
+    throw new Error(`Document trop complexe : ${entries.length} entrées ZIP (max ${MAX_ZIP_ENTRIES}).`);
+  }
+  let totalUncompressed = 0;
+  for (const e of entries) {
+    totalUncompressed += (e.header.size || 0);
+    if (totalUncompressed > MAX_UNZIPPED_BYTES) {
+      throw new Error(`Document trop volumineux une fois décompressé (max ${MAX_UNZIPPED_BYTES / 1024 / 1024} Mo).`);
+    }
+  }
+}
+
 // ── Parseur SmartArt (ppt/diagrams/data*.xml) ─────────────────────────────────
 function parseSmartArt(xml) {
   const texts = [...xml.matchAll(/<a:t(?:\s[^>]*)?>([^<]+)<\/a:t>/g)]
@@ -127,6 +149,10 @@ async function extractAndDescribeOfficeImages(buffer, ext) {
   try {
     const zip  = new AdmZip(buffer);
     const all  = zip.getEntries();
+
+    // ── Garde anti-ZIP bomb (lecture headers uniquement, sans décompression) ──
+    assertSafeZip(all);
+
     const descriptions = [];
 
     // ── 1. Images raster (photos, figures, logos) ──────────────────────────────

@@ -113,12 +113,21 @@ publicRouter.post('/', async (req, res) => {
   const payload = { ...(req.query || {}), ...(req.body || {}) };
   const { api_key_sha256, api_secret_sha256, ref_command, item_price, type_event } = payload;
 
-  logger.info('IPN Payload parsed:', { payload });
+  // Ne pas logger les hashes — ils sont des dérivés de clés API et ne doivent pas apparaître en clair dans les logs
+  logger.info('IPN PayTech reçu', { ref_command, type_event, item_price });
 
   // 1. Validation de l'authenticité de la requête IPN (Hashes SHA256)
   if (!api_key_sha256 || !api_secret_sha256 || !ref_command) {
-    logger.warn('IPN suspect reçu sans paramètres obligatoires', { payload });
+    logger.warn('IPN suspect reçu sans paramètres obligatoires', { ref_command, type_event });
     return res.status(400).send('Bad Request');
+  }
+
+  // Valider le type d'événement : ignorer les IPN qui ne correspondent pas à un paiement abouti.
+  // La valeur 'sale_complete' est confirmée par la documentation PayTech et les tests d'intégration.
+  const VALID_EVENTS = ['sale_complete'];
+  if (type_event && !VALID_EVENTS.includes(type_event)) {
+    logger.warn('IPN ignoré — type_event non reconnu comme succès de paiement', { type_event, ref_command });
+    return res.status(200).send('OK'); // 200 pour éviter les retries PayTech
   }
 
   const rawApiKey = process.env.PAYTECH_API_KEY || '';
