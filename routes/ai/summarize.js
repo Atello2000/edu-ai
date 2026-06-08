@@ -51,7 +51,11 @@ router.post('/summarize', async (req, res) => {
     const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang = langLabel(lang);
     const ctx    = userContext(req.user);
-    const aiCfg  = await getAiConfigForAction('summarize');
+    // Calculer la longueur totale des textes source pour le routing par contexte
+    const totalTextLength = (await Promise.all(files.map(async f => {
+      try { return (await getFileText(f)).length; } catch { return 0; }
+    }))).reduce((a, b) => a + b, 0);
+    const aiCfg  = await getAiConfigForAction('summarize', { lang, textLength: totalTextLength });
     const cSize  = chunkSizeFor(aiCfg.provider);
 
     // ── 1. Séparer fichiers cachés / fichiers à générer ───────────────────
@@ -70,7 +74,7 @@ router.post('/summarize', async (req, res) => {
         cached.push({ file, hit });
       } else {
         const chunks = splitIntoChunks(text, cSize);
-        fileData.push({ file, chunks, key });
+        fileData.push({ file, text, chunks, key });
       }
     }
 
@@ -95,7 +99,7 @@ router.post('/summarize', async (req, res) => {
     // ── 4. Traiter tous les fichiers en parallèle ─────────────────────────
     let streamModel = MODEL_LABEL;
 
-    await Promise.all(fileData.map(async ({ file, chunks, key }) => {
+    await Promise.all(fileData.map(async ({ file, text, chunks, key }) => {
 
       if (chunks.length === 1) {
         // Fichier court : streaming direct
@@ -107,11 +111,28 @@ router.post('/summarize', async (req, res) => {
           send({ type: 'delta', name: file.name, text: c.text });
           streamModel = c.model;
         }
+
+        // Validation post-génération : relance silencieuse si 2+ sections manquent
+        const missing1 = missingSections(fullText);
+        if (missing1.length >= 2) {
+          logger.warn('summarize: sections manquantes, relance repair', { file: file.name, missing: missing1 });
+          try {
+            const { text: repaired, usage: ru } = await aiComplete(
+              promptSummaryRepair(ctx, inLang, file.name, fullText, missing1), 2500, aiCfg
+            );
+            if (ru) logTokens(req.user?.id, 'summarize', ru.provider, ru.input, ru.output);
+            fullText = fullText + '\n\n' + repaired;
+            send({ type: 'patch', name: file.name, text: repaired });
+          } catch (repairErr) {
+            logger.warn('summarize: repair échoué', { file: file.name, error: repairErr.message });
+          }
+        }
+
         send({ type: 'done', name: file.name });
         setCache(key, fullText); // fire-and-forget
 
       } else {
-        // Fichier long : chunks analysés en parallèle (CHUNK_PARALLEL simultanés)
+        // Fichier long : chunks analysés en parallèle
         send({ type: 'progress', name: file.name, step: 0, total: chunks.length,
                message: `Cours volumineux — analyse en ${chunks.length} parties…` });
 
@@ -142,6 +163,23 @@ router.post('/summarize', async (req, res) => {
           send({ type: 'delta', name: file.name, text: c.text });
           streamModel = c.model;
         }
+
+        // Validation post-fusion : relance silencieuse si 2+ sections manquent
+        const missing2 = missingSections(fullText);
+        if (missing2.length >= 2) {
+          logger.warn('summarize: sections manquantes post-fusion, relance repair', { file: file.name, missing: missing2 });
+          try {
+            const { text: repaired, usage: ru } = await aiComplete(
+              promptSummaryRepair(ctx, inLang, file.name, fullText, missing2), 2500, aiCfg
+            );
+            if (ru) logTokens(req.user?.id, 'summarize', ru.provider, ru.input, ru.output);
+            fullText = fullText + '\n\n' + repaired;
+            send({ type: 'patch', name: file.name, text: repaired });
+          } catch (repairErr) {
+            logger.warn('summarize: repair post-fusion échoué', { file: file.name, error: repairErr.message });
+          }
+        }
+
         send({ type: 'done', name: file.name });
         setCache(key, fullText); // fire-and-forget
       }
@@ -159,6 +197,34 @@ router.post('/summarize', async (req, res) => {
 });
 
 // ── Helpers de prompt ──────────────────────────────────────────────────────────
+
+/**
+ * Vérifie que les 7 sections obligatoires sont présentes dans le résumé généré.
+ * Retourne la liste des titres manquants (comparaison insensible à la casse).
+ */
+const REQUIRED_SECTION_KEYS = [
+  'objectifs', 'structure', 'points', 'resum', 'concepts', 'liens', 'retenir',
+];
+function missingSections(md) {
+  const lower = md.toLowerCase();
+  return REQUIRED_SECTION_KEYS.filter(k => !lower.includes(k));
+}
+
+/**
+ * Prompt de réparation : demande au modèle de compléter les sections manquantes
+ * sans réécrire celles qui existent déjà.
+ */
+function promptSummaryRepair(ctx, inLang, name, partial, missing) {
+  return `${ctx}Le résumé du cours "${name}" est incomplet. Il manque les sections suivantes ${inLang} :
+${missing.map(m => `- ## ${m}`).join('\n')}
+
+Résumé partiel existant (NE PAS réécrire les sections déjà présentes) :
+${partial}
+
+---
+Complète UNIQUEMENT les sections manquantes en respectant le même format Markdown (## Titre).
+Si une section n'est vraiment pas applicable au contenu de ce cours, écris une ligne courte sous le titre.`;
+}
 
 function extractionNote(truncated) {
   return truncated

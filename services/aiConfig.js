@@ -144,28 +144,67 @@ const CHEAP_ACTIONS = new Set([
 // Mistral Small évité : trop petit pour produire du Markdown sectionné fiable
 const STRUCTURED_ACTIONS = new Set(['summarize', 'exam-sheet', 'compare']);
 
+// Providers fiables sur l'arabe (script RTL, morphologie complexe) :
+// GPT-4o mini et Gemini surclassent Llama 3.3 sur les langues sémitiques.
+const ARABIC_PRIORITY = [
+  { keys: ['GITHUB_TOKEN'],
+    provider: 'github', model: 'gpt-4o-mini' },
+  { available: hasUsableGeminiApiKey,
+    provider: 'gemini', model: 'gemini-2.5-flash' },
+  { keys: ['MISTRAL_API_KEY'],
+    provider: 'mistral', model: 'mistral-small-latest' },
+  // Llama en dernier recours seulement
+  { keys: ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3'],
+    provider: 'groq', model: 'llama-3.3-70b-versatile' },
+];
+
 /**
  * Retourne la config la moins chère disponible pour une action donnée.
- * Pour toutes les actions standard → Mistral Small > Groq.
- * Si aucun provider économique n'est configuré → erreur explicite.
- * Claude/DeepSeek ne sont JAMAIS utilisés en fallback automatique (risque x50 de coût).
+ *
+ * @param {string} action  - identifiant de l'action ('summarize', 'quiz', …)
+ * @param {object} [opts]  - options de routing contextuel :
+ *   @param {string} [opts.lang]        - langue de sortie ('fr'|'en'|'ar')
+ *   @param {number} [opts.textLength]  - longueur totale du texte source (chars)
+ *
+ * Règles de priorité (dans l'ordre) :
+ *   1. Texte long (> 80K chars) + action structurée → Gemini 2.5 Pro (fenêtre 1M tokens)
+ *   2. Langue arabe → GPT-4o mini > Gemini > Mistral > Llama (dernier recours)
+ *   3. Action structurée → CHEAP_PRIORITY standard
+ *   4. Action légère → CHEAP_PRIORITY standard
+ *   Claude/DeepSeek ne sont JAMAIS utilisés en fallback automatique (risque x50 de coût).
  */
-async function getAiConfigForAction(action) {
+async function getAiConfigForAction(action, { lang, textLength } = {}) {
+
+  // ── 1. Texte très long sur action structurée → Gemini 2.5 Pro (1M tokens) ──
+  // Évite le chunking multi-passes qui dégrade la qualité de fusion.
+  // Seuil : 80 000 chars ≈ 40 pages ≈ 20 000 tokens.
+  if (STRUCTURED_ACTIONS.has(action) && textLength > 80_000 && hasUsableGeminiApiKey()) {
+    return { provider: 'gemini', model: 'gemini-2.5-pro' };
+  }
+
+  // ── 2. Cours en arabe → prioriser GPT-4o mini ou Gemini ──────────────────
+  // Llama 3.3 70B produit des translittérations, mélange de langues et
+  // erreurs de script RTL significatifs sur du contenu académique arabe.
+  if (lang === 'ar') {
+    for (const { keys, available, provider, model } of ARABIC_PRIORITY) {
+      if ((available && available()) || keys?.some(k => process.env[k])) return { provider, model };
+    }
+  }
+
+  // ── 3. Actions JSON légères : Gemini → Groq → GitHub → Mistral ───────────
   if (CHEAP_ACTIONS.has(action)) {
-    // Actions JSON légères : Groq → Mistral → erreur (jamais Claude)
     for (const { keys, available, provider, model } of CHEAP_PRIORITY) {
       if ((available && available()) || keys?.some(k => process.env[k])) return { provider, model };
     }
     throw new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
   }
 
+  // ── 4. Actions Markdown structurées : ordre standard ─────────────────────
   if (STRUCTURED_ACTIONS.has(action)) {
-    // Actions Markdown structurées : Groq 70B → Gemini 2.0 Flash → Claude (dernier recours)
-    // Mistral Small exclu : trop petit pour du Markdown sectionné fiable
     for (const { keys, available, provider, model } of CHEAP_PRIORITY) {
       if ((available && available()) || keys?.some(k => process.env[k])) return { provider, model };
     }
-    return getAiConfig(); // Claude ou provider admin
+    return getAiConfig(); // Claude ou provider admin en dernier recours
   }
 
   return getAiConfig();
