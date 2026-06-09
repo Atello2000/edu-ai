@@ -42,7 +42,8 @@ router.post('/quiz', async (req, res) => {
         continue;
       }
       const chunks = splitIntoChunks(text, cSize);
-      totalCost += chunkCost(JETON_COSTS.quiz, chunks.length);
+      const numChunksToQuery = Math.min(chunks.length, count);
+      totalCost += chunkCost(JETON_COSTS.quiz, numChunksToQuery);
       fileData.push({ file, chunks });
     }
 
@@ -71,20 +72,35 @@ router.post('/quiz', async (req, res) => {
     for (const { file, chunks } of fileData) {
       send({ type: 'start', name: file.name });
 
-      const allQuestions = new Array(chunks.length);
-      const perChunk = Math.ceil(count / chunks.length);
+      // Si le nombre de chunks dépasse le nombre de questions demandées (count), 
+      // on sélectionne un sous-ensemble homogène de taille `count`.
+      let selectedChunks = [];
+      if (chunks.length > count) {
+        for (let i = 0; i < count; i++) {
+          const originalIdx = Math.floor(i * chunks.length / count);
+          selectedChunks.push({ text: chunks[originalIdx], index: originalIdx });
+        }
+      } else {
+        selectedChunks = chunks.map((c, idx) => ({ text: c, index: idx }));
+      }
+
+      const totalChunksToQuery = selectedChunks.length;
+      const allQuestions = new Array(totalChunksToQuery);
+      const perChunk = Math.ceil(count / totalChunksToQuery);
 
       // Chunks traités en parallèle (CHUNK_PARALLEL simultanés)
-      for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
+      for (let i = 0; i < totalChunksToQuery; i += CHUNK_PARALLEL) {
         await Promise.all(
-          chunks.slice(i, i + CHUNK_PARALLEL).map(async (chunk, j) => {
+          selectedChunks.slice(i, i + CHUNK_PARALLEL).map(async (item, j) => {
             const idx = i + j;
-            if (chunks.length > 1) {
-              send({ type: 'progress', name: file.name, step: idx + 1, total: chunks.length,
-                     message: `${idx + 1}/${chunks.length} parties…` });
+            const chunk = item.text;
+            const chunkLabel = chunks.length > 1 ? ` (partie ${item.index + 1}/${chunks.length})` : '';
+
+            if (totalChunksToQuery > 1) {
+              send({ type: 'progress', name: file.name, step: idx + 1, total: totalChunksToQuery,
+                     message: `${idx + 1}/${totalChunksToQuery} parties…` });
             }
 
-            const chunkLabel    = chunks.length > 1 ? ` (partie ${idx + 1}/${chunks.length})` : '';
             const questionTypes = `
 Varie obligatoirement les types de questions parmi :
 - Définition (ex: "Que signifie X ?")

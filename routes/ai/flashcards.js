@@ -34,7 +34,8 @@ router.post('/flashcards', async (req, res) => {
         continue;
       }
       const chunks = splitIntoChunks(text, cSize);
-      totalCost += chunkCost(JETON_COSTS.flashcards, chunks.length);
+      const numChunksToQuery = Math.min(chunks.length, count);
+      totalCost += chunkCost(JETON_COSTS.flashcards, numChunksToQuery);
       fileData.push({ file, chunks });
     }
 
@@ -55,21 +56,35 @@ router.post('/flashcards', async (req, res) => {
     for (const { file, chunks } of fileData) {
       send({ type: 'start', name: file.name });
 
-      const allCards = new Array(chunks.length);
+      // Si le nombre de chunks dépasse le nombre de flashcards demandées (count), 
+      // on sélectionne un sous-ensemble homogène de taille `count`.
+      let selectedChunks = [];
+      if (chunks.length > count) {
+        for (let i = 0; i < count; i++) {
+          const originalIdx = Math.floor(i * chunks.length / count);
+          selectedChunks.push({ text: chunks[originalIdx], index: originalIdx });
+        }
+      } else {
+        selectedChunks = chunks.map((c, idx) => ({ text: c, index: idx }));
+      }
+
+      const totalChunksToQuery = selectedChunks.length;
+      const allCards = new Array(totalChunksToQuery);
       // Distribuer les cartes entre les chunks
-      const perChunk = Math.ceil(count / chunks.length);
+      const perChunk = Math.ceil(count / totalChunksToQuery);
       const CHUNK_PARALLEL = aiCfg.provider === 'gemini' ? 1 : 3;
 
-      for (let i = 0; i < chunks.length; i += CHUNK_PARALLEL) {
+      for (let i = 0; i < totalChunksToQuery; i += CHUNK_PARALLEL) {
         await Promise.all(
-          chunks.slice(i, i + CHUNK_PARALLEL).map(async (chunk, j) => {
+          selectedChunks.slice(i, i + CHUNK_PARALLEL).map(async (item, j) => {
             const idx = i + j;
-            if (chunks.length > 1) {
-              send({ type: 'progress', name: file.name, step: idx + 1, total: chunks.length,
-                     message: `Partie ${idx + 1}/${chunks.length}…` });
-            }
+            const chunk = item.text;
+            const chunkLabel = chunks.length > 1 ? ` (partie ${item.index + 1}/${chunks.length})` : '';
 
-            const chunkLabel = chunks.length > 1 ? ` (partie ${idx + 1}/${chunks.length})` : '';
+            if (totalChunksToQuery > 1) {
+              send({ type: 'progress', name: file.name, step: idx + 1, total: totalChunksToQuery,
+                     message: `Partie ${idx + 1}/${totalChunksToQuery}…` });
+            }
 
             const prompt = `${userContext(req.user)}Tu es un assistant pédagogique. Génère ${perChunk} flashcards ${inLang} pour aider à mémoriser les concepts essentiels de ce contenu de cours${chunkLabel}.
 

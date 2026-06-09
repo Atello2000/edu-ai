@@ -20,9 +20,22 @@ pool.on('error', (err) => {
   require('./services/logger').error('PostgreSQL pool error', { message: err.message });
 });
 
+/**
+ * Convertit les requêtes SQL avec marqueurs de substitution style SQLite (?) 
+ * en marqueurs positionnels style PostgreSQL ($1, $2...).
+ * 
+ * ATTENTION : PostgreSQL utilise le caractère "?" comme opérateur natif pour les colonnes JSONB.
+ * Pour utiliser un "?" littéral dans une requête sans qu'il ne soit converti en paramètre (ex. opérateur JSONB),
+ * utilisez un double point d'interrogation "??". Cette fonction le convertira en un "?" unique.
+ * Alternativement, préférez l'utilisation des fonctions PG standard (comme jsonb_exists(col, 'key'))
+ * ou de l'opérateur de confinement (@>).
+ */
 function toPg(sql) {
   let i = 0;
-  return sql.replace(/\?/g, () => `$${++i}`);
+  return sql
+    .replace(/\?\?/g, '\uFFFD')
+    .replace(/\?/g, () => `$${++i}`)
+    .replace(/\uFFFD/g, '?');
 }
 
 const RETRYABLE = /connection timeout|terminating connection|Connection terminated|ECONNRESET|ENOTFOUND/i;
