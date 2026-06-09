@@ -202,7 +202,7 @@ export default function AppPage() {
   const [chatFiles, setChatFiles] = useState([]);
 
   // ── Jetons ─────────────────────────────────────────────────────────────────
-  const { balance, costs: jetonCosts } = useJetons();
+  const { balance, costs: jetonCosts, chunkSizes } = useJetons();
 
   // ── Session prep ───────────────────────────────────────────────────────────
   const { showGoalModal, sessionGoal, prepLoading, handlePrepareSession, handleGoalSelect } =
@@ -829,6 +829,7 @@ export default function AppPage() {
           <ActionsPanel
             user={user}
             jetonCosts={jetonCosts}
+            chunkSizes={chunkSizes}
             hasFiles={hasFiles}
             uploadedFiles={uploadedFiles}
             onGoUpload={() => setActivePanel('upload-section')}

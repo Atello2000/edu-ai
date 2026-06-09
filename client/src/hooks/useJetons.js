@@ -13,6 +13,7 @@ export function useJetons() {
   const [balance,  setBalance]  = useState(null);
   const [monthly,  setMonthly]  = useState(null);
   const [costs,    setCosts]    = useState(DEFAULT_COSTS);
+  const [chunkSizes, setChunkSizes] = useState({});
   const [loading,  setLoading]  = useState(false);
 
   // Fonction stable exposée pour refresh externe (ex: eventBus, bouton manuel)
@@ -25,6 +26,7 @@ export function useJetons() {
       setBalance(data.balance ?? 0);
       setMonthly(data.monthly_allocation ?? null);
       if (data.costs) setCosts(prev => ({ ...DEFAULT_COSTS, ...data.costs, session: prev.session }));
+      if (data.chunkSizes) setChunkSizes(data.chunkSizes);
     } catch { /* silencieux */ }
     finally { setLoading(false); }
   }, []);
@@ -40,6 +42,7 @@ export function useJetons() {
         if (pricesRes.ok && active) {
           const p = await pricesRes.json();
           setCosts({ ...DEFAULT_COSTS, ...p.costs, session: p.session ?? DEFAULT_COSTS.session });
+          if (p.chunkSizes) setChunkSizes(p.chunkSizes);
         }
         // Puis charger le solde utilisateur
         const res  = await apiFetch('/api/jetons');
@@ -49,6 +52,7 @@ export function useJetons() {
           setBalance(data.balance ?? 0);
           setMonthly(data.monthly_allocation ?? null);
           if (data.costs) setCosts(prev => ({ ...prev, ...data.costs }));
+          if (data.chunkSizes) setChunkSizes(data.chunkSizes);
         }
       } catch { /* silencieux */ }
       finally { if (active) setLoading(false); }
@@ -59,5 +63,5 @@ export function useJetons() {
     return () => { active = false; unsub?.(); };
   }, [refresh]);
 
-  return { balance, monthly_allocation: monthly, costs, loading, refresh };
+  return { balance, monthly_allocation: monthly, costs, chunkSizes, loading, refresh };
 }

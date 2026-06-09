@@ -10,11 +10,12 @@ const DEFAULT_COSTS = {
   socratic: 1, predict: 2, 'study-plan': 1, 'error-analysis': 1,
 };
 
-// Taille chunk Gemini (provider primaire — 80K chars, 1M TPM)
-const CHUNK_SIZE = 80_000;
+// Taille chunk par défaut
+const DEFAULT_CHUNK_SIZE = 80_000;
 
-function chunkCount(textLen) {
-  return Math.max(1, Math.ceil(textLen / CHUNK_SIZE));
+function chunkCount(textLen, chunkSize = DEFAULT_CHUNK_SIZE) {
+  const size = chunkSize || DEFAULT_CHUNK_SIZE;
+  return Math.max(1, Math.ceil(textLen / size));
 }
 
 function chunkCost(base, chunks) {
@@ -22,23 +23,30 @@ function chunkCost(base, chunks) {
 }
 
 // Coût estimé pour une action chunckée sur un ensemble de fichiers
-function estimateCost(base, files) {
+function estimateCost(base, files, chunkSize = DEFAULT_CHUNK_SIZE) {
   if (!files || !files.length) return base;
   return files.reduce((sum, f) => {
-    const c = chunkCount((f.text || '').length);
+    const c = chunkCount((f.text || '').length, chunkSize);
     return sum + chunkCost(base, c);
   }, 0);
 }
 
 // Session = résumé + quiz + flashcards (coûts cumulés par fichier)
-function estimateSessionCost(files, costs) {
+function estimateSessionCost(files, costs, chunkSizes = {}) {
   const s = (costs ?? DEFAULT_COSTS).summarize   ?? 3;
   const q = (costs ?? DEFAULT_COSTS).quiz        ?? 2;
   const f = (costs ?? DEFAULT_COSTS).flashcards  ?? 2;
+  const sizeS = chunkSizes?.summarize || DEFAULT_CHUNK_SIZE;
+  const sizeQ = chunkSizes?.quiz || DEFAULT_CHUNK_SIZE;
+  const sizeF = chunkSizes?.flashcards || DEFAULT_CHUNK_SIZE;
+
   if (!files || !files.length) return s + q + f;
   return files.reduce((sum, file) => {
-    const c = chunkCount((file.text || '').length);
-    return sum + chunkCost(s, c) + chunkCost(q, c) + chunkCost(f, c);
+    const len = (file.text || '').length;
+    const cS = chunkCount(len, sizeS);
+    const cQ = chunkCount(len, sizeQ);
+    const cF = chunkCount(len, sizeF);
+    return sum + chunkCost(s, cS) + chunkCost(q, cQ) + chunkCost(f, cF);
   }, 0);
 }
 
@@ -73,6 +81,7 @@ function Badge({ action, dynCosts, hasFiles }) {
 export default function ActionsPanel({
   user,
   jetonCosts,
+  chunkSizes = {},
   hasFiles,
   uploadedFiles = [],
   onGoUpload,
@@ -131,14 +140,14 @@ export default function ActionsPanel({
 
   const base = action => (jetonCosts ?? DEFAULT_COSTS)[action] ?? DEFAULT_COSTS[action] ?? 1;
   const dynCosts = {
-    session:        { cost: estimateSessionCost(activeFiles, jetonCosts), base: base('session') },
-    summarize:      { cost: estimateCost(base('summarize'),   activeFiles), base: base('summarize') },
-    quiz:           { cost: estimateCost(base('quiz'),        activeFiles), base: base('quiz') },
-    flashcards:     { cost: estimateCost(base('flashcards'),  activeFiles), base: base('flashcards') },
-    'exam-sheet':   { cost: estimateCost(base('exam-sheet'),  activeFiles), base: base('exam-sheet') },
-    mindmap:        { cost: estimateCost(base('mindmap'),     activeFiles.slice(0,1)), base: base('mindmap') },
-    glossary:       { cost: estimateCost(base('glossary'),    activeFiles), base: base('glossary') },
-    predict:        { cost: estimateCost(base('predict'),     activeFiles), base: base('predict') },
+    session:        { cost: estimateSessionCost(activeFiles, jetonCosts, chunkSizes), base: base('session') },
+    summarize:      { cost: estimateCost(base('summarize'),   activeFiles, chunkSizes?.summarize), base: base('summarize') },
+    quiz:           { cost: estimateCost(base('quiz'),        activeFiles, chunkSizes?.quiz), base: base('quiz') },
+    flashcards:     { cost: estimateCost(base('flashcards'),  activeFiles, chunkSizes?.flashcards), base: base('flashcards') },
+    'exam-sheet':   { cost: estimateCost(base('exam-sheet'),  activeFiles, chunkSizes?.['exam-sheet']), base: base('exam-sheet') },
+    mindmap:        { cost: estimateCost(base('mindmap'),     activeFiles.slice(0,1), chunkSizes?.mindmap), base: base('mindmap') },
+    glossary:       { cost: estimateCost(base('glossary'),    activeFiles, chunkSizes?.glossary), base: base('glossary') },
+    predict:        { cost: estimateCost(base('predict'),     activeFiles, chunkSizes?.predict), base: base('predict') },
     chat:           { cost: base('chat'),           base: base('chat') },
     socratic:       { cost: base('socratic'),       base: base('socratic') },
     'study-plan':   { cost: base('study-plan'),    base: base('study-plan') },
