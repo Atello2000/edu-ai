@@ -4949,3 +4949,86 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   margin-top: 0.5rem;
   line-height: 1.4;
 }
+
+/* ── Refonte de l'ActionsPanel (Mise en avant et responsive) ── */
+.act-featured-wrapper {
+  width: 100%;
+  margin-bottom: 1.25rem;
+}
+
+.act-featured-wrapper .act-card-prepare {
+  width: 100%;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  min-height: auto !important;
+  padding: 1.25rem 1.5rem !important;
+  background: linear-gradient(90deg, var(--surface), rgba(61, 126, 255, 0.03)) !important;
+  border: 1px solid rgba(61, 126, 255, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  border-radius: var(--radius) !important;
+  transition: transform .25s cubic-bezier(.4,0,.2,1), border-color .25s, box-shadow .25s !important;
+}
+
+.act-featured-wrapper .act-card-prepare:hover {
+  transform: translateY(-2px) !important;
+  border-color: rgba(61, 126, 255, 0.5) !important;
+  box-shadow: 0 6px 24px rgba(61, 126, 255, 0.12) !important;
+}
+
+.act-featured-wrapper .act-card-prepare .act-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-align: left;
+  flex: 1;
+}
+
+.act-featured-wrapper .act-card-prepare .act-card-body strong {
+  font-size: 1.05rem;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.act-featured-wrapper .act-card-prepare .act-card-body span {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.act-featured-wrapper .act-card-prepare .act-btn {
+  margin-left: auto !important;
+  width: auto !important;
+  flex-shrink: 0;
+}
+
+.prep-goal-tag {
+  background: rgba(212, 169, 76, 0.12);
+  border: 1px solid rgba(212, 169, 76, 0.25);
+  color: var(--gold);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  display: inline-block;
+  margin-top: 0.1rem;
+}
+
+@media (max-width: 768px) {
+  .act-featured-wrapper .act-card-prepare {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+    padding: 1.15rem 1.2rem !important;
+    text-align: center;
+  }
+  .act-featured-wrapper .act-card-prepare .act-card-body {
+    text-align: center;
+  }
+  .act-featured-wrapper .act-card-prepare .act-btn {
+    width: 100% !important;
+    margin-left: 0 !important;
+    justify-content: center;
+  }
+}
+

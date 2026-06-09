@@ -12,3 +12,8 @@ data/
 client/dist/
 
 .vercel
+
+# System and agent generated files
+.agents/
+scratch/
+public/landing-prerender.html

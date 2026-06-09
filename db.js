@@ -155,33 +155,37 @@ async function initSchema() {
       key   TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS applied_migrations (
+      name TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
 
+  const { rows } = await pool.query('SELECT name FROM applied_migrations');
+  const applied = new Set(rows.map(r => r.name));
+
   const migrations = [
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified INTEGER NOT NULL DEFAULT 0",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS level TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS domains TEXT NOT NULL DEFAULT '[]'",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_done INTEGER NOT NULL DEFAULT 0",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty TEXT",
-    "INSERT INTO app_config (key, value) VALUES ('ai_provider', 'groq') ON CONFLICT DO NOTHING",
-    "INSERT INTO app_config (key, value) VALUES ('ai_model', 'llama-3.3-70b-versatile') ON CONFLICT DO NOTHING",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_provider TEXT",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_model TEXT",
-    // Migrer le provider global de groq → mistral si jamais touché
-    "UPDATE app_config SET value = 'mistral' WHERE key = 'ai_provider' AND value = 'groq'",
-    "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'",
-    // Migrer vers Gemini (primaire) — chunk 80K, TPM 1M, meilleur coût jetons
-    "UPDATE app_config SET value = 'gemini' WHERE key = 'ai_provider' AND value IN ('groq', 'mistral')",
-    "UPDATE app_config SET value = 'gemini-2.5-flash' WHERE key = 'ai_model' AND value IN ('llama-3.3-70b-versatile', 'mistral-small-latest', 'gemini-2.0-flash')",
-    // ── Système de jetons ─────────────────────────────────────────────────────
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 40",
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons_reset_date TEXT",
-    `CREATE TABLE IF NOT EXISTS jeton_transactions (
+    { id: 'users_google_id', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT" },
+    { id: 'users_email_verified', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified INTEGER NOT NULL DEFAULT 0" },
+    { id: 'users_verify_token', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT" },
+    { id: 'users_verify_expires', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TEXT" },
+    { id: 'users_reset_token', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token TEXT" },
+    { id: 'users_reset_expires', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_expires TEXT" },
+    { id: 'users_level', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS level TEXT" },
+    { id: 'users_domains', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS domains TEXT NOT NULL DEFAULT '[]'" },
+    { id: 'users_onboarding_done', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_done INTEGER NOT NULL DEFAULT 0" },
+    { id: 'users_specialty', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS specialty TEXT" },
+    { id: 'config_ai_provider', sql: "INSERT INTO app_config (key, value) VALUES ('ai_provider', 'groq') ON CONFLICT DO NOTHING" },
+    { id: 'config_ai_model', sql: "INSERT INTO app_config (key, value) VALUES ('ai_model', 'llama-3.3-70b-versatile') ON CONFLICT DO NOTHING" },
+    { id: 'users_ai_provider', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_provider TEXT" },
+    { id: 'users_ai_model', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_model TEXT" },
+    { id: 'migrate_to_mistral_provider', sql: "UPDATE app_config SET value = 'mistral' WHERE key = 'ai_provider' AND value = 'groq'" },
+    { id: 'migrate_to_mistral_model', sql: "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'" },
+    { id: 'migrate_to_gemini_provider', sql: "UPDATE app_config SET value = 'gemini' WHERE key = 'ai_provider' AND value IN ('groq', 'mistral')" },
+    { id: 'migrate_to_gemini_model', sql: "UPDATE app_config SET value = 'gemini-2.5-flash' WHERE key = 'ai_model' AND value IN ('llama-3.3-70b-versatile', 'mistral-small-latest', 'gemini-2.0-flash')" },
+    { id: 'users_jetons', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 40" },
+    { id: 'users_jetons_reset_date', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons_reset_date TEXT" },
+    { id: 'create_jeton_transactions', sql: `CREATE TABLE IF NOT EXISTS jeton_transactions (
       id            SERIAL PRIMARY KEY,
       user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       action        TEXT    NOT NULL,
@@ -189,14 +193,11 @@ async function initSchema() {
       balance_after INTEGER NOT NULL,
       note          TEXT,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`,
-    // Allocation initiale pour les utilisateurs existants sans jetons_reset_date
-    // Couvre tous les cas : jetons = 0 (anciens comptes) ET jetons = 40 (DEFAULT PostgreSQL)
-    `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 400 WHEN plan = 'pro' THEN 150 ELSE 40 END,
+    )` },
+    { id: 'users_initial_jetons_allocation', sql: `UPDATE users SET jetons = CASE WHEN plan = 'max' THEN 400 WHEN plan = 'pro' THEN 150 ELSE 40 END,
        jetons_reset_date = to_char(NOW(), 'YYYY-MM')
-     WHERE jetons_reset_date IS NULL`,
-    // ── SRS / Flashcards — persistance PostgreSQL (Faille 2 audit) ──────────
-    `CREATE TABLE IF NOT EXISTS srs_progress (
+     WHERE jetons_reset_date IS NULL` },
+    { id: 'create_srs_progress', sql: `CREATE TABLE IF NOT EXISTS srs_progress (
       user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       card_hash   TEXT    NOT NULL,
       interval_days REAL  NOT NULL DEFAULT 1,
@@ -207,10 +208,10 @@ async function initSchema() {
       back        TEXT    NOT NULL DEFAULT '',
       updated_at  BIGINT  NOT NULL DEFAULT 0,
       PRIMARY KEY (user_id, card_hash)
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_srs_next_review ON srs_progress(user_id, next_review)`,
-    "ALTER TABLE folder_files ADD COLUMN IF NOT EXISTS truncated INTEGER NOT NULL DEFAULT 0",
-    `CREATE TABLE IF NOT EXISTS shared_content (
+    )` },
+    { id: 'idx_srs_next_review', sql: `CREATE INDEX IF NOT EXISTS idx_srs_next_review ON srs_progress(user_id, next_review)` },
+    { id: 'folder_files_truncated', sql: "ALTER TABLE folder_files ADD COLUMN IF NOT EXISTS truncated INTEGER NOT NULL DEFAULT 0" },
+    { id: 'create_shared_content', sql: `CREATE TABLE IF NOT EXISTS shared_content (
       token      TEXT PRIMARY KEY,
       user_id    INTEGER REFERENCES users(id) ON DELETE CASCADE,
       type       TEXT NOT NULL DEFAULT 'summary',
@@ -218,50 +219,49 @@ async function initSchema() {
       content    TEXT NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '7 days',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`,
-    `CREATE INDEX IF NOT EXISTS idx_shared_content_expires ON shared_content(expires_at)`,
-    // IPN idempotency — une ref_command ne peut créditer qu'une seule fois
-    `CREATE TABLE IF NOT EXISTS payments (
+    )` },
+    { id: 'idx_shared_content_expires', sql: `CREATE INDEX IF NOT EXISTS idx_shared_content_expires ON shared_content(expires_at)` },
+    { id: 'create_payments', sql: `CREATE TABLE IF NOT EXISTS payments (
       id          SERIAL PRIMARY KEY,
       ref_command TEXT    NOT NULL UNIQUE,
       user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       plan        TEXT    NOT NULL,
       amount      INTEGER NOT NULL,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )`,
-    // Rôle admin en base — plus fiable que la comparaison d'email
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false",
-    // Révocation de session — permet d'invalider tous les tokens émis avant cette date
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_invalidated_at TIMESTAMPTZ",
-    // Expiration du plan payant — NULL = free, date = fin d'abonnement actif
-    "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ",
-    // ── Audit fixes ────────────────────────────────────────────────────────────
-    // Index google_id — évite un full table scan à chaque login OAuth
-    "CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)",
-    // verify_expires & reset_expires : TEXT → TIMESTAMPTZ pour comparaisons SQL natives
-    "ALTER TABLE users ALTER COLUMN verify_expires TYPE TIMESTAMPTZ USING verify_expires::TIMESTAMPTZ",
-    "ALTER TABLE users ALTER COLUMN reset_expires TYPE TIMESTAMPTZ USING reset_expires::TIMESTAMPTZ",
-    // domains : TEXT → JSONB pour validation et indexation native
-    "ALTER TABLE users ALTER COLUMN domains DROP DEFAULT",
-    "ALTER TABLE users ALTER COLUMN domains TYPE JSONB USING domains::JSONB",
-    "ALTER TABLE users ALTER COLUMN domains SET DEFAULT '[]'::JSONB",
+    )` },
+    { id: 'users_is_admin', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false" },
+    { id: 'users_session_invalidated_at', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_invalidated_at TIMESTAMPTZ" },
+    { id: 'users_plan_expires_at', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ" },
+    { id: 'idx_users_google_id', sql: "CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)" },
+    { id: 'alter_users_verify_expires_type', sql: "ALTER TABLE users ALTER COLUMN verify_expires TYPE TIMESTAMPTZ USING verify_expires::TIMESTAMPTZ" },
+    { id: 'alter_users_reset_expires_type', sql: "ALTER TABLE users ALTER COLUMN reset_expires TYPE TIMESTAMPTZ USING reset_expires::TIMESTAMPTZ" },
+    { id: 'alter_users_domains_type', sql: "ALTER TABLE users ALTER COLUMN domains DROP DEFAULT" },
+    { id: 'alter_users_domains_type_jsonb', sql: "ALTER TABLE users ALTER COLUMN domains TYPE JSONB USING domains::JSONB" },
+    { id: 'alter_users_domains_default_jsonb', sql: "ALTER TABLE users ALTER COLUMN domains SET DEFAULT '[]'::JSONB" }
   ];
-  // MED-01 : Loguer les erreurs de migration au lieu de les avaler silencieusement.
-  // Les codes 42701 (column already exists) et 42P07 (relation already exists) sont attendus.
+
   const EXPECTED_CODES = new Set(['42701', '42P07', '42710']);
-  for (const sql of migrations) {
+  for (const m of migrations) {
+    if (applied.has(m.id)) continue;
     try {
-      await pool.query(sql);
+      await pool.query(m.sql);
+      await pool.query('INSERT INTO applied_migrations (name) VALUES ($1)', [m.id]);
     } catch (err) {
       if (!EXPECTED_CODES.has(err.code)) {
         require('./services/logger').warn('Migration warning', {
-          sql: sql.replace(/\s+/g, ' ').slice(0, 120),
+          id: m.id,
+          sql: m.sql.replace(/\s+/g, ' ').slice(0, 120),
           code: err.code,
           error: err.message,
         });
+      } else {
+        try {
+          await pool.query('INSERT INTO applied_migrations (name) VALUES ($1) ON CONFLICT DO NOTHING', [m.id]);
+        } catch (_) {}
       }
     }
   }
+
   // Synchronise is_admin depuis ADMIN_EMAIL à chaque démarrage
   const adminEmail = (process.env.ADMIN_EMAIL || '').toLowerCase().trim();
   if (adminEmail) {

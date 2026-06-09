@@ -242,11 +242,9 @@ export default function ActionsPanel({
         </div>
       </div>
 
-      {/* Cartes d'action */}
-      <div className="action-trio">
-
-        {/* ── Actions principales (toujours visibles) ─────────────────── */}
-        <div className="act-card act-card-wide act-card-prepare" data-color="blue">
+      {/* Action vedette (Mise en avant) */}
+      <div className="act-featured-wrapper">
+        <div className="act-card act-card-prepare" data-color="blue">
           <div className="act-card-icon blue">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
@@ -255,7 +253,7 @@ export default function ActionsPanel({
           <div className="act-card-body">
             <strong>Préparer ma session</strong>
             <span>
-              Résumé + quiz + flashcards en une fois
+              Résumé + quiz + flashcards en une seule opération
               {sessionGoal && <> · <span className="prep-goal-tag">{
                 sessionGoal === 'exam'       ? 'Examen demain' :
                 sessionGoal === 'understand' ? 'Comprendre' :
@@ -265,9 +263,14 @@ export default function ActionsPanel({
             <Badge action="session" dynCosts={dynCosts} hasFiles={hasFiles} />
           </div>
           <button className="act-btn blue large" disabled={!hasFiles || prepLoading} onClick={onPrepareSession}>
-            {prepLoading ? 'En cours…' : 'Lancer'}
+            {prepLoading ? 'En cours…' : 'Lancer la session'}
           </button>
         </div>
+      </div>
+
+      {/* Cartes d'action complémentaires */}
+      <div className="action-trio">
+
 
         <div className="act-card" data-color="blue">
           <div className="act-card-icon blue">
