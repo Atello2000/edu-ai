@@ -68,6 +68,54 @@ router.post('/mindmap', async (req, res) => {
   }
 });
 
+// POST /api/mindmap/extend — approfondit un nœud de la carte mentale (coût: 1 jeton)
+router.post('/mindmap/extend', async (req, res) => {
+  let deducted = 0;
+  try {
+    const { file, nodeText } = req.body;
+    if (!file) return res.status(400).json({ error: 'Fichier manquant' });
+    if (!nodeText) return res.status(400).json({ error: 'Concept à approfondir manquant' });
+
+    const text = await getFileText(file);
+    const chunks = splitIntoChunks(text);
+
+    // Isoler les chunks pertinents qui parlent du nœud
+    let relevantText = '';
+    const matchingChunks = chunks.filter(c => c.toLowerCase().includes(nodeText.toLowerCase()));
+    if (matchingChunks.length > 0) {
+      relevantText = matchingChunks.slice(0, 2).join('\n\n');
+    } else {
+      // Fallback sur le premier chunk s'il n'y a pas de correspondance textuelle brute
+      relevantText = chunks[0] || '';
+    }
+
+    // Déduction unitaire fixe de 1 jeton pour l'approfondissement ciblé
+    const jeton = await checkAndDeduct(req.user?.id, 'mindmap', req.user?.plan || 'free', 1);
+    if (!jeton.ok) {
+      return res.status(402).json({ error: `Solde insuffisant : ${jeton.needed} jeton requis, vous en avez ${jeton.balance}.` });
+    }
+    deducted = jeton.cost || 0;
+
+    const aiCfg = await getAiConfigForAction('mindmap');
+    const ctx = userContext(req.user);
+
+    const { text: result, usage } = await aiComplete(
+      promptExtendNode(ctx, file.name, nodeText, relevantText),
+      600,
+      aiCfg
+    );
+
+    if (usage) logTokens(req.user?.id, 'mindmap', usage.provider, usage.input, usage.output);
+
+    res.json({ markdown: result.trim() });
+
+  } catch (err) {
+    logger.error('AI mindmap extend error', { userId: req.user?.id, message: err.message });
+    await refundJetons(req.user?.id, 'mindmap', deducted);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Helpers de prompt ──────────────────────────────────────────────────────────
 
 function promptMindmap(ctx, name, text) {
@@ -117,6 +165,23 @@ RÈGLES STRICTES :
 ---
 Notes du cours "${name}" :
 ${combined}`;
+}
+
+function promptExtendNode(ctx, name, nodeText, text) {
+  return `${ctx}Tu es un tuteur expert. Tu devez approfondir et détailler le concept/thématique "${nodeText}" à partir de l'extrait du cours "${name}" ci-dessous.
+
+RÈGLES STRICTES :
+- Génère exactement entre 3 et 5 sous-éléments directs pour détailler ce concept.
+- Les sous-éléments doivent être concis (3 à 7 mots maximum chacun).
+- Réponds uniquement sous forme d'une liste simple en Markdown avec des tirets "- ", sans aucun sous-niveau (pas d'indentation interne).
+- Ne mets aucune phrase d'introduction ni de conclusion, aucun titre, réponds uniquement avec la liste de puces en Markdown pur.
+
+---
+Extrait du cours pertinent pour le contexte :
+${text}
+
+---
+Concept à approfondir : ${nodeText}`;
 }
 
 module.exports = router;

@@ -54,6 +54,7 @@ export function useSessions({
   restoreExamRef,
   restoreQuizRef,
   restoreFcRef,
+  restoreMindmapRef,
   userPlan,
 }) {
   const maxSessions = getMaxSessions(userPlan);
@@ -155,9 +156,12 @@ export function useSessions({
       eventBus.emit('nav:section', 'exam-sheet-section');
       if (firstPanel === 'actions-section') firstPanel = 'exam-sheet-section';
     }
+    if (s.mindmap) {
+      restoreMindmapRef.current?.(s.mindmap);
+    }
 
     setActivePanel(firstPanel);
-  }, [setUploadedFiles, setActivePanel, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef]);
+  }, [setUploadedFiles, setActivePanel, restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef, restoreMindmapRef]);
 
   return { saveSession, restoreSession };
 }

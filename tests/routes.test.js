@@ -100,3 +100,22 @@ describe('Sécurité path traversal', () => {
     expect(body).toMatch(/non autorisé|error/i);
   });
 });
+
+// ── /api/mindmap/extend ───────────────────────────────────────────────────────
+describe('POST /api/mindmap/extend', () => {
+  it('rejette une requête sans fichier', async () => {
+    const res = await request(app)
+      .post('/api/mindmap/extend')
+      .send({ nodeText: 'Concept' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/fichier manquant/i);
+  });
+
+  it('rejette une requête sans concept à approfondir', async () => {
+    const res = await request(app)
+      .post('/api/mindmap/extend')
+      .send({ file: { path: 'uploads/test.pdf', name: 'test.pdf' } });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/concept à approfondir manquant/i);
+  });
+});

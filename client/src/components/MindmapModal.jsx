@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import eventBus from '../utils/eventBus';
-// Bundlés via npm — plus de dépendance CDN, fonctionne hors-ligne
+import { apiFetch } from '../utils/apiFetch';
+import toast from '../utils/toast';
 
-/**
- * Modal de carte mentale (markmap).
- *
- * Écoute l'événement eventBus 'mindmap:open' avec payload { name, markdown }.
- */
+// Bundlés via npm — plus de dépendance CDN, fonctionne hors-ligne
 
 let markmapModulesPromise;
 function loadMarkmapModules() {
@@ -20,16 +17,25 @@ function loadMarkmapModules() {
   return markmapModulesPromise;
 }
 
-export default function MindmapModal() {
+export default function MindmapModal({
+  mindmapMd,
+  onMindmapChange,
+  saveSession,
+  uploadedFiles = [],
+  selectedFileIds = null,
+}) {
   const [visible,    setVisible]    = useState(false);
   const [courseName, setCourseName] = useState('Carte mentale');
   const [pendingMd,  setPendingMd]  = useState(null);
+  const [extending,  setExtending]  = useState(false);
+  const [selectedNodeText, setSelectedNodeText] = useState(null);
   const svgRef      = useRef(null);
   const instanceRef = useRef(null);
 
   const close = useCallback(() => {
     setVisible(false);
     setPendingMd(null);
+    setSelectedNodeText(null);
     if (svgRef.current) svgRef.current.innerHTML = '';
     instanceRef.current = null;
   }, []);
@@ -87,6 +93,62 @@ export default function MindmapModal() {
     return () => { cancelled = true; };
   }, [visible, pendingMd, courseName]);
 
+  // Highlight et sélection visuelle du nœud sélectionné
+  useEffect(() => {
+    if (!visible || !svgRef.current) return;
+    const svgEl = svgRef.current;
+
+    // Réinitialiser les styles de tous les nœuds
+    svgEl.querySelectorAll('.markmap-node').forEach(nodeEl => {
+      nodeEl.classList.remove('selected-node');
+      const circle = nodeEl.querySelector('circle');
+      if (circle) {
+        circle.style.stroke = '';
+        circle.style.strokeWidth = '';
+        circle.style.fill = '';
+      }
+      const rect = nodeEl.querySelector('rect');
+      if (rect) {
+        rect.style.stroke = '';
+        rect.style.strokeWidth = '';
+      }
+      const text = nodeEl.querySelector('text');
+      if (text) {
+        text.style.fill = '';
+        text.style.fontWeight = '';
+      }
+    });
+
+    if (!selectedNodeText) return;
+
+    // Appliquer le style de sélection sur le nœud correspondant
+    svgEl.querySelectorAll('.markmap-node').forEach(nodeEl => {
+      const data = nodeEl.__data__;
+      if (data && data.content) {
+        const text = data.content.replace(/<[^>]*>/g, '').trim();
+        if (text === selectedNodeText) {
+          nodeEl.classList.add('selected-node');
+          const circle = nodeEl.querySelector('circle');
+          if (circle) {
+            circle.style.stroke = 'var(--gold, #f5a623)';
+            circle.style.strokeWidth = '3px';
+            circle.style.fill = 'var(--gold, #f5a623)';
+          }
+          const rect = nodeEl.querySelector('rect');
+          if (rect) {
+            rect.style.stroke = 'var(--gold, #f5a623)';
+            rect.style.strokeWidth = '2px';
+          }
+          const txt = nodeEl.querySelector('text');
+          if (txt) {
+            txt.style.fill = 'var(--gold, #f5a623)';
+            txt.style.fontWeight = 'bold';
+          }
+        }
+      }
+    });
+  }, [selectedNodeText, pendingMd, visible]);
+
   // Écoute l'événement eventBus
   useEffect(() => {
     return eventBus.on('mindmap:open', ({ name, markdown }) => {
@@ -96,6 +158,116 @@ export default function MindmapModal() {
     });
   }, []);
 
+  // Gérer le clic sur le SVG pour la sélection des nœuds
+  const handleSvgClick = useCallback((e) => {
+    const nodeEl = e.target.closest('.markmap-node');
+    if (!nodeEl) {
+      if (e.target === svgRef.current) {
+        setSelectedNodeText(null);
+      }
+      return;
+    }
+    const data = nodeEl.__data__;
+    if (data && data.content) {
+      const text = data.content.replace(/<[^>]*>/g, '').trim();
+      setSelectedNodeText(text);
+    }
+  }, []);
+
+  // Approfondir le concept sélectionné
+  const handleExtendNode = async () => {
+    if (!selectedNodeText) return;
+
+    const files = !selectedFileIds || selectedFileIds.size === uploadedFiles.length
+      ? uploadedFiles
+      : uploadedFiles.filter(f => selectedFileIds?.has(f.id));
+
+    if (!files || !files.length) {
+      toast.warn('Sélectionnez d\'abord un cours.');
+      return;
+    }
+
+    const file = files[0];
+    setExtending(true);
+
+    try {
+      const res = await apiFetch('/api/mindmap/extend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file, nodeText: selectedNodeText }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Erreur lors de l\'approfondissement.');
+      }
+
+      const originalMd = pendingMd;
+      const newItemsMd = data.markdown;
+
+      const lines = originalMd.split('\n');
+      let targetLineIndex = -1;
+      const cleanSelectedText = selectedNodeText.trim().toLowerCase();
+
+      // Recherche du nœud dans le Markdown
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const cleanLine = line.replace(/^[#\-*\s]+/, '').trim().toLowerCase();
+        if (cleanLine === cleanSelectedText) {
+          targetLineIndex = i;
+          break;
+        }
+      }
+
+      if (targetLineIndex === -1) {
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const cleanLine = line.replace(/^[#\-*\s]+/, '').trim().toLowerCase();
+          if (cleanLine.includes(cleanSelectedText) || cleanSelectedText.includes(cleanLine)) {
+            targetLineIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (targetLineIndex !== -1) {
+        const targetLine = lines[targetLineIndex];
+        let childPrefix = '- ';
+
+        if (targetLine.trim().startsWith('#')) {
+          childPrefix = '- ';
+        } else {
+          const spaceMatch = targetLine.match(/^(\s*)/);
+          const leadingSpaces = spaceMatch ? spaceMatch[1] : '';
+          childPrefix = leadingSpaces + '  - ';
+        }
+
+        const newLines = newItemsMd.split('\n')
+          .map(line => line.replace(/^[\s\-*]+/, '').trim())
+          .filter(Boolean)
+          .map(text => `${childPrefix}${text}`);
+
+        lines.splice(targetLineIndex + 1, 0, ...newLines);
+        const newMarkdown = lines.join('\n');
+
+        // Mettre à jour les états et sauvegarder la session
+        setPendingMd(newMarkdown);
+        onMindmapChange?.(newMarkdown);
+        saveSession?.({ mindmap: newMarkdown });
+        setSelectedNodeText(null);
+
+        eventBus.emit('quota:refresh');
+        toast.success('Concept approfondi ! (-1 jeton)');
+      } else {
+        throw new Error('Impossible de localiser le concept dans le document original.');
+      }
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setExtending(false);
+    }
+  };
+
   if (!visible) return null;
 
   return (
@@ -104,10 +276,70 @@ export default function MindmapModal() {
       id="mindmap-overlay"
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
+      <style>{`
+        .markmap-node {
+          cursor: pointer;
+        }
+        .markmap-node:hover circle {
+          stroke: var(--teal, #00f2fe) !important;
+          stroke-width: 2.5px !important;
+        }
+        .markmap-node.selected-node circle {
+          stroke: var(--gold, #f5a623) !important;
+          stroke-dasharray: none !important;
+          stroke-width: 3px !important;
+          fill: var(--gold, #f5a623) !important;
+        }
+        .markmap-node.selected-node text {
+          fill: var(--gold, #f5a623) !important;
+          font-weight: bold !important;
+        }
+      `}</style>
       <div className="mindmap-modal">
         <div className="mindmap-header">
           <span className="mindmap-course-name">{courseName}</span>
-          <div className="mindmap-header-actions">
+          {selectedNodeText && (
+            <span className="selected-node-badge" style={{
+              fontSize: '0.8rem',
+              color: 'var(--gold, #f5a623)',
+              background: 'rgba(245, 166, 35, 0.1)',
+              border: '1px solid rgba(245, 166, 35, 0.25)',
+              padding: '0.2rem 0.6rem',
+              borderRadius: '6px',
+              marginLeft: '1rem',
+              marginRight: 'auto',
+              maxWidth: '200px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'inline-block'
+            }}>
+              Sélection : {selectedNodeText}
+            </span>
+          )}
+          <div className="mindmap-header-actions" style={{ marginLeft: !selectedNodeText ? 'auto' : undefined }}>
+            <button
+              className="act-btn gold"
+              style={{
+                padding: '0.4rem 0.9rem',
+                fontSize: '0.78rem',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+                marginRight: '0.5rem',
+                borderRadius: '8px',
+                height: '32px'
+              }}
+              disabled={!selectedNodeText || extending}
+              onClick={handleExtendNode}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              {extending ? 'Approfondissement...' : 'Approfondir (1 jeton)'}
+            </button>
             <button className="ghost-btn" title="Zoom +" onClick={() => instanceRef.current?.rescale(1.25)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
             </button>
@@ -132,7 +364,7 @@ export default function MindmapModal() {
             </button>
           </div>
         </div>
-        <svg ref={svgRef} id="mindmap-svg" />
+        <svg ref={svgRef} id="mindmap-svg" onClick={handleSvgClick} />
       </div>
     </div>
   );

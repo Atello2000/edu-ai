@@ -128,6 +128,9 @@ export default function ActionsPanel({
   onExamMinsChange,
   // ── Loader mindmap (piloté par React state dans AppPage) ──────────────────
   onMindmapLoading,         // (loading: boolean) => void
+  mindmapMd,
+  onMindmapChange,
+  saveSession,
 }) {
   const [showMore,  setShowMore]  = useState(false);
   const isPro = user?.plan === 'pro' || user?.plan === 'max';
@@ -180,6 +183,11 @@ export default function ActionsPanel({
 
     if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
 
+    if (mindmapMd) {
+      eventBus.emit('mindmap:open', { name: files[0].name, markdown: mindmapMd });
+      return;
+    }
+
     onMindmapLoading?.(true);
 
     try {
@@ -190,6 +198,33 @@ export default function ActionsPanel({
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');
+      onMindmapChange?.(data.markdown);
+      saveSession?.({ mindmap: data.markdown });
+      eventBus.emit('mindmap:open', { name: file.name, markdown: data.markdown });
+    } catch (err) { toast.error(err.message); }
+    finally { onMindmapLoading?.(false); }
+  }
+
+  async function handleMindmapRegen(e) {
+    e.stopPropagation();
+    const files = !selectedFileIds || selectedFileIds.size === uploadedFiles.length
+      ? uploadedFiles
+      : uploadedFiles.filter(f => selectedFileIds?.has(f.id));
+
+    if (!files.length) { toast.warn('Sélectionnez au moins un fichier.'); return; }
+
+    onMindmapLoading?.(true);
+
+    try {
+      const file = files[0];
+      const res  = await apiFetch('/api/mindmap', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');
+      onMindmapChange?.(data.markdown);
+      saveSession?.({ mindmap: data.markdown });
       eventBus.emit('mindmap:open', { name: file.name, markdown: data.markdown });
     } catch (err) { toast.error(err.message); }
     finally { onMindmapLoading?.(false); }
@@ -425,7 +460,14 @@ export default function ActionsPanel({
               <span>Visualise le cours sous forme d&apos;arbre interactif</span>
               <Badge action="mindmap" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
-            <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>Créer</button>
+            <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>
+              {mindmapMd ? 'Voir la carte' : 'Créer'}
+            </button>
+            {mindmapMd && (
+              <button className="regen-link" id="mindmap-regen-btn" onClick={handleMindmapRegen}>
+                ↺ Régénérer
+              </button>
+            )}
           </div>
 
           <div className="act-card act-card-wide" data-color="gold">

@@ -161,11 +161,17 @@ export default function AppPage() {
   const restoreExamRef    = useRef(null);
   const restoreQuizRef    = useRef(null);
   const restoreFcRef      = useRef(null);
+  const restoreMindmapRef = useRef(null);
+
+  const [mindmapMd, setMindmapMd] = useState(null);
+  useEffect(() => {
+    restoreMindmapRef.current = setMindmapMd;
+  }, []);
 
   // ── Session history ────────────────────────────────────────────────────────
   const { saveSession, restoreSession } = useSessions({
     uploadedFiles, setUploadedFiles, setActivePanel,
-    restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef,
+    restoreSummaryRef, restoreExamRef, restoreQuizRef, restoreFcRef, restoreMindmapRef,
     userPlan: user?.plan,
   });
 
@@ -400,6 +406,7 @@ export default function AppPage() {
     setUploadedFiles(files);
     setSelectedFileIds(null);  // réinitialiser la sélection
     resetSummary();
+    setMindmapMd(null);
     setActivePanel('actions-section');
   }, [resetSummary]);
 
@@ -414,6 +421,7 @@ export default function AppPage() {
     setUploadedFiles(files);
     setSelectedFileIds(null);  // réinitialiser la sélection
     resetSummary(); resetExam(); resetQuiz(); resetFlashcards(); resetChat();
+    setMindmapMd(null);
 
     if (pendingFolderId) {
       try {
@@ -834,6 +842,9 @@ export default function AppPage() {
             uploadedFiles={uploadedFiles}
             onGoUpload={() => setActivePanel('upload-section')}
             onMindmapLoading={setMindmapLoading}
+            mindmapMd={mindmapMd}
+            onMindmapChange={setMindmapMd}
+            saveSession={saveSession}
             summaryResults={summaryResults}
             examMd={examMd}
             questions={questions}
@@ -1154,7 +1165,15 @@ export default function AppPage() {
 
       <FloatNav hasFiles={uploadedFiles.length > 0} activePanel={activePanel} onNavigate={setActivePanel} />
 
-      <Suspense fallback={null}><MindmapModal /></Suspense>
+      <Suspense fallback={null}>
+        <MindmapModal
+          mindmapMd={mindmapMd}
+          onMindmapChange={setMindmapMd}
+          saveSession={saveSession}
+          uploadedFiles={uploadedFiles}
+          selectedFileIds={selectedFileIds}
+        />
+      </Suspense>
 
       {/* Loader global mindmap — piloté par état React (pas par DOM) */}
       {mindmapLoading && (
