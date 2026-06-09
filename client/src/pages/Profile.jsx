@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
+import { useJetons } from '../hooks/useJetons.js';
 import { apiFetch } from '../utils/apiFetch';
 import './Profile.css';
 
@@ -29,6 +30,7 @@ const PLAN_INFO = {
 
 export default function Profile() {
   const { user, setUser } = useAuth();
+  const { balance, history, monthly_allocation } = useJetons();
   const [nameVal, setNameVal]   = useState('');
   const [nameAlert, setNameAlert] = useState(null);
   const [nameBusy, setNameBusy] = useState(false);
@@ -141,6 +143,150 @@ export default function Profile() {
               </div>
             );
           })()}
+        </div>
+
+        <div className="profile-section">
+          <h3>Tableau de bord de mes jetons</h3>
+          <div className="jeton-dashboard-block">
+            <div className="jeton-summary-cards">
+              <div className="jeton-summary-card">
+                <span className="jsc-label">Solde actuel</span>
+                <strong className="jsc-value">{balance !== null ? balance : '—'}</strong>
+                <span className="jsc-sub text-muted">jetons restants</span>
+              </div>
+              <div className="jeton-summary-card">
+                <span className="jsc-label">Allocation mensuelle</span>
+                <strong className="jsc-value">{monthly_allocation !== null ? monthly_allocation : '40'}</strong>
+                <span className="jsc-sub text-muted">jetons / mois</span>
+              </div>
+            </div>
+
+            {/* Répartition des dépenses (Graphique CSS personnalisé) */}
+            <h4 className="jeton-sub-title">Répartition de mes dépenses</h4>
+            {(() => {
+              const spentHistory = (history || []).filter(tx => tx.amount < 0);
+              const totalSpent = spentHistory.reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+              
+              const actionSpent = {};
+              spentHistory.forEach(tx => {
+                let act = tx.action;
+                if (act.startsWith('refund:')) act = act.split(':')[1];
+                actionSpent[act] = (actionSpent[act] || 0) + Math.abs(tx.amount);
+              });
+
+              const ACTION_LABELS = {
+                summarize: 'Résumés',
+                quiz: 'Quiz',
+                flashcards: 'Flashcards',
+                chat: 'Chat',
+                'exam-sheet': 'Fiches d\'examen',
+                glossary: 'Glossaires',
+                mindmap: 'Cartes mentales',
+                socratic: 'Mode socratique',
+                'study-plan': 'Plans de révision',
+                predict: 'Prédicteur',
+                'error-analysis': 'Analyse d\'erreurs',
+                compare: 'Comparateur',
+              };
+
+              const chartData = Object.entries(actionSpent)
+                .map(([action, amount]) => {
+                  const percentage = totalSpent > 0 ? Math.round((amount / totalSpent) * 100) : 0;
+                  return { action, amount, percentage, label: ACTION_LABELS[action] || action };
+                })
+                .sort((a, b) => b.amount - a.amount);
+
+              if (chartData.length === 0) {
+                return (
+                  <div className="jeton-empty-state">
+                    Aucune dépense de jetons enregistrée récemment.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="jeton-chart-list">
+                  {chartData.map(item => (
+                    <div key={item.action} className="jeton-chart-row">
+                      <div className="jeton-chart-info">
+                        <span className="jeton-chart-name">{item.label}</span>
+                        <span className="jeton-chart-value">{item.amount} jetons ({item.percentage}%)</span>
+                      </div>
+                      <div className="jeton-chart-bar-track">
+                        <div className="jeton-chart-bar-fill" style={{ width: `${item.percentage}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="jeton-chart-total">
+                    Total dépensé sur la période : <strong>{totalSpent} jetons</strong>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Historique des transactions */}
+            <h4 className="jeton-sub-title" style={{ marginTop: '1.5rem' }}>Dernières transactions</h4>
+            {(!history || history.length === 0) ? (
+              <div className="jeton-empty-state">
+                Aucune transaction répertoriée.
+              </div>
+            ) : (
+              <div className="jeton-tx-list">
+                {history.slice(0, 10).map((tx, idx) => {
+                  const ACTION_LABELS = {
+                    summarize: 'Résumés',
+                    quiz: 'Quiz',
+                    flashcards: 'Flashcards',
+                    chat: 'Chat',
+                    'exam-sheet': 'Fiches d\'examen',
+                    glossary: 'Glossaires',
+                    mindmap: 'Cartes mentales',
+                    socratic: 'Mode socratique',
+                    'study-plan': 'Plans de révision',
+                    predict: 'Prédicteur',
+                    'error-analysis': 'Analyse d\'erreurs',
+                    compare: 'Comparateur',
+                  };
+
+                  const dateStr = new Date(tx.created_at).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+
+                  let desc = tx.note || '';
+                  let act = tx.action;
+                  const isRefund = act.startsWith('refund:');
+                  if (isRefund) act = act.split(':')[1];
+                  const actionName = ACTION_LABELS[act] || act;
+
+                  if (tx.amount < 0) {
+                    desc = `Génération de ${actionName.toLowerCase()}`;
+                  } else if (isRefund) {
+                    desc = `Remboursement (${actionName.toLowerCase()})`;
+                  } else if (tx.action === 'admin_credit') {
+                    desc = tx.note ? `Crédit : ${tx.note}` : 'Allocation de jetons';
+                  }
+
+                  const isPositive = tx.amount > 0;
+                  const badgeClass = isPositive ? 'tx-badge-plus' : 'tx-badge-minus';
+
+                  return (
+                    <div key={idx} className="jeton-tx-item">
+                      <div className="jtx-left">
+                        <span className="jtx-date">{dateStr}</span>
+                        <span className="jtx-desc">{desc}</span>
+                      </div>
+                      <span className={`jtx-badge ${badgeClass}`}>
+                        {isPositive ? `+${tx.amount}` : tx.amount}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="profile-section">

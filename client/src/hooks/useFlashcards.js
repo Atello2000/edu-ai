@@ -199,10 +199,21 @@ export function useFlashcards({ saveSession } = {}) {
     }
   }, [saveSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function markCard(cardIdx, state) {
+  function markCard(cardIdx, stateOrQuality) {
+    let quality = 4;
+    let state = 'known';
+
+    if (typeof stateOrQuality === 'number') {
+      quality = stateOrQuality;
+      state = quality >= 3 ? 'known' : 'review';
+    } else {
+      state = stateOrQuality;
+      quality = stateOrQuality === 'known' ? 4 : 1;
+    }
+
     setCardStates(prev => ({ ...prev, [cardIdx]: state }));
     const card = cards[cardIdx];
-    if (card?.front) sm2Update(cardHash(card.front), state === 'known' ? 4 : 1, card);
+    if (card?.front) sm2Update(cardHash(card.front), quality, card);
   }
 
   function shuffle() {

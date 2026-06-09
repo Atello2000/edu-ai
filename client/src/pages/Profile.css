@@ -92,3 +92,154 @@
   .profile-page { padding: 1rem; }
   .profile-card { padding: 1.5rem 1.1rem; }
 }
+
+/* Jeton Dashboard Block */
+.jeton-dashboard-block {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.jeton-summary-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .75rem;
+}
+.jeton-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: .9rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.jsc-label {
+  font-size: .65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.jsc-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: .25rem 0;
+}
+.jsc-sub {
+  font-size: .68rem;
+}
+.jeton-sub-title {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: .5rem 0 .25rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.jeton-empty-state {
+  text-align: center;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-xs);
+  font-size: .78rem;
+  color: var(--muted);
+}
+/* Custom CSS progress bar chart */
+.jeton-chart-list {
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 1rem;
+}
+.jeton-chart-row {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+}
+.jeton-chart-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: .76rem;
+}
+.jeton-chart-name {
+  font-weight: 500;
+  color: var(--text);
+}
+.jeton-chart-value {
+  color: var(--muted);
+}
+.jeton-chart-bar-track {
+  height: 6px;
+  background: var(--border-sub);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.jeton-chart-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue) 0%, var(--purple) 100%);
+  border-radius: 99px;
+}
+.jeton-chart-total {
+  font-size: .76rem;
+  color: var(--muted);
+  text-align: right;
+  margin-top: .4rem;
+  padding-top: .6rem;
+  border-top: 1px solid var(--border-sub);
+}
+
+/* Jeton Transaction list */
+.jeton-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: .25rem;
+}
+.jeton-tx-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem .75rem;
+  background: var(--surface);
+  border: 1px solid var(--border-sub);
+  border-radius: var(--radius-xs);
+  font-size: .78rem;
+  gap: .75rem;
+}
+.jtx-left {
+  display: flex;
+  flex-direction: column;
+  gap: .15rem;
+}
+.jtx-date {
+  font-size: .64rem;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+}
+.jtx-desc {
+  color: var(--text);
+  font-weight: 500;
+}
+.jtx-badge {
+  font-family: 'DM Mono', monospace;
+  font-weight: 700;
+  font-size: .82rem;
+  padding: .15rem .4rem;
+  border-radius: 4px;
+}
+.tx-badge-plus {
+  color: var(--teal);
+  background: var(--teal-bg);
+}
+.tx-badge-minus {
+  color: var(--rose);
+  background: var(--rose-bg);
+}

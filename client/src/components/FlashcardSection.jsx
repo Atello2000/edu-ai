@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getSRSStatus, getSRSLabel } from '../hooks/useFlashcards.js';
 
 /* ── Icônes SVG ──────────────────────────────────────────────────────────── */
@@ -11,7 +11,7 @@ const IcoCards   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="n
 const IcoRepeat  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>;
 
 /* ── Carte individuelle ───────────────────────────────────────────────────── */
-function FlashCard({ card, cardIdx, state, onMark }) {
+function FlashCard({ card, cardIdx, state, onMark, isSrsMode, onNext }) {
   const [flipped, setFlipped] = useState(false);
 
   // Garde contre les cartes malformées (front null/undefined = crash cardHash)
@@ -28,9 +28,11 @@ function FlashCard({ card, cardIdx, state, onMark }) {
   function handleMark(s) {
     onMark(cardIdx, s);
     setFlipped(false);
+    if (onNext) onNext();
   }
 
   let cls = 'fc-card';
+  if (isSrsMode)          cls += ' srs-card-large';
   if (state === 'known')  cls += ' fc-known';
   if (state === 'review') cls += ' fc-review';
   if (flipped)            cls += ' flipped';
@@ -56,8 +58,19 @@ function FlashCard({ card, cardIdx, state, onMark }) {
           <div className="fc-card-lbl">Réponse</div>
           <div className="fc-card-a">{card.back}</div>
           <div className="fc-card-btns">
-            <button className="fc-card-no-btn"  onClick={() => handleMark('review')}><IcoX /> À revoir</button>
-            <button className="fc-card-yes-btn" onClick={() => handleMark('known')}><IcoCheck /> Je sais</button>
+            {isSrsMode ? (
+              <>
+                <button className="fc-card-btn fc-btn-again" onClick={() => handleMark(1)}>À revoir</button>
+                <button className="fc-card-btn fc-btn-hard"  onClick={() => handleMark(3)}>Difficile</button>
+                <button className="fc-card-btn fc-btn-good"  onClick={() => handleMark(4)}>Bien</button>
+                <button className="fc-card-btn fc-btn-easy"  onClick={() => handleMark(5)}>Facile</button>
+              </>
+            ) : (
+              <>
+                <button className="fc-card-no-btn"  onClick={() => handleMark('review')}><IcoX /> À revoir</button>
+                <button className="fc-card-yes-btn" onClick={() => handleMark('known')}><IcoCheck /> Je sais</button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -66,47 +79,50 @@ function FlashCard({ card, cardIdx, state, onMark }) {
 }
 
 /* ── Composant principal ──────────────────────────────────────────────────── */
-/**
- * Props :
- *   decks       [{ name, cards }]
- *   deckIdx     number
- *   cards       [{ front, back }]   — deck courant (peut être mélangé)
- *   cardStates  { [idx]: 'known'|'review' }
- *   srsOnlyDue  bool
- *   onMark      (idx, state) => void
- *   onShuffle   () => void
- *   onRestart   () => void
- *   onRedoWrong () => void
- *   onSwitchDeck(idx) => void
- *   onToggleSrs () => void
- */
 export default function FlashcardSection({
   decks, deckIdx, cards, cardStates, srsOnlyDue,
   onMark, onShuffle, onRestart, onRedoWrong, onSwitchDeck, onToggleSrs,
 }) {
+  const [srsIndex, setSrsIndex] = useState(0);
+  const [srsSessionCards, setSrsSessionCards] = useState([]);
+
+  // Geler la liste des cartes SRS à réviser à l'activation du mode ou au changement de deck
+  useEffect(() => {
+    if (srsOnlyDue) {
+      const due = cards
+        .map((c, i) => ({ c, i }))
+        .filter(({ c }) => getSRSStatus(c.front) === 'due');
+      setSrsSessionCards(due);
+      setSrsIndex(0);
+    } else {
+      setSrsSessionCards([]);
+      setSrsIndex(0);
+    }
+  }, [srsOnlyDue, deckIdx, cards]);
+
   if (!decks.length) return null;
 
   const known     = Object.values(cardStates).filter(s => s === 'known').length;
   const review    = Object.values(cardStates).filter(s => s === 'review').length;
   const remaining = cards.length - known - review;
 
-  // Filter for SRS mode
-  const dueCards = srsOnlyDue
-    ? cards.map((c, i) => ({ c, i })).filter(({ c }) => getSRSStatus(c.front) === 'due')
-    : cards.map((c, i) => ({ c, i }));
-
-  // Sort: due first, then soon, learned, new
-  const order = { due: 0, soon: 1, learned: 2, null: 3 };
-  const sortedCards = [...dueCards].sort(
-    (a, b) => (order[getSRSStatus(a.c.front)] ?? 3) - (order[getSRSStatus(b.c.front)] ?? 3)
-  );
+  // En mode SRS, on utilise la liste gelée pour éviter les sauts de carte.
+  // En mode normal, on affiche la liste complète triée dynamiquement.
+  const sortedCards = srsOnlyDue
+    ? srsSessionCards
+    : [...cards.map((c, i) => ({ c, i }))].sort(
+        (a, b) => {
+          const order = { due: 0, soon: 1, learned: 2, null: 3 };
+          return (order[getSRSStatus(a.c.front)] ?? 3) - (order[getSRSStatus(b.c.front)] ?? 3);
+        }
+      );
 
   const dueCount = cards.filter(c => getSRSStatus(c.front) === 'due').length;
 
   return (
     <>
       {/* Tabs — plusieurs fichiers */}
-      {decks.length > 1 && (
+      {decks.length > 1 && !srsOnlyDue && (
         <div id="fc-file-tabs" style={{ display: 'flex', gap: '.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           {decks.map((d, i) => (
             <button
@@ -122,28 +138,32 @@ export default function FlashcardSection({
 
       {/* Stats bar */}
       <div id="fc-viewer">
-        <div className="fc-stats">
-          <div className="fc-stat">
-            <span className="fc-stat-val" id="fc-known-count">{known}</span>
-            <span className="fc-stat-lbl">Sus</span>
-          </div>
-          <div className="fc-stat">
-            <span className="fc-stat-val" id="fc-review-count">{review}</span>
-            <span className="fc-stat-lbl">À revoir</span>
-          </div>
-          <div className="fc-stat">
-            <span className="fc-stat-val" id="fc-remaining-count">{remaining}</span>
-            <span className="fc-stat-lbl">Restantes</span>
-          </div>
-        </div>
-        <div className="fc-progress-bar">
-          <div id="fc-bar" style={{ width: `${cards.length ? (known / cards.length) * 100 : 0}%` }} />
-        </div>
+        {!srsOnlyDue && (
+          <>
+            <div className="fc-stats">
+              <div className="fc-stat">
+                <span className="fc-stat-val" id="fc-known-count">{known}</span>
+                <span className="fc-stat-lbl">Sus</span>
+              </div>
+              <div className="fc-stat">
+                <span className="fc-stat-val" id="fc-review-count">{review}</span>
+                <span className="fc-stat-lbl">À revoir</span>
+              </div>
+              <div className="fc-stat">
+                <span className="fc-stat-val" id="fc-remaining-count">{remaining}</span>
+                <span className="fc-stat-lbl">Restantes</span>
+              </div>
+            </div>
+            <div className="fc-progress-bar">
+              <div id="fc-bar" style={{ width: `${cards.length ? (known / cards.length) * 100 : 0}%` }} />
+            </div>
+          </>
+        )}
 
         {/* Toolbar */}
         <div className="fc-toolbar">
           <span className="fc-progress-info" id="fc-progress-info">
-            {cards.length} carte{cards.length !== 1 ? 's' : ''}
+            {srsOnlyDue ? `${dueCount} carte${dueCount !== 1 ? 's' : ''} due${dueCount !== 1 ? 's' : ''}` : `${cards.length} carte${cards.length !== 1 ? 's' : ''}`}
           </span>
           <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
             <button
@@ -153,25 +173,67 @@ export default function FlashcardSection({
             >
               {srsOnlyDue ? <><IcoCards /> Toutes les cartes</> : <><IcoRepeat /> Révision espacée</>}
             </button>
-            <button className="fc-tool-btn" id="fc-shuffle" onClick={onShuffle}><IcoShuffle /> Mélanger</button>
-            <button className="fc-tool-btn" id="fc-restart" onClick={onRestart}><IcoRefresh /> Reprendre</button>
-            <button className="fc-tool-btn" id="fc-redo-wrong" onClick={onRedoWrong}><IcoXCircle /> Revoir erronées</button>
+            {!srsOnlyDue && (
+              <>
+                <button className="fc-tool-btn" id="fc-shuffle" onClick={onShuffle}><IcoShuffle /> Mélanger</button>
+                <button className="fc-tool-btn" id="fc-restart" onClick={onRestart}><IcoRefresh /> Reprendre</button>
+                <button className="fc-tool-btn" id="fc-redo-wrong" onClick={onRedoWrong}><IcoXCircle /> Revoir erronées</button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* SRS due count */}
-        {srsOnlyDue && (
-          <div id="fc-srs-bar" className="fc-srs-bar">
-            <span id="srs-due-label">{dueCount} carte{dueCount !== 1 ? 's' : ''} due{dueCount !== 1 ? 's' : ''}</span>
-          </div>
-        )}
-
-        {/* Grid */}
+        {/* Grid or Focused Carousel */}
         <div id="fc-grid">
-          {sortedCards.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)', fontFamily: "'DM Mono',monospace", fontSize: '.8rem' }}>
-              Aucune carte due pour aujourd&apos;hui ✓
-            </div>
+          {srsOnlyDue ? (
+            sortedCards.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem 1.5rem', color: 'var(--muted)', fontFamily: "'DM Mono',monospace", fontSize: '.8rem' }}>
+                Aucune carte due pour aujourd&apos;hui ✓
+              </div>
+            ) : srsIndex < sortedCards.length ? (
+              <div className="srs-active-session">
+                <div className="srs-session-progress">
+                  <span>Carte {srsIndex + 1} / {sortedCards.length}</span>
+                  <div className="srs-progress-track">
+                    <div className="srs-progress-fill" style={{ width: `${((srsIndex + 1) / sortedCards.length) * 100}%` }} />
+                  </div>
+                </div>
+                <div className="srs-card-container">
+                  <FlashCard
+                    key={srsIndex}
+                    card={sortedCards[srsIndex].c}
+                    cardIdx={sortedCards[srsIndex].i}
+                    state={cardStates[sortedCards[srsIndex].i]}
+                    onMark={onMark}
+                    isSrsMode={true}
+                    onNext={() => setTimeout(() => setSrsIndex(idx => idx + 1), 300)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="srs-done-card">
+                <div className="srs-done-icon">🎉</div>
+                <h3>Session terminée !</h3>
+                <p>Félicitations, vous avez révisé toutes vos cartes dues pour aujourd&apos;hui.</p>
+                <div className="srs-done-stats">
+                  <div className="srs-done-stat">
+                    <strong>{sortedCards.length}</strong>
+                    <span>Dues</span>
+                  </div>
+                  <div className="srs-done-stat text-good">
+                    <strong>{sortedCards.filter(c => cardStates[c.i] === 'known').length}</strong>
+                    <span>Retenues</span>
+                  </div>
+                  <div className="srs-done-stat text-rose">
+                    <strong>{sortedCards.filter(c => cardStates[c.i] === 'review').length}</strong>
+                    <span>À revoir</span>
+                  </div>
+                </div>
+                <button className="act-btn blue" onClick={onToggleSrs} style={{ marginTop: '1.5rem', width: 'auto', display: 'inline-block' }}>
+                  Retourner aux cartes
+                </button>
+              </div>
+            )
           ) : (
             <div className="fc-cat-group">
               <div className="fc-cat-title">
@@ -196,3 +258,4 @@ export default function FlashcardSection({
     </>
   );
 }
+

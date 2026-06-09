@@ -14,19 +14,21 @@ export function useJetons() {
   const [monthly,  setMonthly]  = useState(null);
   const [costs,    setCosts]    = useState(DEFAULT_COSTS);
   const [chunkSizes, setChunkSizes] = useState({});
+  const [history,  setHistory]  = useState([]);
   const [loading,  setLoading]  = useState(false);
 
   // Fonction stable exposée pour refresh externe (ex: eventBus, bouton manuel)
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await apiFetch('/api/jetons');
+      const res = await apiFetch('/api/jetons');
       if (!res.ok) return;
       const data = await res.json();
       setBalance(data.balance ?? 0);
       setMonthly(data.monthly_allocation ?? null);
       if (data.costs) setCosts(prev => ({ ...DEFAULT_COSTS, ...data.costs, session: prev.session }));
       if (data.chunkSizes) setChunkSizes(data.chunkSizes);
+      setHistory(data.history ?? []);
     } catch { /* silencieux */ }
     finally { setLoading(false); }
   }, []);
@@ -53,6 +55,7 @@ export function useJetons() {
           setMonthly(data.monthly_allocation ?? null);
           if (data.costs) setCosts(prev => ({ ...prev, ...data.costs }));
           if (data.chunkSizes) setChunkSizes(data.chunkSizes);
+          setHistory(data.history ?? []);
         }
       } catch { /* silencieux */ }
       finally { if (active) setLoading(false); }
@@ -63,5 +66,5 @@ export function useJetons() {
     return () => { active = false; unsub?.(); };
   }, [refresh]);
 
-  return { balance, monthly_allocation: monthly, costs, chunkSizes, loading, refresh };
+  return { balance, monthly_allocation: monthly, costs, chunkSizes, history, loading, refresh };
 }
