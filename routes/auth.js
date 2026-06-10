@@ -42,10 +42,22 @@ function setToken(res, userId, req) {
   if (req) generateAndSetCsrfToken(req, res);
 }
 
+// Le token doit avoir été émis APRÈS session_invalidated_at (logout / reset),
+// sinon un cookie volé resterait utilisable jusqu'à 7 jours sur ces routes.
+async function rejectIfRevoked(decoded) {
+  if (!decoded?.userId) return null;
+  const row = await db.prepare('SELECT session_invalidated_at FROM users WHERE id = ?').get(decoded.userId);
+  if (!row) return null;
+  if (row.session_invalidated_at && decoded.iat) {
+    if (decoded.iat * 1000 < new Date(row.session_invalidated_at).getTime()) return null;
+  }
+  return decoded;
+}
+
 async function getTokenUser(req, res) {
   const token = req.cookies?.['jangalai.token'];
   if (token) {
-    try { return jwt.verify(token, JWT_SECRET); }
+    try { return await rejectIfRevoked(jwt.verify(token, JWT_SECRET)); }
     catch (err) { if (err.name !== 'TokenExpiredError') return null; }
   }
   // Access token absent ou expiré — tenter le refresh
@@ -54,6 +66,7 @@ async function getTokenUser(req, res) {
     try {
       const decoded = jwt.verify(rt, REFRESH_SECRET);
       if (decoded.type !== 'refresh') return null;
+      if (!(await rejectIfRevoked(decoded))) return null;
       const newToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '1h' });
       res.cookie('jangalai.token', newToken, ACCESS_COOKIE_OPTS);
       return { userId: decoded.userId };
@@ -63,6 +76,16 @@ async function getTokenUser(req, res) {
 }
 
 function genToken() { return crypto.randomBytes(32).toString('hex'); }
+
+// Seul le hash SHA256 des tokens verify/reset est stocké en base : en cas de
+// fuite DB, les liens envoyés par email restent inutilisables par l'attaquant.
+function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+// Hash bcrypt factice — comparé quand l'email n'existe pas pour neutraliser
+// la détection de comptes par mesure du temps de réponse.
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync('jangalai-timing-equalizer', 12);
 
 function sendVerifyConfirmPage(res, token) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -95,7 +118,7 @@ function sendVerifyConfirmPage(res, token) {
 }
 
 async function verifyEmailToken(req, res) {
-  const user = await db.prepare('SELECT * FROM users WHERE verify_token = ?').get(req.params.token);
+  const user = await db.prepare('SELECT * FROM users WHERE verify_token = ?').get(hashToken(req.params.token));
   if (!user) return res.redirect(`${getAppUrl(req)}/login?error=invalid_token`);
   if (new Date(user.verify_expires) < new Date())
     return res.redirect(`${getAppUrl(req)}/login?error=token_expired`);
@@ -128,7 +151,7 @@ router.post('/register', async (req, res) => {
       `INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date)
        SELECT $1, $2, $3, $4, $5, 40, $6
        WHERE (SELECT COUNT(*) FROM users) < ${BETA_LIMIT}`
-    ).run(emailLower, hash, (name || '').trim(), verifyToken, verifyExp, currentMonth);
+    ).run(emailLower, hash, (name || '').trim(), hashToken(verifyToken), verifyExp, currentMonth);
     if (!info.changes) {
       return res.status(403).json({ error: 'L\'accès est limité pendant la bêta. Revenez bientôt !' });
     }
@@ -161,13 +184,14 @@ router.post('/login', async (req, res) => {
 
   const emailLower = email.toLowerCase().trim();
   const row = await db.prepare('SELECT * FROM users WHERE email = ?').get(emailLower);
-  if (!row) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
 
-  if (row.google_id && !row.password)
-    return res.status(401).json({ error: 'Ce compte utilise Google pour se connecter.' });
-
-  const match = await bcrypt.compare(password, row.password);
-  if (!match) return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
+  // Message unique quel que soit le cas (email inconnu, compte Google, mauvais
+  // mot de passe) + comparaison bcrypt systématique : pas d'énumération de
+  // comptes par message d'erreur ni par timing.
+  const hashToCompare = (row && row.password) ? row.password : DUMMY_BCRYPT_HASH;
+  const match = await bcrypt.compare(password, hashToCompare);
+  if (!row || !row.password || !match)
+    return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
 
   setToken(res, row.id, req);
   res.json({ user: withAdminFlag({ id: row.id, email: row.email, name: row.name, plan: row.plan, email_verified: row.email_verified, created_at: row.created_at }) });
@@ -270,7 +294,7 @@ router.put('/profile', doubleCsrfProtection, async (req, res) => {
 
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────
 router.get('/verify/:token', async (req, res) => {
-  const user = await db.prepare('SELECT id, verify_expires FROM users WHERE verify_token = ?').get(req.params.token);
+  const user = await db.prepare('SELECT id, verify_expires FROM users WHERE verify_token = ?').get(hashToken(req.params.token));
   if (!user) return res.redirect(`${getAppUrl(req)}/login?error=invalid_token`);
   if (new Date(user.verify_expires) < new Date())
     return res.redirect(`${getAppUrl(req)}/login?error=token_expired`);
@@ -290,7 +314,7 @@ router.post('/resend-verify', doubleCsrfProtection, async (req, res) => {
 
   const token = genToken();
   const exp   = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
-  await db.prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?').run(token, exp, user.id);
+  await db.prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?').run(hashToken(token), exp, user.id);
   try {
     await sendVerifyEmail(user.email, token);
   } catch (err) {
@@ -310,7 +334,7 @@ router.post('/forgot-password', async (req, res) => {
   if (user) {
     const token = genToken();
     const exp   = new Date(Date.now() + 3600 * 1000).toISOString();
-    await db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?').run(token, exp, user.id);
+    await db.prepare('UPDATE users SET reset_token = ?, reset_expires = ? WHERE id = ?').run(hashToken(token), exp, user.id);
     sendResetEmail(user.email, token).catch(err => logger.error('sendResetEmail failed', { email: user.email, message: err.message }));
   }
   res.json({ ok: true });
@@ -322,7 +346,7 @@ router.post('/reset-password', async (req, res) => {
   if (!token || !password) return res.status(400).json({ error: 'Données manquantes.' });
   if (password.length < 8) return res.status(400).json({ error: 'Mot de passe trop court (8 caractères minimum).' });
 
-  const user = await db.prepare('SELECT * FROM users WHERE reset_token = ?').get(token);
+  const user = await db.prepare('SELECT * FROM users WHERE reset_token = ?').get(hashToken(token));
   if (!user) return res.status(400).json({ error: 'Lien invalide ou expiré.' });
   if (new Date(user.reset_expires) < new Date()) return res.status(400).json({ error: 'Lien expiré.' });
 

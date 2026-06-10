@@ -5,7 +5,7 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { langLabel, getFileText, sseSetup } = require('./helpers');
+const { langLabel, getFileText, sseSetup, clientErrorMessage } = require('./helpers');
 
 // POST /api/compare — confrontation multi-sources (SSE streaming)
 router.post('/compare', async (req, res) => {
@@ -81,7 +81,7 @@ ${sourcesText}`;
   } catch (err) {
     logger.error('AI compare error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'compare', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

@@ -6,7 +6,7 @@ const { LIMITS }                               = require('../../middleware/quota
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 const VALID_DIFF = ['facile', 'moyen', 'difficile'];
@@ -193,7 +193,7 @@ ${chunk.slice(0, 12000)}`;
   } catch (err) {
     logger.error('AI quiz error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'quiz', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

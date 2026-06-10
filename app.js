@@ -4,7 +4,7 @@ const cors         = require('cors');
 const path         = require('path');
 const fs           = require('fs');
 const cookieParser = require('cookie-parser');
-const { globalLimiter, aiLimiter } = require('./middleware/rateLimit');
+const { globalLimiter, aiLimiter, clientIpKey } = require('./middleware/rateLimit');
 const { requireAuth } = require('./middleware/auth');
 const { generateAndSetCsrfToken, doubleCsrfProtection } = require('./middleware/csrf');
 
@@ -107,22 +107,34 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ token });
 });
 
-// ── Rate limit login/forgot — anti brute-force (10 req/15min par IP) ────────
+// ── Rate limit login/forgot — anti brute-force (10 req/15min par IP réelle) ──
 const loginLimiter = require('express-rate-limit')({
   windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: clientIpKey,
   message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
 });
-// ── Rate limit register — anti-spam comptes (5 req/heure par IP) ─────────────
+// ── Throttle par compte — anti brute-force distribué (10 échecs/15min/email) ─
+// Complète le limiteur IP : x-vercel-forwarded-for est spoofable en accès API
+// direct, mais l'email ciblé, lui, ne change pas. Seuls les échecs comptent.
+const accountLoginLimiter = require('express-rate-limit')({
+  windowMs: 15 * 60 * 1000, max: 10, standardHeaders: false, legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `acct:${String(req.body?.email || '').toLowerCase().trim()}`,
+  message: { error: 'Trop de tentatives sur ce compte. Réessayez dans 15 minutes.' },
+});
+// ── Rate limit register — anti-spam comptes (5 req/heure par IP réelle) ──────
 const registerLimiter = require('express-rate-limit')({
   windowMs: 60 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: clientIpKey,
   message: { error: 'Trop de tentatives d\'inscription. Réessayez dans une heure.' },
 });
-// ── Rate limit webhook PayTech — anti-flood IPN (120 req/min par IP) ─────────
+// ── Rate limit webhook PayTech — anti-flood IPN (20 req/min par IP) ──────────
+// L'IPN arrive en direct (pas via Vercel) : req.ip est la bonne clé ici.
 const ipnLimiter = require('express-rate-limit')({
   windowMs: 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Trop de requêtes IPN.' },
 });
-app.use('/api/auth/login',           loginLimiter);
+app.use('/api/auth/login',           loginLimiter, accountLoginLimiter);
 app.use('/api/auth/forgot-password', loginLimiter);
 app.use('/api/auth/register',        registerLimiter);
 app.use('/api/payment/ipn',          ipnLimiter);

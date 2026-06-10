@@ -5,7 +5,7 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost } = require('../../services/chunker');
 
 const GLOSSARY_MAX_TOKENS = 3000;
@@ -112,7 +112,7 @@ ${chunks[i]}`;
   } catch (err) {
     logger.error('AI glossary error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'glossary', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

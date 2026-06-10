@@ -5,7 +5,7 @@ const { getAiConfigForAction }  = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }             = require('../../services/tokens');
 const logger                    = require('../../services/logger');
-const { userContext, getFileText } = require('./helpers');
+const { userContext, getFileText, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost } = require('../../services/chunker');
 
 // POST /api/mindmap — génère un markdown hiérarchique pour markmap (avec chunking)
@@ -64,7 +64,7 @@ router.post('/mindmap', async (req, res) => {
   } catch (err) {
     logger.error('AI mindmap error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'mindmap', deducted);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: clientErrorMessage(err) });
   }
 });
 
@@ -112,7 +112,7 @@ router.post('/mindmap/extend', async (req, res) => {
   } catch (err) {
     logger.error('AI mindmap extend error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'mindmap', deducted);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: clientErrorMessage(err) });
   }
 });
 

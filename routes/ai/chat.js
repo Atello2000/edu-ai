@@ -4,9 +4,10 @@ const { aiChatStream }            = require('../../services/ai');
 const { getAiConfigForAction }    = require('../../services/aiConfig');
 const { LIMITS }               = require('../../middleware/quota');
 const { checkAndDeduct, refundJetons } = require('../../services/jetons');
+const { prepare }              = require('../../db');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { userContext, getFileText, sseSetup } = require('./helpers');
+const { userContext, getFileText, sseSetup, clientErrorMessage } = require('./helpers');
 
 // POST /api/chat — chat contextuel avec le cours, réponse en streaming SSE
 router.post('/chat', async (req, res) => {
@@ -20,10 +21,18 @@ router.post('/chat', async (req, res) => {
       return res.end();
     }
 
-    // Coût dynamique : conversation longue (≥ 4 échanges) = 2 jetons
-    // Protège contre les conversations multi-tours très coûteuses en tokens
-    const historyLen = Array.isArray(messages) ? messages.length : 0;
-    const chatCost   = historyLen >= 4 ? 2 : 1;
+    // Coût dynamique : conversation longue = 2 jetons.
+    // Compté côté serveur (appels chat facturés sur les 30 dernières minutes) :
+    // le tableau `messages` est fourni par le client et donc falsifiable —
+    // un client modifié pourrait tronquer l'historique pour payer 1 jeton à vie.
+    let chatCost = 1;
+    try {
+      const recent = await prepare(`
+        SELECT COUNT(*) AS n FROM jeton_transactions
+        WHERE user_id = ? AND action = 'chat' AND created_at > NOW() - INTERVAL '30 minutes'
+      `).get(req.user?.id);
+      if (Number(recent?.n || 0) >= 2) chatCost = 2;
+    } catch { /* en cas d'erreur DB, tarif de base */ }
 
     const jeton = await checkAndDeduct(req.user?.id, 'chat', req.user?.plan || 'free', chatCost);
     if (!jeton.ok) {
@@ -72,7 +81,7 @@ Cours disponibles (${courseNames}) :${context}`;
   } catch (err) {
     logger.error('AI chat error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'chat', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

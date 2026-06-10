@@ -6,7 +6,7 @@ const { getAiConfigForAction }                 = require('../../services/aiConfi
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 const { prepare }                              = require('../../db');
 
@@ -191,7 +191,7 @@ router.post('/summarize', async (req, res) => {
   } catch (err) {
     logger.error('AI summarize error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'summarize', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

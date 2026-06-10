@@ -243,6 +243,11 @@ async function initSchema() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )` },
     { id: 'users_is_admin', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT false" },
+    // Cycle de vie des paiements : 'pending' à l'initiation du checkout,
+    // 'paid' une fois l'IPN validé. Les lignes existantes sont des paiements
+    // aboutis → DEFAULT 'paid' les couvre.
+    { id: 'payments_status', sql: "ALTER TABLE payments ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'paid'" },
+    { id: 'payments_paid_at', sql: "ALTER TABLE payments ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ" },
     { id: 'users_session_invalidated_at', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS session_invalidated_at TIMESTAMPTZ" },
     { id: 'users_plan_expires_at', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMPTZ" },
     { id: 'idx_users_google_id', sql: "CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)" },

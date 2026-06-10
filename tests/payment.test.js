@@ -11,18 +11,41 @@ process.env.PAYMENTS_LOCKED    = 'true';
 
 const crypto = require('crypto');
 
-jest.mock('../db', () => ({
-  prepare: (sql) => ({
-    async get(...params) {
-      if (sql.includes('WHERE id')) return { id: 1, plan: 'free' };
-      return null;
-    },
-    async run() { return { rowCount: 1, changes: 1 }; },
-    async all()  { return []; },
-  }),
-  pool: { query: async () => ({ rows: [], rowCount: 0 }) },
-  exec: async () => {},
-}));
+jest.mock('../db', () => {
+  // Mini-store des paiements : l'IPN ne crédite que les ref_command
+  // préalablement enregistrées en 'pending' par le checkout.
+  const payments = new Map(); // ref_command -> { user_id, plan, amount, status }
+  return {
+    prepare: (sql) => ({
+      async get(...params) {
+        if (sql.includes('FROM payments WHERE ref_command')) {
+          const p = payments.get(params[0]);
+          return p ? { ...p } : null;
+        }
+        if (sql.includes("UPDATE payments SET status = 'paid'")) {
+          const p = payments.get(params[0]);
+          if (!p || p.status !== 'pending') return null;
+          p.status = 'paid';
+          return { id: 1 };
+        }
+        if (sql.includes('UPDATE users SET')) return { balance: 190 };
+        if (sql.includes('WHERE id')) return { id: 1, plan: 'free' };
+        return null;
+      },
+      async run(...params) {
+        if (sql.includes('INSERT INTO payments')) {
+          const [ref, userId, plan, amount] = params;
+          payments.set(ref, { user_id: userId, plan, amount, status: 'pending' });
+          return { rowCount: 1, changes: 1 };
+        }
+        return { rowCount: 1, changes: 1 };
+      },
+      async all()  { return []; },
+    }),
+    pool: { query: async () => ({ rows: [], rowCount: 0 }) },
+    exec: async () => {},
+  };
+});
 
 jest.mock('../middleware/csrf', () => ({
   doubleCsrfProtection:    (req, res, next) => next(),
@@ -81,16 +104,44 @@ describe('POST /api/payment/ipn', () => {
     expect(r.status).toBe(400);
   });
 
-  it('accepte un IPN valide et répond 200', async () => {
+  it('rejette un IPN dont la ref_command ne correspond à aucun checkout', async () => {
     const { api_key_sha256, api_secret_sha256 } = makeHashes();
     const r = await request(app).post('/api/payment/ipn').send({
       api_key_sha256,
       api_secret_sha256,
-      ref_command: 'PAYTECH_sub_1_pro_' + Date.now(),
+      ref_command: 'PAYTECH_sub_1_max_' + Date.now(), // jamais enregistrée en pending
+      item_price:  '5000',
+      type_event:  'sale_complete',
+    });
+    expect(r.status).toBe(400);
+  });
+
+  it('accepte un IPN valide (checkout pending enregistré) et répond 200', async () => {
+    const db  = require('../db');
+    const ref = 'PAYTECH_sub_1_pro_' + Date.now();
+    await db.prepare(
+      "INSERT INTO payments (ref_command, user_id, plan, amount, status) VALUES (?, ?, ?, ?, 'pending')"
+    ).run(ref, 1, 'pro', 2500);
+
+    const { api_key_sha256, api_secret_sha256 } = makeHashes();
+    const r = await request(app).post('/api/payment/ipn').send({
+      api_key_sha256,
+      api_secret_sha256,
+      ref_command: ref,
       item_price:  '2500',
       type_event:  'sale_complete',
     });
     expect(r.status).toBe(200);
+
+    // Idempotence : un retry PayTech sur la même ref répond 200 sans recréditer
+    const retry = await request(app).post('/api/payment/ipn').send({
+      api_key_sha256,
+      api_secret_sha256,
+      ref_command: ref,
+      item_price:  '2500',
+      type_event:  'sale_complete',
+    });
+    expect(retry.status).toBe(200);
   });
 });
 

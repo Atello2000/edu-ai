@@ -14,7 +14,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: DB_SSL_REJECT_UNAUTHORIZED
-        value: "false"
+        value: "true"
       - key: APP_URL
         value: https://jangalai.online
       - key: BACKEND_URL

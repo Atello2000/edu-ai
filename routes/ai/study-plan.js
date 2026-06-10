@@ -5,7 +5,7 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { langLabel, parseJsonResponse, sseSetup } = require('./helpers');
+const { langLabel, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 
 // POST /api/study-plan — plan de révision intelligent (SSE streaming)
 router.post('/study-plan', async (req, res) => {
@@ -125,7 +125,7 @@ Retourne UNIQUEMENT ce JSON (sans markdown, sans explication) :
   } catch (err) {
     logger.error('AI study-plan error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'study-plan', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

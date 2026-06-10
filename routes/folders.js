@@ -115,12 +115,17 @@ router.post('/:id/files', async (req, res) => {
       });
     }
 
+    // `text` et `size` viennent du client : on les borne aux mêmes limites que
+    // l'upload (200 000 chars) pour empêcher le gonflage artificiel de la DB.
+    const MAX_TEXT = 200000;
     for (const f of files) {
+      const text = String(f.text || '').slice(0, MAX_TEXT);
+      const size = Math.max(0, Math.min(Number(f.size) || 0, 50 * 1024 * 1024));
       await client.query(
         `INSERT INTO folder_files (folder_id, filename, orig_name, size, text, truncated)
          VALUES ($1, $2, $3, $4, $5, $6)
          ON CONFLICT (folder_id, filename) DO NOTHING`,
-        [folder.id, f.id || f.filename, f.name || f.orig_name, f.size || 0, f.text || '', f.truncated ? 1 : 0]
+        [folder.id, f.id || f.filename, f.name || f.orig_name, size, text, f.truncated ? 1 : 0]
       );
     }
 

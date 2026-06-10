@@ -37,7 +37,21 @@ function userContext(user) {
 
 async function getFileText(file) {
   if (file.text) return file.text;
-  throw new Error(`Contenu du fichier "${file.name}" indisponible. Veuillez le re-charger.`);
+  const err = new Error(`Contenu du fichier "${file.name}" indisponible. Veuillez le re-charger.`);
+  err.expose = true; // message destiné à l'utilisateur — safe à renvoyer tel quel
+  throw err;
+}
+
+/**
+ * Message d'erreur à renvoyer au client (SSE ou JSON).
+ * En production, les erreurs internes (providers IA, réseau, parsing) ne sont
+ * jamais exposées telles quelles : elles fuient des détails d'infrastructure.
+ * Seules les erreurs marquées `err.expose = true` passent.
+ */
+function clientErrorMessage(err) {
+  if (err?.expose) return err.message;
+  if (process.env.NODE_ENV !== 'production') return err?.message || 'Erreur inconnue';
+  return 'Une erreur est survenue pendant la génération. Veuillez réessayer.';
 }
 
 /** Extrait le premier objet JSON d'une réponse brute du modèle. */
@@ -66,4 +80,4 @@ function sseSetup(req, res) {
   return (data) => { res.write(`data: ${JSON.stringify(data)}\n\n`); res.flush?.(); };
 }
 
-module.exports = { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup };
+module.exports = { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup, clientErrorMessage };

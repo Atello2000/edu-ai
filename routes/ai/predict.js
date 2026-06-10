@@ -6,7 +6,7 @@ const { LIMITS }                        = require('../../middleware/quota');
 const { checkAndDeduct, refundJetons }  = require('../../services/jetons');
 const { logTokens }                     = require('../../services/tokens');
 const logger                            = require('../../services/logger');
-const { langLabel, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
+const { langLabel, getFileText, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 
 // POST /api/predict — prédicteur de questions d'examen (SSE streaming)
 router.post('/predict', async (req, res) => {
@@ -75,7 +75,7 @@ ${trimmed}`;
   } catch (err) {
     logger.error('AI predict error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'predict', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

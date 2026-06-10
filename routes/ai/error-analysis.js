@@ -5,7 +5,7 @@ const { getAiConfigForAction } = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
-const { langLabel, parseJsonResponse } = require('./helpers');
+const { langLabel, parseJsonResponse, clientErrorMessage } = require('./helpers');
 
 // POST /api/error-analysis — analyse des erreurs récurrentes (JSON response)
 router.post('/error-analysis', async (req, res) => {
@@ -66,7 +66,7 @@ Retourne UNIQUEMENT ce JSON:
   } catch (err) {
     logger.error('AI error-analysis error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'error-analysis', deducted);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: clientErrorMessage(err) });
   }
 });
 

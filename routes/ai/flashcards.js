@@ -6,7 +6,7 @@ const { LIMITS }                               = require('../../middleware/quota
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }                            = require('../../services/tokens');
 const logger                                   = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 // POST /api/flashcards — génération de flashcards par streaming SSE (avec chunking)
@@ -134,7 +134,7 @@ ${chunk}`;
   } catch (err) {
     logger.error('AI flashcards error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'flashcards', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

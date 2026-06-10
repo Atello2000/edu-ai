@@ -57,12 +57,16 @@ function startMaintenanceJobs() {
   // Purge des données historiques anciennes (une fois par jour)
   const runHistoricalDataPurge = async () => {
     await runOnce('maintenance_purge_historical_data', 24 * 3600 * 1000, async () => {
-      const [tx, quota] = await Promise.all([
+      const [tx, quota, pendingPayments] = await Promise.all([
         pool.query("DELETE FROM jeton_transactions WHERE created_at < NOW() - INTERVAL '6 months'"),
         pool.query("DELETE FROM user_quota WHERE date < to_char(NOW() - INTERVAL '3 months', 'YYYY-MM-DD')"),
+        // Checkouts jamais aboutis (abandonnés avant paiement) — l'IPN PayTech
+        // arrive en minutes, 7 jours laissent une marge très large.
+        pool.query("DELETE FROM payments WHERE status = 'pending' AND created_at < NOW() - INTERVAL '7 days'"),
       ]);
       if (tx.rowCount > 0)    logger.info(`Purged ${tx.rowCount} old jeton transactions`);
       if (quota.rowCount > 0) logger.info(`Purged ${quota.rowCount} old user quota rows`);
+      if (pendingPayments.rowCount > 0) logger.info(`Purged ${pendingPayments.rowCount} abandoned pending payments`);
     });
   };
 

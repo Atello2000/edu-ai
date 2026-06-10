@@ -5,7 +5,7 @@ const { getAiConfigForAction }    = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons } = require('../../services/jetons');
 const { logTokens }               = require('../../services/tokens');
 const logger                      = require('../../services/logger');
-const { userContext, getFileText, sseSetup } = require('./helpers');
+const { userContext, getFileText, sseSetup, clientErrorMessage } = require('./helpers');
 
 // POST /api/socratic — mode socratique (SSE streaming, chat-like)
 router.post('/socratic', async (req, res) => {
@@ -88,7 +88,7 @@ Règles STRICTES:
   } catch (err) {
     logger.error('AI socratic error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'socratic', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

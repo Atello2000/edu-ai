@@ -5,7 +5,7 @@ const { getAiConfigForAction }   = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }              = require('../../services/tokens');
 const logger                     = require('../../services/logger');
-const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup } = require('./helpers');
+const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 const EXAM_MAX_FILES  = 5;
@@ -135,7 +135,7 @@ ${context}`;
   } catch (err) {
     logger.error('AI exam-sheet error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'exam-sheet', deducted);
-    send({ type: 'error', message: err.message });
+    send({ type: 'error', message: clientErrorMessage(err) });
   }
   res.end();
 });

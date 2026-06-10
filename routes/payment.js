@@ -98,6 +98,13 @@ protectedRouter.post('/checkout', async (req, res) => {
       return res.status(400).json({ error: data.message || 'Impossible de créer la session de paiement.' });
     }
 
+    // Enregistre la transaction en attente : l'IPN ne créditera que les
+    // ref_command créées ici. Sans ça, quiconque connaît les hashes IPN
+    // pourrait forger des références et se créditer des plans/jetons.
+    await db.prepare(
+      "INSERT INTO payments (ref_command, user_id, plan, amount, status) VALUES (?, ?, ?, ?, 'pending')"
+    ).run(refCommand, userId, plan, config.price);
+
     res.json({ redirectUrl: data.redirect_url });
 
   } catch (err) {
@@ -183,17 +190,30 @@ publicRouter.post('/', async (req, res) => {
   }
 
   try {
-    // Idempotency — si ref_command déjà traitée, ignorer silencieusement
-    try {
-      await db.prepare(
-        'INSERT INTO payments (ref_command, user_id, plan, amount) VALUES (?, ?, ?, ?)'
-      ).run(ref_command, userId, plan, config.price);
-    } catch (err) {
-      if (err.code === '23505') {
-        logger.warn('IPN duplicate ignoré', { ref_command });
-        return res.status(200).send('OK');
-      }
-      throw err;
+    // La ref_command DOIT correspondre à un checkout initié par ce serveur.
+    // Un IPN forgé (hashes volés + référence inventée) est rejeté ici.
+    const pending = await db.prepare(
+      'SELECT user_id, plan, amount, status FROM payments WHERE ref_command = ?'
+    ).get(ref_command);
+    if (!pending) {
+      logger.error('IPN rejeté — ref_command inconnue (aucun checkout correspondant)', { ref_command });
+      return res.status(400).send('Unknown Reference');
+    }
+    if (pending.user_id !== userId || pending.plan !== plan) {
+      logger.error('IPN rejeté — ref_command incohérente avec le checkout enregistré', {
+        ref_command, userId, plan, expectedUser: pending.user_id, expectedPlan: pending.plan,
+      });
+      return res.status(400).send('Reference Mismatch');
+    }
+
+    // Idempotency — passage atomique pending → paid : si une IPN concurrente
+    // ou un retry PayTech a déjà gagné la course, on ignore silencieusement.
+    const claimed = await db.prepare(
+      "UPDATE payments SET status = 'paid', paid_at = NOW() WHERE ref_command = ? AND status = 'pending' RETURNING id"
+    ).get(ref_command);
+    if (!claimed) {
+      logger.warn('IPN duplicate ignoré', { ref_command });
+      return res.status(200).send('OK');
     }
 
     // Vérifier si l'utilisateur existe

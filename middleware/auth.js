@@ -4,6 +4,11 @@ const { prepare } = require('../db');
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) throw new Error('SESSION_SECRET non configuré');
 
+// Entropie indépendante obligatoire en production — un secret dérivé du
+// SESSION_SECRET ferait tomber les refresh tokens 7 jours avec lui.
+if (!process.env.REFRESH_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('REFRESH_SECRET non configuré — variable obligatoire en production.');
+}
 const REFRESH_SECRET = process.env.REFRESH_SECRET || (JWT_SECRET + ':refresh');
 
 const ACCESS_COOKIE_OPTS = {

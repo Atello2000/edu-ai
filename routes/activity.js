@@ -33,13 +33,24 @@ async function calcStreak(userId) {
 // ── POST /api/activity ────────────────────────────────────────────────────────
 router.post('/', async (req, res, next) => {
   const { topic, type, score, total } = req.body || {};
-  if (!topic || !['flashcards', 'quiz'].includes(type))
+  if (!topic || typeof topic !== 'string' || !['flashcards', 'quiz'].includes(type))
     return res.status(400).json({ error: 'Paramètres invalides.' });
+
+  // Bornage : entiers 0..10000, score ≤ total — évite les 500 sur valeurs
+  // non numériques et les stats faussées par des scores aberrants.
+  const toBoundedInt = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return Math.max(0, Math.min(10000, Math.round(n)));
+  };
+  let safeScore = toBoundedInt(score);
+  const safeTotal = toBoundedInt(total);
+  if (safeScore !== null && safeTotal !== null && safeScore > safeTotal) safeScore = safeTotal;
 
   try {
     await prepare(
       'INSERT INTO activity (user_id, topic, type, score, total) VALUES (?, ?, ?, ?, ?)'
-    ).run(req.user.id, topic.trim().slice(0, 120), type, score ?? null, total ?? null);
+    ).run(req.user.id, topic.trim().slice(0, 120), type, safeScore, safeTotal);
     res.json({ ok: true });
   } catch (err) {
     logger.error('POST /activity error', { message: err.message });

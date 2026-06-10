@@ -196,7 +196,9 @@ async function getAiConfigForAction(action, { lang, textLength } = {}) {
     for (const { keys, available, provider, model } of CHEAP_PRIORITY) {
       if ((available && available()) || keys?.some(k => process.env[k])) return { provider, model };
     }
-    throw new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
+    const err = new Error('Service temporairement indisponible. Réessayez dans quelques instants.');
+    err.expose = true;
+    throw err;
   }
 
   // ── 4. Actions Markdown structurées : ordre standard ─────────────────────

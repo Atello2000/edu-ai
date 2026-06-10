@@ -167,12 +167,19 @@ router.post('/upload', requireAuth, doubleCsrfProtection, (req, res, next) => {
 // Compteur d'utilisateurs en ligne
 const onlineUsers    = new Map();
 const ONLINE_TIMEOUT = 90000;
+// Borne dure : endpoint public — sans plafond, des clientId générés en masse
+// feraient grossir la Map jusqu'à l'épuisement mémoire (la purge à 90 s ne
+// suffit pas contre un flood distribué).
+const MAX_ONLINE_ENTRIES = 10000;
 
 router.post('/ping', (req, res) => {
-  const { clientId } = req.body;
-  if (clientId) onlineUsers.set(clientId, Date.now());
+  const { clientId } = req.body || {};
   const cutoff = Date.now() - ONLINE_TIMEOUT;
   for (const [id, ts] of onlineUsers) if (ts < cutoff) onlineUsers.delete(id);
+  const validId = typeof clientId === 'string' && clientId.length > 0 && clientId.length <= 64;
+  if (validId && (onlineUsers.has(clientId) || onlineUsers.size < MAX_ONLINE_ENTRIES)) {
+    onlineUsers.set(clientId, Date.now());
+  }
   res.json({ online: onlineUsers.size });
 });
 

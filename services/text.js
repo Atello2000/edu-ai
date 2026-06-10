@@ -52,10 +52,11 @@ async function describeImageWithGemini(base64, mimeType) {
   if (!apiKey) return null;
   try {
     const res = await fetchGeminiWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Clé en header (pas en query string) : les URLs fuient dans les logs de proxy
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -405,10 +406,10 @@ async function ocrPdfWithGemini(buffer) {
   try {
     const base64 = buffer.toString('base64');
     const res = await fetchGeminiWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -435,10 +436,10 @@ async function describePdfFiguresWithGemini(buffer) {
   try {
     const base64 = buffer.toString('base64');
     const res = await fetchGeminiWithRetry(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{
             parts: [
@@ -532,6 +533,12 @@ async function _extractCore(buffer, ext, originalName) {
   }
   if (ext === '.ppt') {
     return extractLegacyPpt(buffer, originalName);
+  }
+  // Garde anti-ZIP bomb AVANT officeParser : c'est lui qui décompresse
+  // l'archive en premier — la même garde dans extractAndDescribeOfficeImages
+  // arriverait trop tard pour protéger la mémoire du serveur.
+  if (ext === '.docx' || ext === '.pptx') {
+    assertSafeZip(new AdmZip(buffer).getEntries());
   }
   const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
   const { value: parsed } = await ast.to('md');

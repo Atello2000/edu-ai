@@ -296,7 +296,7 @@ router.get('/analytics', requireAdmin, async (req, res) => {
         COALESCE(SUM(amount), 0)    AS total_xof,
         COUNT(*)                    AS nb_transactions
       FROM payments
-      WHERE created_at > NOW() - INTERVAL '30 days'
+      WHERE status = 'paid' AND created_at > NOW() - INTERVAL '30 days'
     `).get(),
 
     // 5. Croissance hebdomadaire des inscrits (4 dernières semaines)
