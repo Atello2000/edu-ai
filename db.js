@@ -11,7 +11,9 @@ const pool = new Pool({
     : false,
   max: 10,
   idleTimeoutMillis: 10000,
-  connectionTimeoutMillis: 5000,
+  // Neon (autosuspend) peut mettre 5-10 s à se réveiller à froid : 5 s de
+  // timeout faisait échouer le démarrage (deploy failed sur Render).
+  connectionTimeoutMillis: 15000,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
 });
