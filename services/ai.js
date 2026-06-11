@@ -12,25 +12,30 @@ const {
 
 const IS_PROD = process.env.NODE_ENV === 'production';
 
+// maxRetries: 0 — la cascade de fallback ci-dessous remplace les retries du
+// SDK (2 par défaut, avec backoff) : basculer vers un autre provider est plus
+// rapide que réessayer un provider rate-limité.
+const CLIENT_OPTS = { maxRetries: 0, timeout: 120_000 };
+
 // ── Clients ───────────────────────────────────────────────────────────────────
 
 const GROQ_BASE = 'https://api.groq.com/openai/v1';
 const groqClients = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3']
   .map(k => process.env[k]).filter(Boolean)
-  .map(apiKey => new OpenAI({ apiKey, baseURL: GROQ_BASE }));
+  .map(apiKey => new OpenAI({ apiKey, baseURL: GROQ_BASE, ...CLIENT_OPTS }));
 
 let _groqIdx = 0;
 
 const anthropicClient = process.env.ANTHROPIC_API_KEY
-  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, ...CLIENT_OPTS })
   : null;
 
 const deepseek = process.env.DEEPSEEK_API_KEY
-  ? new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1' })
+  ? new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: 'https://api.deepseek.com/v1', ...CLIENT_OPTS })
   : null;
 
 const mistral = process.env.MISTRAL_API_KEY
-  ? new OpenAI({ apiKey: process.env.MISTRAL_API_KEY, baseURL: 'https://api.mistral.ai/v1' })
+  ? new OpenAI({ apiKey: process.env.MISTRAL_API_KEY, baseURL: 'https://api.mistral.ai/v1', ...CLIENT_OPTS })
   : null;
 
 // Gemini via endpoint compatible OpenAI (pas besoin de SDK séparé)
@@ -39,6 +44,7 @@ const gemini = geminiApiKey
   ? new OpenAI({
       apiKey:  geminiApiKey,
       baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+      ...CLIENT_OPTS,
     })
   : null;
 
@@ -47,6 +53,7 @@ const github = process.env.GITHUB_TOKEN
   ? new OpenAI({
       apiKey:  process.env.GITHUB_TOKEN,
       baseURL: 'https://models.github.ai/inference',
+      ...CLIENT_OPTS,
     })
   : null;
 
@@ -59,7 +66,7 @@ function geminiCooldownError() {
   return err;
 }
 
-// ── Label helpers ─────────────────────────────────────────────────────────────
+// ── Labels ────────────────────────────────────────────────────────────────────
 
 const ANTHROPIC_LABELS = {
   'claude-haiku-4-5-20251001': 'Claude Haiku',
@@ -68,16 +75,27 @@ const ANTHROPIC_LABELS = {
 };
 function anthropicLabel(model) { return ANTHROPIC_LABELS[model] || `Claude (${model})`; }
 
-// ── Groq helpers (multi-key rotation + 429 retry) ─────────────────────────────
+const LABELS = {
+  groq:     m => m.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3',
+  deepseek: () => 'DeepSeek · Chat',
+  mistral:  m => m.includes('large') ? 'Mistral Large' : m.includes('small') ? 'Mistral Small' : 'Mistral 7B',
+  gemini:   m => m.includes('2.5') ? 'Gemini 2.5 Flash' : m.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash',
+  github:   m => m === 'gpt-4o-mini' ? 'GitHub · GPT-4o Mini' : m === 'gpt-4o' ? 'GitHub · GPT-4o' : 'GitHub · Phi-4',
+};
 
-async function groqComplete(params) {
+const USAGE_PROVIDERS = {
+  groq: 'Groq', deepseek: 'DeepSeek', mistral: 'Mistral', gemini: 'Gemini', github: 'GitHub',
+};
+
+// ── Groq helpers (rotation multi-clés sur 429) ────────────────────────────────
+
+async function groqRequest(params) {
   if (!groqClients.length) throw new Error('Aucune clé Groq configurée (GROQ_API_KEY)');
   let lastErr;
   for (let i = 0; i < groqClients.length; i++) {
     const idx = (_groqIdx + i) % groqClients.length;
-    const client = groqClients[idx];
     try {
-      const result = await client.chat.completions.create(params);
+      const result = await groqClients[idx].chat.completions.create(params);
       _groqIdx = (idx + 1) % groqClients.length; // round-robin réel
       return result;
     } catch (err) {
@@ -89,48 +107,110 @@ async function groqComplete(params) {
   throw lastErr;
 }
 
-async function groqStream(params) {
-  if (!groqClients.length) throw new Error('Aucune clé Groq configurée (GROQ_API_KEY)');
-  let lastErr;
-  for (let i = 0; i < groqClients.length; i++) {
-    const idx = (_groqIdx + i) % groqClients.length;
-    const client = groqClients[idx];
+// ── Gemini helper (cooldown partagé + retry avec backoff) ─────────────────────
+
+async function geminiRequest(params) {
+  if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
+  if (isGeminiCoolingDown()) throw geminiCooldownError();
+  let delay = 1500;
+  for (let attempt = 1; ; attempt++) {
     try {
-      const stream = await client.chat.completions.create({ ...params, stream: true });
-      _groqIdx = (idx + 1) % groqClients.length; // round-robin réel
-      return stream;
+      return await gemini.chat.completions.create(params);
     } catch (err) {
-      lastErr = err;
-      if (err?.status === 429) { logger.warn(`Groq key ${idx} rate-limited (stream), trying next`); continue; }
+      const isRateLimit = err?.status === 429 || err?.status === 503;
+      if (isRateLimit && attempt < 2) {
+        logger.warn(`Gemini rate-limited (attempt ${attempt}/2). Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2;
+        continue;
+      }
+      if (isRateLimit) markGeminiRateLimited();
       throw err;
     }
   }
-  throw lastErr;
 }
 
-// ── Provider stream generators ────────────────────────────────────────────────
+// ── Registre des providers ────────────────────────────────────────────────────
+// Chaque provider expose : available(), complete() et stream() avec la même
+// signature ({ model, messages, maxTokens }) — `messages` au format OpenAI
+// (system inclus comme premier message). Anthropic est traité à part (format
+// différent) et n'apparaît jamais dans les cascades de fallback.
 
-async function* streamGroq(model, messages, maxTokens) {
-  const stream = await groqStream({
-    model, max_tokens: maxTokens, messages,
-    stream_options: { include_usage: true },
-  });
-  const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
-  for await (const chunk of stream) {
-    const text = chunk.choices?.[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
-    if (chunk.usage) {
-      yield { usage: { provider: 'Groq', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-    }
-  }
+function usageOf(provider, u) {
+  return { provider: USAGE_PROVIDERS[provider], input: u?.prompt_tokens || 0, output: u?.completion_tokens || 0 };
 }
 
-async function* streamAnthropic(model, messages, maxTokens, system) {
+function makeOpenAIProvider(name, request) {
+  return {
+    available: () => true, // gardé par PROVIDERS[p] !== undefined côté cascade
+    async complete({ model, messages, maxTokens }) {
+      const r = await request({ model, max_tokens: maxTokens, messages });
+      return { text: r.choices[0].message.content, model: LABELS[name](model), usage: usageOf(name, r.usage) };
+    },
+    async *stream({ model, messages, maxTokens }) {
+      const stream = await request({
+        model, max_tokens: maxTokens, messages,
+        stream: true, stream_options: { include_usage: true },
+      });
+      const label = LABELS[name](model);
+      try {
+        for await (const chunk of stream) {
+          const text = chunk.choices?.[0]?.delta?.content || '';
+          if (text) yield { text, model: label };
+          if (chunk.usage) yield { usage: usageOf(name, chunk.usage) };
+        }
+      } catch (err) {
+        if (name === 'gemini' && (err?.status === 429 || err?.status === 503)) markGeminiRateLimited();
+        throw err;
+      }
+    },
+  };
+}
+
+function clientRequest(getClient, missingKeyMsg) {
+  return (params) => {
+    const client = getClient();
+    if (!client) throw new Error(missingKeyMsg);
+    return client.chat.completions.create(params);
+  };
+}
+
+const PROVIDERS = {
+  groq:     makeOpenAIProvider('groq',     groqRequest),
+  gemini:   makeOpenAIProvider('gemini',   geminiRequest),
+  mistral:  makeOpenAIProvider('mistral',  clientRequest(() => mistral,  'Clé Mistral non configurée (MISTRAL_API_KEY)')),
+  deepseek: makeOpenAIProvider('deepseek', clientRequest(() => deepseek, 'Clé DeepSeek non configurée')),
+  github:   makeOpenAIProvider('github',   clientRequest(() => github,   'Clé GitHub Models non configurée (GITHUB_TOKEN)')),
+};
+
+function providerConfigured(name) {
+  if (name === 'groq')     return groqClients.length > 0;
+  if (name === 'gemini')   return !!gemini;
+  if (name === 'mistral')  return !!mistral;
+  if (name === 'deepseek') return !!deepseek;
+  if (name === 'github')   return !!github;
+  return false;
+}
+
+// ── Anthropic (format propre : system séparé, messages bruts) ─────────────────
+
+async function anthropicComplete({ model, messages, maxTokens, system }) {
+  if (!anthropicClient) throw new Error('Clé Anthropic non configurée (ANTHROPIC_API_KEY)');
+  const params = { model, max_tokens: maxTokens, messages };
+  if (system) params.system = system;
+  const r = await anthropicClient.messages.create(params);
+  return {
+    text:  r.content[0].text,
+    model: anthropicLabel(model),
+    usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens },
+  };
+}
+
+async function* anthropicStream({ model, messages, maxTokens, system }) {
   if (!anthropicClient) throw new Error('Clé Anthropic non configurée (ANTHROPIC_API_KEY)');
   const label = anthropicLabel(model);
   const params = { model, max_tokens: maxTokens, messages };
   if (system) params.system = system;
-
   const stream = anthropicClient.messages.stream(params);
   for await (const event of stream) {
     if (event.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
@@ -141,98 +221,88 @@ async function* streamAnthropic(model, messages, maxTokens, system) {
   yield { usage: { provider: 'Anthropic', input: final.usage.input_tokens, output: final.usage.output_tokens } };
 }
 
-async function* streamDeepSeek(model, messages, maxTokens) {
-  if (!deepseek) throw new Error('Clé DeepSeek non configurée (DEEPSEEK_API_KEY)');
-  const stream = await deepseek.chat.completions.create({
-    model, max_tokens: maxTokens, stream: true, messages,
-    stream_options: { include_usage: true },
-  });
-  for await (const chunk of stream) {
-    const text = chunk.choices?.[0]?.delta?.content || '';
-    if (text) yield { text, model: 'DeepSeek · Chat' };
-    if (chunk.usage) {
-      yield { usage: { provider: 'DeepSeek', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-    }
-  }
+// ── Cascade de fallback (implémentation unique) ───────────────────────────────
+// Erreur de quota sur le provider primaire → ordre de cascade dédié.
+// Toute autre erreur → ordre par défaut, en sautant le provider qui a échoué.
+
+const QUOTA_STATUSES = { groq: [429, 413], gemini: [429, 503], github: [429, 403] };
+const CASCADES = {
+  github:  ['gemini', 'groq', 'mistral'],
+  gemini:  ['groq', 'github', 'mistral'],
+  groq:    ['gemini', 'github', 'mistral'],
+  default: ['groq', 'github', 'mistral'],
+};
+const FALLBACK_MODELS = {
+  groq:    'llama-3.3-70b-versatile',
+  gemini:  'gemini-2.5-flash',
+  github:  'gpt-4o-mini',
+  mistral: 'mistral-small-latest',
+};
+const ALL_DOWN_MSG = 'Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.';
+
+function isQuotaError(provider, err) {
+  return (QUOTA_STATUSES[provider] || []).includes(err?.status);
 }
 
-async function* streamMistral(model, messages, maxTokens) {
-  if (!mistral) throw new Error('Clé Mistral non configurée (MISTRAL_API_KEY)');
-  const label = model.includes('large') ? 'Mistral Large'
-              : model.includes('small') ? 'Mistral Small'
-              : 'Mistral 7B';
-  const stream = await mistral.chat.completions.create({
-    model, max_tokens: maxTokens, stream: true, messages,
-    stream_options: { include_usage: true },
-  });
-  for await (const chunk of stream) {
-    const text = chunk.choices?.[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
-    if (chunk.usage) {
-      yield { usage: { provider: 'Mistral', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-    }
-  }
+function fallbackChain(provider, err) {
+  const chain = isQuotaError(provider, err)
+    ? CASCADES[provider]
+    : CASCADES.default.filter(p => p !== provider);
+  return chain.filter(providerConfigured);
 }
 
-async function* streamGemini(model, messages, maxTokens) {
-  if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
-  if (isGeminiCoolingDown()) throw geminiCooldownError();
-  const label = model.includes('2.5') ? 'Gemini 2.5 Flash'
-              : model.includes('2.0') ? 'Gemini 2.0 Flash'
-              : 'Gemini 1.5 Flash';
-
-  let stream;
-  let retries = 2;
-  let delay = 1500;
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      stream = await gemini.chat.completions.create({
-        model, max_tokens: maxTokens, stream: true, messages,
-        stream_options: { include_usage: true },
-      });
-      break;
-    } catch (err) {
-      const isRateLimit = err?.status === 429 || err?.status === 503;
-      if (isRateLimit && attempt < retries) {
-        logger.warn(`Gemini stream creation rate-limited (attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= 2;
-        continue;
+async function completeWithFallback({ provider, model, messages, maxTokens, system }) {
+  try {
+    if (provider === 'anthropic') return await anthropicComplete({ model, messages, maxTokens, system });
+    if (!PROVIDERS[provider]) provider = 'groq';
+    return await PROVIDERS[provider].complete({ model, messages, maxTokens });
+  } catch (err) {
+    const quota = isQuotaError(provider, err);
+    logger.warn(`Provider ${provider} failed (${err?.status || ''} ${err.message}), fallback cascade`);
+    for (const p of fallbackChain(provider, err)) {
+      try {
+        return await PROVIDERS[p].complete({ model: FALLBACK_MODELS[p], messages, maxTokens });
+      } catch (e) {
+        logger.warn(`${p} fallback failed (${e.message})`);
       }
-      if (isRateLimit) markGeminiRateLimited();
-      throw err;
     }
+    throw quota ? new Error(ALL_DOWN_MSG) : err;
   }
+}
+
+async function* streamWithFallback({ provider, model, messages, maxTokens, system, anthMessages }) {
+  // Garde anti-duplication : si du texte a déjà été envoyé au client, on ne
+  // relance pas la réponse depuis zéro sur un autre provider.
+  let started = false;
+  const track = async function* (gen) {
+    for await (const chunk of gen) {
+      if (chunk.text) started = true;
+      yield chunk;
+    }
+  };
 
   try {
-    for await (const chunk of stream) {
-      const text = chunk.choices?.[0]?.delta?.content || '';
-      if (text) yield { text, model: label };
-      if (chunk.usage) {
-        yield { usage: { provider: 'Gemini', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
+    if (provider === 'anthropic') {
+      yield* track(anthropicStream({ model, messages: anthMessages || messages, maxTokens, system }));
+      return;
+    }
+    if (!PROVIDERS[provider]) provider = 'groq';
+    yield* track(PROVIDERS[provider].stream({ model, messages, maxTokens }));
+    return;
+  } catch (err) {
+    if (started) throw err;
+    const quota = isQuotaError(provider, err);
+    logger.warn(`Provider ${provider} failed (stream, ${err?.status || ''} ${err.message}), fallback cascade`);
+    for (const p of fallbackChain(provider, err)) {
+      try {
+        yield* track(PROVIDERS[p].stream({ model: FALLBACK_MODELS[p], messages, maxTokens }));
+        return;
+      } catch (e) {
+        if (started) throw e;
+        logger.warn(`${p} stream fallback failed (${e.message})`);
       }
     }
-  } catch (err) {
-    if (err?.status === 429 || err?.status === 503) markGeminiRateLimited();
-    throw err;
-  }
-}
-
-async function* streamGithub(model, messages, maxTokens) {
-  if (!github) throw new Error('Clé GitHub Models non configurée (GITHUB_TOKEN)');
-  const label = model === 'gpt-4o-mini' ? 'GitHub · GPT-4o Mini'
-              : model === 'gpt-4o' ? 'GitHub · GPT-4o'
-              : 'GitHub · Phi-4';
-  const stream = await github.chat.completions.create({
-    model, max_tokens: maxTokens, stream: true, messages,
-    stream_options: { include_usage: true },
-  });
-  for await (const chunk of stream) {
-    const text = chunk.choices?.[0]?.delta?.content || '';
-    if (text) yield { text, model: label };
-    if (chunk.usage) {
-      yield { usage: { provider: 'GitHub', input: chunk.usage.prompt_tokens, output: chunk.usage.completion_tokens } };
-    }
+    throw quota ? new Error(ALL_DOWN_MSG) : err;
   }
 }
 
@@ -241,270 +311,23 @@ async function* streamGithub(model, messages, maxTokens) {
 async function* aiStream(prompt, maxTokens = 4096, config = null) {
   const { provider, model } = config || await getAiConfig();
   const messages = [{ role: 'user', content: prompt }];
-  try {
-    if (provider === 'anthropic') { yield* streamAnthropic(model, messages, maxTokens, null); return; }
-    if (provider === 'deepseek')  { yield* streamDeepSeek(model, messages, maxTokens); return; }
-    if (provider === 'mistral')   { yield* streamMistral(model, messages, maxTokens); return; }
-    if (provider === 'gemini')    { yield* streamGemini(model, messages, maxTokens); return; }
-    if (provider === 'github')    { yield* streamGithub(model, messages, maxTokens); return; }
-    yield* streamGroq(model, messages, maxTokens);
-  } catch (err) {
-    const isGroqQuota   = provider === 'groq'   && (err?.status === 429 || err?.status === 413);
-    const isGeminiQuota = provider === 'gemini' && (err?.status === 429 || err?.status === 503);
-    const isGithubQuota = provider === 'github' && (err?.status === 429 || err?.status === 403);
-
-    // GitHub Models 429/403 → cascade : Gemini → Groq → Mistral
-    if (isGithubQuota) {
-      logger.warn(`GitHub Models ${err.status} (quota), fallback cascade`);
-      if (gemini) {
-        try { yield* streamGemini('gemini-2.5-flash', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying Groq`); }
-      }
-      if (groqClients.length) {
-        try { yield* streamGroq('llama-3.3-70b-versatile', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Groq fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Gemini 429/503 (provider primaire) → cascade : Groq → GitHub → Mistral
-    if (isGeminiQuota) {
-      logger.warn(`Gemini ${err.status} (quota), fallback cascade`);
-      if (groqClients.length) {
-        try { yield* streamGroq('llama-3.3-70b-versatile', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Groq fallback failed (${e.message}), trying GitHub`); }
-      }
-      if (github) {
-        try { yield* streamGithub('gpt-4o-mini', messages, maxTokens); return; }
-        catch (e) { logger.warn(`GitHub fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Groq 429/413 → cascade : Gemini → GitHub → Mistral
-    if (isGroqQuota) {
-      logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
-      if (gemini) {
-        try { yield* streamGemini('gemini-2.5-flash', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Gemini fallback failed (${e.message}), trying GitHub`); }
-      }
-      if (github) {
-        try { yield* streamGithub('gpt-4o-mini', messages, maxTokens); return; }
-        catch (e) { logger.warn(`GitHub fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
-        catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Autre provider échoue → Groq → GitHub → Mistral en dernier recours
-    if (provider !== 'groq' && groqClients.length) {
-      logger.warn(`Provider ${provider} failed (${err.message}), fallback → Groq`);
-      try { yield* streamGroq('llama-3.3-70b-versatile', messages, maxTokens); return; }
-      catch (e) { logger.warn(`Groq fallback failed (${e.message}), trying GitHub`); }
-    }
-    if (provider !== 'github' && github) {
-      try { yield* streamGithub('gpt-4o-mini', messages, maxTokens); return; }
-      catch (e) { logger.warn(`GitHub fallback failed (${e.message}), trying Mistral`); }
-    }
-    if (provider !== 'mistral' && mistral) {
-      try { yield* streamMistral('mistral-small-latest', messages, maxTokens); return; }
-      catch (e) { logger.warn(`Mistral last-resort failed (${e.message})`); }
-    }
-
-    throw err;
-  }
+  yield* streamWithFallback({ provider, model, messages, maxTokens });
 }
 
 async function aiComplete(prompt, maxTokens = 3000, config = null) {
   const { provider, model } = config || await getAiConfig();
   const messages = [{ role: 'user', content: prompt }];
-
-  async function tryGroqFallback() {
-    if (!groqClients.length) throw new Error('Aucune clé Groq configurée');
-    const r = await groqComplete({ model: 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages });
-    return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-  }
-
-  async function tryGithubFallback() {
-    if (!github) throw new Error('Aucune clé GitHub Models configurée');
-    const r = await github.chat.completions.create({ model: 'gpt-4o-mini', max_tokens: maxTokens, messages });
-    return { text: r.choices[0].message.content, model: 'GitHub · GPT-4o Mini', usage: { provider: 'GitHub', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-  }
-
-  try {
-    if (provider === 'anthropic') {
-      if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
-      const r = await anthropicClient.messages.create({ model, max_tokens: maxTokens, messages });
-      return {
-        text:  r.content[0].text,
-        model: anthropicLabel(model),
-        usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens },
-      };
-    }
-    if (provider === 'deepseek') {
-      if (!deepseek) throw new Error('Clé DeepSeek non configurée');
-      const r = await deepseek.chat.completions.create({ model, max_tokens: maxTokens, messages });
-      return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: { provider: 'DeepSeek', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    if (provider === 'mistral') {
-      if (!mistral) throw new Error('Clé Mistral non configurée (MISTRAL_API_KEY)');
-      const mistralLabel = model.includes('large') ? 'Mistral Large' : model.includes('small') ? 'Mistral Small' : 'Mistral 7B';
-      const r = await mistral.chat.completions.create({ model, max_tokens: maxTokens, messages });
-      return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    if (provider === 'gemini') {
-      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
-      if (isGeminiCoolingDown()) throw geminiCooldownError();
-      const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
-      let r;
-      let retries = 2;
-      let delay = 1500;
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages });
-          break;
-        } catch (err) {
-          const isRateLimit = err?.status === 429 || err?.status === 503;
-          if (isRateLimit && attempt < retries) {
-            logger.warn(`Gemini complete rate-limited (attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2;
-            continue;
-          }
-          if (isRateLimit) markGeminiRateLimited();
-          throw err;
-        }
-      }
-      return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    if (provider === 'github') {
-      if (!github) throw new Error('Clé GitHub Models non configurée');
-      const githubLabel = model === 'gpt-4o-mini' ? 'GitHub · GPT-4o Mini'
-                        : model === 'gpt-4o' ? 'GitHub · GPT-4o'
-                        : 'GitHub · Phi-4';
-      const r = await github.chat.completions.create({ model, max_tokens: maxTokens, messages });
-      return { text: r.choices[0].message.content, model: githubLabel, usage: { provider: 'GitHub', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    // groq
-    const r = await groqComplete({ model, max_tokens: maxTokens, messages });
-    const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
-    return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-  } catch (err) {
-    const isGroqQuota   = provider === 'groq'   && (err?.status === 429 || err?.status === 413);
-    const isGeminiQuota = provider === 'gemini' && (err?.status === 429 || err?.status === 503);
-    const isGithubQuota = provider === 'github' && (err?.status === 429 || err?.status === 403);
-
-    // GitHub Models 429/403 → cascade : Gemini → Groq → Mistral
-    if (isGithubQuota) {
-      logger.warn(`GitHub Models ${err.status} (quota), fallback cascade`);
-      if (gemini) {
-        try {
-          if (isGeminiCoolingDown()) throw geminiCooldownError();
-          const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages });
-          return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) {
-          if (e?.status === 429 || e?.status === 503) markGeminiRateLimited();
-          logger.warn(`Gemini fallback failed (${e.message}), trying Groq`);
-        }
-      }
-      if (groqClients.length) {
-        try { return await tryGroqFallback(); }
-        catch (e) { logger.warn(`Groq fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try {
-          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
-          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Gemini 429/503 (provider primaire) → cascade : Groq → GitHub → Mistral
-    if (isGeminiQuota) {
-      logger.warn(`Gemini ${err.status} (quota), fallback cascade`);
-      if (groqClients.length) {
-        try { return await tryGroqFallback(); }
-        catch (e) { logger.warn(`Groq fallback failed (${e.message}), trying GitHub`); }
-      }
-      if (github) {
-        try { return await tryGithubFallback(); }
-        catch (e) { logger.warn(`GitHub fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try {
-          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
-          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Groq 429/413 → cascade : Gemini → GitHub → Mistral
-    if (isGroqQuota) {
-      logger.warn(`Groq ${err.status} (quota/size), fallback cascade`);
-      if (gemini) {
-        try {
-          if (isGeminiCoolingDown()) throw geminiCooldownError();
-          const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages });
-          return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) {
-          if (e?.status === 429 || e?.status === 503) markGeminiRateLimited();
-          logger.warn(`Gemini fallback failed (${e.message}), trying GitHub`);
-        }
-      }
-      if (github) {
-        try { return await tryGithubFallback(); }
-        catch (e) { logger.warn(`GitHub fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try {
-          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
-          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Mistral fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Autre provider échoue → Groq → GitHub → Mistral en dernier recours
-    if (provider !== 'groq' && groqClients.length) {
-      logger.warn(`Provider ${provider} failed (${err.message}), fallback → Groq`);
-      try { return await tryGroqFallback(); }
-      catch (e) { logger.warn(`Groq fallback failed (${e.message}), trying GitHub`); }
-    }
-    if (provider !== 'github' && github) {
-      try { return await tryGithubFallback(); }
-      catch (e) { logger.warn(`GitHub fallback failed (${e.message}), trying Mistral`); }
-    }
-    if (provider !== 'mistral' && mistral) {
-      try {
-        const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages });
-        return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-      } catch (e) { logger.warn(`Mistral last-resort failed (${e.message})`); }
-    }
-    throw err;
-  }
+  return completeWithFallback({ provider, model, messages, maxTokens });
 }
 
 async function aiCompleteFast(prompt, maxTokens = 2000, config = null) {
-  // If user has a personal provider configured, respect it
+  // Provider personnel configuré → le respecter
   if (config) return aiComplete(prompt, maxTokens, config);
-  // Otherwise try fast Groq model first, then fallback to active global provider
+  // Sinon modèle Groq rapide en priorité, puis provider global actif
   if (groqClients.length) {
     try {
-      const r = await groqComplete({ model: 'llama-3.1-8b-instant', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
-      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.1-8b', usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+      const r = await groqRequest({ model: 'llama-3.1-8b-instant', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
+      return { text: r.choices[0].message.content, model: 'Groq · Llama 3.1-8b', usage: usageOf('groq', r.usage) };
     } catch (err) {
       logger.warn('Groq fast fallback to active provider', { message: err?.message });
     }
@@ -512,7 +335,7 @@ async function aiCompleteFast(prompt, maxTokens = 2000, config = null) {
   return aiComplete(prompt, maxTokens);
 }
 
-// ── Chat (with system prompt + history + optional images) ─────────────────────
+// ── Chat (system prompt + historique + images éventuelles) ────────────────────
 
 function toOpenAIMessages(messages) {
   return messages.map(msg => {
@@ -529,148 +352,26 @@ function toOpenAIMessages(messages) {
   });
 }
 
+const IMAGE_MODEL = 'claude-haiku-4-5-20251001';
+
 async function aiChat(systemPrompt, messages, maxTokens = 1024, hasImage = false, config = null) {
   const { provider, model } = config || await getAiConfig();
 
   // Requêtes avec image : Anthropic uniquement, pas de fallback possible
   if (hasImage) {
-    if (!anthropicClient) throw new Error('Clé Anthropic non configurée (image requise)');
-    const r = await anthropicClient.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      system: systemPrompt, max_tokens: maxTokens, messages,
-    });
-    return { text: r.content[0].text, model: anthropicLabel('claude-haiku-4-5-20251001'), usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens } };
+    return anthropicComplete({ model: IMAGE_MODEL, messages, maxTokens, system: systemPrompt });
   }
 
   const oaiMsgs = [{ role: 'system', content: systemPrompt }, ...toOpenAIMessages(messages)];
-
-  async function tryGroqChat() {
-    const r = await groqComplete({ model: 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages: oaiMsgs });
-    return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
+  if (provider === 'anthropic') {
+    try {
+      return await anthropicComplete({ model, messages, maxTokens, system: systemPrompt });
+    } catch (err) {
+      logger.warn(`Anthropic chat failed (${err.message}), fallback cascade`);
+      return completeWithFallback({ provider: 'groq', model: FALLBACK_MODELS.groq, messages: oaiMsgs, maxTokens });
+    }
   }
-
-  try {
-    if (provider === 'anthropic') {
-      if (!anthropicClient) throw new Error('Clé Anthropic non configurée');
-      const r = await anthropicClient.messages.create({
-        model, system: systemPrompt, max_tokens: maxTokens, messages,
-      });
-      return { text: r.content[0].text, model: anthropicLabel(model), usage: { provider: 'Anthropic', input: r.usage.input_tokens, output: r.usage.output_tokens } };
-    }
-    if (provider === 'deepseek') {
-      if (!deepseek) throw new Error('Clé DeepSeek non configurée');
-      const r = await deepseek.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
-      return { text: r.choices[0].message.content, model: 'DeepSeek · Chat', usage: { provider: 'DeepSeek', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    if (provider === 'mistral') {
-      if (!mistral) throw new Error('Clé Mistral non configurée (MISTRAL_API_KEY)');
-      const mistralLabel = model.includes('large') ? 'Mistral Large' : model.includes('small') ? 'Mistral Small' : 'Mistral 7B';
-      const r = await mistral.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
-      return { text: r.choices[0].message.content, model: mistralLabel, usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    if (provider === 'gemini') {
-      if (!gemini) throw new Error('Clé Gemini non configurée (GEMINI_API_KEY ou GOOGLE_API_KEY)');
-      if (isGeminiCoolingDown()) throw geminiCooldownError();
-      const geminiLabel = model.includes('2.5') ? 'Gemini 2.5 Flash' : model.includes('2.0') ? 'Gemini 2.0 Flash' : 'Gemini 1.5 Flash';
-      let r;
-      let retries = 2;
-      let delay = 1500;
-      for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-          r = await gemini.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
-          break;
-        } catch (err) {
-          const isRateLimit = err?.status === 429 || err?.status === 503;
-          if (isRateLimit && attempt < retries) {
-            logger.warn(`Gemini chat rate-limited (attempt ${attempt}/${retries}). Retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            delay *= 2;
-            continue;
-          }
-          if (isRateLimit) markGeminiRateLimited();
-          throw err;
-        }
-      }
-      return { text: r.choices[0].message.content, model: geminiLabel, usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    if (provider === 'github') {
-      if (!github) throw new Error('Clé GitHub Models non configurée');
-      const githubLabel = model === 'gpt-4o-mini' ? 'GitHub · GPT-4o Mini'
-                        : model === 'gpt-4o' ? 'GitHub · GPT-4o'
-                        : 'GitHub · Phi-4';
-      const r = await github.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMsgs });
-      return { text: r.choices[0].message.content, model: githubLabel, usage: { provider: 'GitHub', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-    }
-    // groq (défaut)
-    const r = await groqComplete({ model, max_tokens: maxTokens, messages: oaiMsgs });
-    const label = model.includes('8b') ? 'Groq · Llama 3.1-8b' : 'Groq · Llama 3.3';
-    return { text: r.choices[0].message.content, model: label, usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-
-  } catch (err) {
-    const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);
-    const isGithubQuota = provider === 'github' && (err?.status === 429 || err?.status === 403);
-
-    if (isGithubQuota) {
-      logger.warn(`GitHub Models ${err.status} (chat), fallback cascade`);
-      if (gemini) {
-        try {
-          if (isGeminiCoolingDown()) throw geminiCooldownError();
-          const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) {
-          if (e?.status === 429 || e?.status === 503) markGeminiRateLimited();
-          logger.warn(`Gemini chat fallback failed (${e.message}), trying Groq`);
-        }
-      }
-      if (groqClients.length) {
-        try {
-          const r = await groqComplete({ model: 'llama-3.3-70b-versatile', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'Groq · Llama 3.3', usage: { provider: 'Groq', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Groq chat fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try {
-          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Mistral chat fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    if (isGroqQuota) {
-      logger.warn(`Groq ${err.status} (chat), fallback cascade`);
-      if (gemini) {
-        try {
-          if (isGeminiCoolingDown()) throw geminiCooldownError();
-          const r = await gemini.chat.completions.create({ model: 'gemini-2.5-flash', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'Gemini 2.5 Flash', usage: { provider: 'Gemini', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) {
-          if (e?.status === 429 || e?.status === 503) markGeminiRateLimited();
-          logger.warn(`Gemini chat fallback failed (${e.message}), trying GitHub`);
-        }
-      }
-      if (github) {
-        try {
-          const r = await github.chat.completions.create({ model: 'gpt-4o-mini', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'GitHub · GPT-4o Mini', usage: { provider: 'GitHub', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`GitHub chat fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try {
-          const r = await mistral.chat.completions.create({ model: 'mistral-small-latest', max_tokens: maxTokens, messages: oaiMsgs });
-          return { text: r.choices[0].message.content, model: 'Mistral Small', usage: { provider: 'Mistral', input: r.usage?.prompt_tokens || 0, output: r.usage?.completion_tokens || 0 } };
-        } catch (e) { logger.warn(`Mistral chat fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Autre provider échoue → Groq
-    if (provider !== 'groq' && groqClients.length) {
-      logger.warn(`Provider ${provider} failed (chat, ${err.message}), fallback → Groq`);
-      return tryGroqChat();
-    }
-    throw err;
-  }
+  return completeWithFallback({ provider, model, messages: oaiMsgs, maxTokens });
 }
 
 async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage = false, config = null) {
@@ -678,68 +379,12 @@ async function* aiChatStream(systemPrompt, messages, maxTokens = 1024, hasImage 
 
   // Requêtes avec image : Anthropic uniquement, pas de fallback possible
   if (hasImage) {
-    yield* streamAnthropic('claude-haiku-4-5-20251001', messages, maxTokens, systemPrompt);
+    yield* anthropicStream({ model: IMAGE_MODEL, messages, maxTokens, system: systemPrompt });
     return;
   }
 
   const oaiMsgs = [{ role: 'system', content: systemPrompt }, ...toOpenAIMessages(messages)];
-
-  try {
-    if (provider === 'anthropic') {
-      yield* streamAnthropic(model, messages, maxTokens, systemPrompt);
-      return;
-    }
-    if (provider === 'deepseek') { yield* streamDeepSeek(model, oaiMsgs, maxTokens); return; }
-    if (provider === 'mistral')  { yield* streamMistral(model, oaiMsgs, maxTokens); return; }
-    if (provider === 'gemini')   { yield* streamGemini(model, oaiMsgs, maxTokens); return; }
-    if (provider === 'github')   { yield* streamGithub(model, oaiMsgs, maxTokens); return; }
-    yield* streamGroq(model, oaiMsgs, maxTokens);
-  } catch (err) {
-    const isGroqQuota = provider === 'groq' && (err?.status === 429 || err?.status === 413);
-    const isGithubQuota = provider === 'github' && (err?.status === 429 || err?.status === 403);
-
-    if (isGithubQuota) {
-      logger.warn(`GitHub Models ${err.status} (chat stream), fallback cascade`);
-      if (gemini) {
-        try { yield* streamGemini('gemini-2.5-flash', oaiMsgs, maxTokens); return; }
-        catch (e) { logger.warn(`Gemini chat-stream fallback failed (${e.message}), trying Groq`); }
-      }
-      if (groqClients.length) {
-        try { yield* streamGroq('llama-3.3-70b-versatile', oaiMsgs, maxTokens); return; }
-        catch (e) { logger.warn(`Groq chat-stream fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try { yield* streamMistral('mistral-small-latest', oaiMsgs, maxTokens); return; }
-        catch (e) { logger.warn(`Mistral chat-stream fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    if (isGroqQuota) {
-      logger.warn(`Groq ${err.status} (chat stream), fallback cascade`);
-      if (gemini) {
-        try { yield* streamGemini('gemini-2.5-flash', oaiMsgs, maxTokens); return; }
-        catch (e) { logger.warn(`Gemini chat-stream fallback failed (${e.message}), trying GitHub`); }
-      }
-      if (github) {
-        try { yield* streamGithub('gpt-4o-mini', oaiMsgs, maxTokens); return; }
-        catch (e) { logger.warn(`GitHub chat-stream fallback failed (${e.message}), trying Mistral`); }
-      }
-      if (mistral) {
-        try { yield* streamMistral('mistral-small-latest', oaiMsgs, maxTokens); return; }
-        catch (e) { logger.warn(`Mistral chat-stream fallback failed (${e.message})`); }
-      }
-      throw new Error('Tous les providers IA sont indisponibles. Réessayez dans quelques minutes.');
-    }
-
-    // Autre provider échoue → Groq
-    if (provider !== 'groq' && groqClients.length) {
-      logger.warn(`Provider ${provider} failed (chat stream, ${err.message}), fallback → Groq`);
-      yield* streamGroq('llama-3.3-70b-versatile', oaiMsgs, maxTokens);
-      return;
-    }
-    throw err;
-  }
+  yield* streamWithFallback({ provider, model, messages: oaiMsgs, maxTokens, system: systemPrompt, anthMessages: messages });
 }
 
 function calcMaxTokens(type, textLen, count = 0) {
