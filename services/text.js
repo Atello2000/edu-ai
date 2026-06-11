@@ -521,6 +521,9 @@ async function _extractCore(buffer, ext, originalName) {
     const data    = await pdfParse(buffer);
     const rawText = data.text?.trim() || '';
     if (rawText.length < OCR_THRESHOLD) {
+      // Pas d'appel réseau OCR pendant les tests : résultats non déterministes
+      // (rate limits Gemini, hallucinations OCR sur PDF vide) et coût API.
+      if (process.env.NODE_ENV === 'test') return rawText;
       const ocrText = await ocrPdfWithGemini(buffer)
         || (process.env.MISTRAL_API_KEY ? await ocrWithMistral(buffer, originalName) : null);
       return ocrText || rawText;
