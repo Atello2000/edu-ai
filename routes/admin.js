@@ -102,6 +102,8 @@ router.patch('/users/:id/plan', requireAdmin, async (req, res) => {
 router.delete('/users/:id', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
+  if (id === req.user.id)
+    return res.status(403).json({ error: 'Impossible de supprimer votre propre compte admin.' });
   await prepare('DELETE FROM users WHERE id = ?').run(id);
   logger.info('ADMIN', { action: 'delete_user', adminId: req.user.id, targetId: id });
   res.json({ ok: true });
@@ -224,13 +226,20 @@ router.get('/jetons', requireAdmin, async (req, res) => {
   res.json({ users, costs: JETON_COSTS, monthly: MONTHLY_JETONS });
 });
 
+// Garde-fous anti-fat-finger : un ajustement manuel ne doit jamais dépasser
+// quelques mois d'allocation max (400/mois). Au-delà, c'est une erreur de saisie.
+const MAX_JETON_ADJUST  = 2000;
+const MAX_JETON_BALANCE = 10000;
+
 // ── POST /api/admin/users/:id/jetons — ajouter/retirer des jetons ─────────────
 router.post('/users/:id/jetons', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   const { amount, note } = req.body;
-  if (!amount || isNaN(amount))
+  if (!amount || !Number.isInteger(Number(amount)))
     return res.status(400).json({ error: 'amount invalide' });
+  if (Math.abs(Number(amount)) > MAX_JETON_ADJUST)
+    return res.status(400).json({ error: `Ajustement limité à ±${MAX_JETON_ADJUST} jetons par opération.` });
   const newBalance = await addJetons(id, Number(amount), note || '');
   logger.info('ADMIN', { action: 'adjust_jetons', adminId: req.user.id, targetId: id, amount: Number(amount), note });
   res.json({ ok: true, balance: newBalance });
@@ -241,8 +250,10 @@ router.patch('/users/:id/jetons', requireAdmin, async (req, res) => {
   const id = parseId(req.params.id);
   if (!id) return res.status(400).json({ error: 'ID invalide.' });
   const { balance } = req.body;
-  if (balance === undefined || isNaN(balance))
+  if (balance === undefined || !Number.isInteger(Number(balance)))
     return res.status(400).json({ error: 'balance invalide' });
+  if (Number(balance) < 0 || Number(balance) > MAX_JETON_BALANCE)
+    return res.status(400).json({ error: `Solde limité à 0–${MAX_JETON_BALANCE} jetons.` });
   await prepare('UPDATE users SET jetons = ? WHERE id = ?').run(Number(balance), id);
   logger.info('ADMIN', { action: 'set_jetons', adminId: req.user.id, targetId: id, balance: Number(balance) });
   res.json({ ok: true, balance: Number(balance) });

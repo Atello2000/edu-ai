@@ -8,6 +8,14 @@ const express = require('express');
 const crypto = require('crypto');
 const db = require('../db');
 const logger = require('../services/logger');
+const { sendAdminAlert } = require('../services/email');
+
+// Un IPN rejeté peut être un vrai paiement client perdu : l'admin doit le
+// savoir tout de suite, pas en relisant les logs. Fire-and-forget.
+function alertPaymentRejected(reason, details) {
+  sendAdminAlert(`Paiement PayTech rejeté — ${reason}`, details)
+    .catch(() => {}); // sendAdminAlert ne lève pas, ceinture + bretelles
+}
 
 const publicRouter = express.Router();
 const protectedRouter = express.Router();
@@ -154,6 +162,7 @@ publicRouter.post('/', async (req, res) => {
 
   if (!safeCompareHex(api_key_sha256, localKeyHash) || !safeCompareHex(api_secret_sha256, localSecretHash)) {
     logger.error('Signature IPN invalide : échec de l\'authentification des clés');
+    alertPaymentRejected('signature invalide', { ref_command, type_event, item_price });
     return res.status(403).send('Forbidden');
   }
 
@@ -186,6 +195,7 @@ publicRouter.post('/', async (req, res) => {
       expected: config.price,
       received: item_price,
     });
+    alertPaymentRejected('montant insuffisant', { ref_command, attendu: `${config.price} XOF`, reçu: `${item_price} XOF`, userId, plan });
     return res.status(400).send('Price Mismatch');
   }
 
@@ -197,12 +207,14 @@ publicRouter.post('/', async (req, res) => {
     ).get(ref_command);
     if (!pending) {
       logger.error('IPN rejeté — ref_command inconnue (aucun checkout correspondant)', { ref_command });
+      alertPaymentRejected('référence inconnue', { ref_command, userId, plan, item_price });
       return res.status(400).send('Unknown Reference');
     }
     if (pending.user_id !== userId || pending.plan !== plan) {
       logger.error('IPN rejeté — ref_command incohérente avec le checkout enregistré', {
         ref_command, userId, plan, expectedUser: pending.user_id, expectedPlan: pending.plan,
       });
+      alertPaymentRejected('référence incohérente', { ref_command, userId, plan, checkout_user: pending.user_id, checkout_plan: pending.plan });
       return res.status(400).send('Reference Mismatch');
     }
 
@@ -220,6 +232,7 @@ publicRouter.post('/', async (req, res) => {
     const user = await db.prepare('SELECT id, plan FROM users WHERE id = ?').get(userId);
     if (!user) {
       logger.error('Utilisateur non trouvé pour le crédit IPN', { userId });
+      alertPaymentRejected('utilisateur introuvable (paiement reçu mais non crédité !)', { ref_command, userId, plan, item_price });
       return res.status(404).send('User Not Found');
     }
 
@@ -262,6 +275,7 @@ publicRouter.post('/', async (req, res) => {
       plan,
       message: err.message
     });
+    alertPaymentRejected('erreur interne pendant le crédit (PayTech va retenter)', { ref_command, userId, plan, erreur: err.message });
     res.status(500).send('Internal Server Error');
   }
 });

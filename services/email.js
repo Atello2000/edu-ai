@@ -97,4 +97,33 @@ exports.sendResetEmail = async (to, token) => {
   });
 };
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Alerte opérationnelle envoyée à l'admin (ADMIN_EMAIL). Ne lève jamais :
+// une alerte qui échoue ne doit pas casser le flux appelant (webhook IPN…).
+exports.sendAdminAlert = async (subject, details = {}) => {
+  const to = (process.env.ADMIN_EMAIL || '').trim();
+  if (!to) return;
+  try {
+    const rows = Object.entries(details).map(([k, v]) => `
+      <tr>
+        <td style="padding:6px 12px;color:#999;font-size:.85rem;white-space:nowrap;">${escapeHtml(k)}</td>
+        <td style="padding:6px 12px;color:#111;font-size:.85rem;word-break:break-all;">${escapeHtml(v ?? '')}</td>
+      </tr>`).join('');
+    await sendEmail({
+      to,
+      subject: `[Jangalai] ${subject}`,
+      html: emailTemplate(`
+        <h2 style="margin:0 0 12px;font-size:1.15rem;font-weight:600;color:#b91c1c;">${escapeHtml(subject)}</h2>
+        <table style="border-collapse:collapse;background:#fafafa;border-radius:8px;width:100%;">${rows}</table>
+        <p style="color:#999;font-size:.78rem;margin-top:16px;">Alerte automatique — vérifier les logs du serveur pour le contexte complet.</p>
+      `),
+    });
+  } catch (err) {
+    logger.error('Admin alert email failed', { subject, message: err.message });
+  }
+};
+
 exports._private = { normalizeUrl, getBackendUrl, getClientUrl, getVerifyUrl };
