@@ -1,15 +1,9 @@
 const jwt = require('jsonwebtoken');
 const { prepare } = require('../db');
+const { REFRESH_SECRET, REFRESH_COOKIE_OPTS, consumeRefreshToken } = require('../services/refreshTokens');
 
 const JWT_SECRET = process.env.SESSION_SECRET;
 if (!JWT_SECRET) throw new Error('SESSION_SECRET non configuré');
-
-// Entropie indépendante obligatoire en production — un secret dérivé du
-// SESSION_SECRET ferait tomber les refresh tokens 7 jours avec lui.
-if (!process.env.REFRESH_SECRET && process.env.NODE_ENV === 'production') {
-  throw new Error('REFRESH_SECRET non configuré — variable obligatoire en production.');
-}
-const REFRESH_SECRET = process.env.REFRESH_SECRET || (JWT_SECRET + ':refresh');
 
 const ACCESS_COOKIE_OPTS = {
   httpOnly: true,
@@ -18,19 +12,17 @@ const ACCESS_COOKIE_OPTS = {
   maxAge:   60 * 60 * 1000, // 1h
 };
 
-// Retourne { userId, iat } ou null — iat sert à vérifier la révocation de session
-function tryRefreshAccess(req, res) {
-  const rt = req.cookies?.['jangalai.refresh'];
-  if (!rt) return null;
-  try {
-    const decoded = jwt.verify(rt, REFRESH_SECRET);
-    if (decoded.type !== 'refresh') return null;
-    const newToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '1h' });
-    res.cookie('jangalai.token', newToken, ACCESS_COOKIE_OPTS);
-    return { userId: decoded.userId, iat: decoded.iat };
-  } catch {
-    return null;
+// Retourne { userId, iat } ou null — iat sert à vérifier la révocation de session.
+// Le refresh token est tourné à chaque usage (services/refreshTokens.js).
+async function tryRefreshAccess(req, res) {
+  const result = await consumeRefreshToken(req.cookies?.['jangalai.refresh']);
+  if (!result) return null;
+  const newToken = jwt.sign({ userId: result.userId }, JWT_SECRET, { expiresIn: '1h' });
+  res.cookie('jangalai.token', newToken, ACCESS_COOKIE_OPTS);
+  if (result.newRefreshToken) {
+    res.cookie('jangalai.refresh', result.newRefreshToken, REFRESH_COOKIE_OPTS);
   }
+  return { userId: result.userId, iat: result.iat };
 }
 
 async function requireAuth(req, res, next) {
@@ -45,12 +37,12 @@ async function requireAuth(req, res, next) {
       tokenIat = decoded.iat;
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
-        const refreshResult = tryRefreshAccess(req, res);
+        const refreshResult = await tryRefreshAccess(req, res);
         if (refreshResult) { userId = refreshResult.userId; tokenIat = refreshResult.iat; }
       }
     }
   } else {
-    const refreshResult = tryRefreshAccess(req, res);
+    const refreshResult = await tryRefreshAccess(req, res);
     if (refreshResult) { userId = refreshResult.userId; tokenIat = refreshResult.iat; }
   }
 

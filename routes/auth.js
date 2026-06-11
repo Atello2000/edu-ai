@@ -10,14 +10,10 @@ const { sendVerifyEmail, sendResetEmail } = require('../services/email');
 const { doubleCsrfProtection } = require('../middleware/csrf');
 const logger   = require('../services/logger');
 
+const { REFRESH_COOKIE_OPTS, issueRefreshToken, consumeRefreshToken, revokeAllForUser } = require('../services/refreshTokens');
+
 const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BETA_LIMIT = parseInt(process.env.BETA_USER_LIMIT || '100', 10);
-const REFRESH_COOKIE_OPTS = {
-  httpOnly: true,
-  secure:   process.env.NODE_ENV === 'production',
-  sameSite: 'lax',
-  maxAge:   7 * 24 * 60 * 60 * 1000,
-};
 const APP_URL = process.env.APP_URL || 'http://localhost:3001';
 
 function withAdminFlag(user) {
@@ -34,11 +30,10 @@ function getAppUrl(req) {
   return raw.trim().replace(/\/+$/, ''); // retire juste les slashes finaux, pas de patch protocole
 }
 
-function setToken(res, userId, req) {
-  const token        = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
-  const refreshToken = jwt.sign({ userId, type: 'refresh' }, REFRESH_SECRET, { expiresIn: '7d' });
-  res.cookie('jangalai.token',   token,        ACCESS_COOKIE_OPTS);
-  res.cookie('jangalai.refresh', refreshToken, REFRESH_COOKIE_OPTS);
+async function setToken(res, userId, req) {
+  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
+  res.cookie('jangalai.token',   token, ACCESS_COOKIE_OPTS);
+  res.cookie('jangalai.refresh', await issueRefreshToken(userId), REFRESH_COOKIE_OPTS);
   if (req) generateAndSetCsrfToken(req, res);
 }
 
@@ -60,17 +55,16 @@ async function getTokenUser(req, res) {
     try { return await rejectIfRevoked(jwt.verify(token, JWT_SECRET)); }
     catch (err) { if (err.name !== 'TokenExpiredError') return null; }
   }
-  // Access token absent ou expiré — tenter le refresh
+  // Access token absent ou expiré — tenter le refresh (avec rotation)
   const rt = req.cookies?.['jangalai.refresh'];
   if (rt && res) {
-    try {
-      const decoded = jwt.verify(rt, REFRESH_SECRET);
-      if (decoded.type !== 'refresh') return null;
-      if (!(await rejectIfRevoked(decoded))) return null;
-      const newToken = jwt.sign({ userId: decoded.userId }, JWT_SECRET, { expiresIn: '1h' });
-      res.cookie('jangalai.token', newToken, ACCESS_COOKIE_OPTS);
-      return { userId: decoded.userId };
-    } catch { return null; }
+    const result = await consumeRefreshToken(rt);
+    if (!result) return null;
+    if (!(await rejectIfRevoked({ userId: result.userId, iat: result.iat }))) return null;
+    const newToken = jwt.sign({ userId: result.userId }, JWT_SECRET, { expiresIn: '1h' });
+    res.cookie('jangalai.token', newToken, ACCESS_COOKIE_OPTS);
+    if (result.newRefreshToken) res.cookie('jangalai.refresh', result.newRefreshToken, REFRESH_COOKIE_OPTS);
+    return { userId: result.userId };
   }
   return null;
 }
@@ -124,7 +118,7 @@ async function verifyEmailToken(req, res) {
     return res.redirect(`${getAppUrl(req)}/login?error=token_expired`);
 
   await db.prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?').run(user.id);
-  setToken(res, user.id, req);
+  await setToken(res, user.id, req);
   res.redirect(`${getAppUrl(req)}/app?verified=1`);
 }
 
@@ -168,7 +162,7 @@ router.post('/register', async (req, res) => {
       }
       return res.status(502).json({ error: "Impossible d'envoyer l'e-mail de verification pour le moment. Reessayez dans quelques minutes." });
     }
-    setToken(res, user.id, req);
+    await setToken(res, user.id, req);
     res.json({ user: withAdminFlag(user) });
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'Cet email est déjà utilisé.' });
@@ -193,7 +187,7 @@ router.post('/login', async (req, res) => {
   if (!row || !row.password || !match)
     return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
 
-  setToken(res, row.id, req);
+  await setToken(res, row.id, req);
   res.json({ user: withAdminFlag({ id: row.id, email: row.email, name: row.name, plan: row.plan, email_verified: row.email_verified, created_at: row.created_at }) });
 });
 
@@ -210,7 +204,7 @@ router.post('/logout', doubleCsrfProtection, async (req, res) => {
       try { const d = jwt.verify(rt, REFRESH_SECRET); if (d.type === 'refresh') userId = d.userId; } catch {}
     }
     if (userId) {
-      await db.prepare('UPDATE users SET session_invalidated_at = NOW() WHERE id = ?').run(userId);
+      await revokeAllForUser(userId);
     }
   } catch {}
   res.clearCookie('jangalai.token',   base);
@@ -355,7 +349,7 @@ router.post('/reset-password', async (req, res) => {
   await db.prepare(
     'UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL, email_verified = 1, session_invalidated_at = NOW() WHERE id = ?'
   ).run(hash, user.id);
-  setToken(res, user.id, req);
+  await setToken(res, user.id, req);
   res.json({ ok: true });
 });
 
@@ -425,7 +419,7 @@ router.get('/google/callback', async (req, res) => {
       }
     }
 
-    setToken(res, user.id, req);
+    await setToken(res, user.id, req);
     res.redirect(`${getAppUrl(req)}/app`);
   } catch (err) {
     logger.error('Google OAuth error', { message: err.message, stack: err.stack });

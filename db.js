@@ -257,7 +257,18 @@ async function initSchema() {
     { id: 'alter_users_reset_expires_type', sql: "ALTER TABLE users ALTER COLUMN reset_expires TYPE TIMESTAMPTZ USING reset_expires::TIMESTAMPTZ" },
     { id: 'alter_users_domains_type', sql: "ALTER TABLE users ALTER COLUMN domains DROP DEFAULT" },
     { id: 'alter_users_domains_type_jsonb', sql: "ALTER TABLE users ALTER COLUMN domains TYPE JSONB USING domains::JSONB" },
-    { id: 'alter_users_domains_default_jsonb', sql: "ALTER TABLE users ALTER COLUMN domains SET DEFAULT '[]'::JSONB" }
+    { id: 'alter_users_domains_default_jsonb', sql: "ALTER TABLE users ALTER COLUMN domains SET DEFAULT '[]'::JSONB" },
+    // Rotation des refresh tokens : chaque token émis est tracé par son hash.
+    // rotated_at non NULL = token consommé, conservé pour détecter sa réutilisation.
+    { id: 'create_refresh_tokens', sql: `CREATE TABLE IF NOT EXISTS refresh_tokens (
+      token_hash TEXT PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      rotated_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )` },
+    { id: 'idx_refresh_tokens_user', sql: "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)" },
+    { id: 'idx_refresh_tokens_expires', sql: "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at)" }
   ];
 
   const EXPECTED_CODES = new Set(['42701', '42P07', '42710']);

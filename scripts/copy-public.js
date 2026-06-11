@@ -11,7 +11,9 @@ const path = require('path');
 const src  = path.join(__dirname, '..', 'public');
 const dest = path.join(__dirname, '..', 'client', 'dist');
 
-const FILES = ['icon.svg', 'manifest.json', 'sw.js'];
+// robots.txt, sitemap.xml et og-image.jpg sont indispensables au SEO et aux
+// aperçus sociaux — sans eux Vercel renvoie index.html pour ces URLs.
+const FILES = ['icon.svg', 'manifest.json', 'sw.js', 'robots.txt', 'sitemap.xml', 'og-image.jpg', 'logo.svg'];
 
 if (!fs.existsSync(dest)) {
   console.error(`[copy-public] ERROR: output directory not found: ${dest}`);
