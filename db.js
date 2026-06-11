@@ -69,8 +69,11 @@ function prepare(sql) {
       return rows;
     },
     async run(...params) {
+      // RETURNING * et non RETURNING id : certaines tables n'ont pas de
+      // colonne id (shared_content → token, refresh_tokens → token_hash,
+      // srs_progress → PK composite) et l'INSERT explosait en 42703.
       const finalSql = isInsert && !pgSql.toUpperCase().includes('RETURNING')
-        ? pgSql + ' RETURNING id'
+        ? pgSql + ' RETURNING *'
         : pgSql;
       const { rows, rowCount } = await query(finalSql, params);
       return { lastInsertRowid: rows[0]?.id, rowCount, changes: rowCount };

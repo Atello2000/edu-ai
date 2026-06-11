@@ -149,6 +149,14 @@ app.use('/api',      require('./routes/misc'));
 // consomment pas de ressources utilisateur et ne modifient pas d'état sensible.
 const csrfAndAuth = [requireAuth, doubleCsrfProtection];
 
+// Montés AVANT le bloc csrfAndAuth : ces routeurs gèrent leur propre auth
+// (share : GET public + POST protégé ; push : tout protégé en interne).
+// Un app.use('/api', csrfAndAuth, …) s'exécute pour TOUTE requête /api/*,
+// même celles destinées aux routeurs montés après — le GET public de
+// partage renvoyait donc 401 en production.
+app.use('/api/share', require('./routes/share'));
+app.use('/api/push',  require('./routes/push'));
+
 app.use('/api',         csrfAndAuth, aiLimiter, require('./routes/ai'));
 app.use('/api',         csrfAndAuth, require('./routes/jetons'));
 app.use('/api/payment', csrfAndAuth, require('./routes/payment').protectedRouter);
@@ -157,8 +165,6 @@ app.use('/api/activity', csrfAndAuth, require('./routes/activity'));
 app.use('/api/folders', csrfAndAuth, require('./routes/folders'));
 app.use('/api/admin',    csrfAndAuth, require('./routes/admin'));
 app.use('/api/feedback', csrfAndAuth, require('./routes/feedback'));
-app.use('/api/share',   require('./routes/share')); // POST interne requireAuth+CSRF, GET public
-app.use('/api/push',    require('./routes/push'));
 
 // ── MED-02 : Purge périodique des contenus partagés expirés ─────────────────
 // Gérée désormais par le service de maintenance (services/maintenance.js)
