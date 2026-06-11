@@ -17,6 +17,16 @@
   text-decoration: none;
 }
 
+/* L'en-tête est toujours sombre : le mot-logo doit rester lisible quel que
+   soit le thème actif (les variables --text peuvent être sombres). */
+.legal-header .jlogo-word {
+  color: #fff;
+}
+
+.legal-header .jlogo-word em {
+  color: #3d7eff;
+}
+
 .legal-content {
   width: min(92vw, 760px);
   margin: 32px auto 48px;
