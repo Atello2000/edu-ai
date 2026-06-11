@@ -1,0 +1,88 @@
+# DigitalOcean App Platform — backend Jangalai (remplace Render free).
+# Déploiement : doctl apps create --spec .do/app.yaml
+# ou dashboard DO → Apps → Create App → import depuis GitHub puis coller cette spec.
+# Les secrets (type SECRET) sont à renseigner dans le dashboard — jamais ici.
+name: jangalai-api
+region: lon
+features:
+  - buildpack-stack=ubuntu-22
+
+domains:
+  - domain: api.jangalai.online
+    type: PRIMARY
+
+services:
+  - name: api
+    dockerfile_path: Dockerfile
+    source_dir: /
+    github:
+      repo: Atello2000/edu-ai
+      branch: main
+      deploy_on_push: true
+    http_port: 10000
+    instance_count: 1
+    instance_size_slug: basic-xs # 1 vCPU / 1 Go — LibreOffice a besoin de RAM, éviter basic-xxs
+    health_check:
+      http_path: /api/health
+      initial_delay_seconds: 20 # réveil Neon autosuspend (5-10 s) + initSchema
+      period_seconds: 30
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: LIBREOFFICE_PATH
+        value: /usr/bin/soffice
+      - key: DB_SSL_REJECT_UNAUTHORIZED
+        value: "true"
+      - key: CLIENT_URL
+        value: https://jangalai.online
+      - key: APP_URL
+        value: https://jangalai.online
+      - key: BACKEND_URL
+        value: https://api.jangalai.online
+      - key: PAYTECH_ENV
+        value: prod
+      # ── Secrets : renseigner les valeurs dans le dashboard DO (Settings → api → Environment Variables)
+      - key: DATABASE_URL
+        type: SECRET
+      - key: SESSION_SECRET
+        type: SECRET
+      - key: REFRESH_SECRET
+        type: SECRET
+      - key: CSRF_SECRET
+        type: SECRET
+      - key: ADMIN_EMAIL
+        type: SECRET
+      - key: RESEND_API_KEY
+        type: SECRET
+      - key: EMAIL_FROM
+        type: SECRET
+      - key: GOOGLE_CLIENT_ID
+        type: SECRET
+      - key: GOOGLE_CLIENT_SECRET
+        type: SECRET
+      - key: GOOGLE_CALLBACK_URL
+        type: SECRET
+      - key: PAYTECH_API_KEY
+        type: SECRET
+      - key: PAYTECH_API_SECRET
+        type: SECRET
+      - key: GROQ_API_KEY
+        type: SECRET
+      - key: GROQ_API_KEY_2
+        type: SECRET
+      - key: GROQ_API_KEY_3
+        type: SECRET
+      - key: GEMINI_API_KEY
+        type: SECRET
+      - key: MISTRAL_API_KEY
+        type: SECRET
+      - key: DEEPSEEK_API_KEY
+        type: SECRET
+      - key: ANTHROPIC_API_KEY
+        type: SECRET
+      - key: VAPID_PUBLIC_KEY
+        type: SECRET
+      - key: VAPID_PRIVATE_KEY
+        type: SECRET
