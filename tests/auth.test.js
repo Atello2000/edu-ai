@@ -40,7 +40,7 @@ jest.mock('../db', () => {
           const id = nextId++;
           users.set(id, { id, email, password, name: name || '', plan: 'free',
             email_verified: 0, verify_token: verifyToken, verify_expires: verifyExpires,
-            jetons: 40, is_admin: false, session_invalidated_at: null });
+            jetons: 80, is_admin: false, session_invalidated_at: null });
           return { lastInsertRowid: id, rowCount: 1, changes: 1 };
         }
         // UPDATE email verification

@@ -9,7 +9,7 @@ const PLAN_LABELS = { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' };
 
 const PLAN_INFO = {
   free: {
-    jetons:   '40 jetons à l\'inscription (unique)',
+    jetons:   '80 jetons à l\'inscription (unique)',
     fileSize: '5 Mo max par fichier',
     features: ['Résumés, quiz, flashcards', 'Chat avec le cours', 'Carte mentale & fiche d\'examen', 'Glossaire automatique', '10 sessions sauvegardées', 'Bibliothèque jusqu\'à 15 cours'],
     locked:   ['Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs', 'Export PDF fiche d\'examen'],

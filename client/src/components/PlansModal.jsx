@@ -10,7 +10,7 @@ const PLANS = [
     key:     'free',
     name:    'Gratuit',
     price:   '0',
-    jetons:  40,
+    jetons:  80,
     jetonsLabel: 'jetons à l\'inscription',
     accent:  '#1dd1a1',
     accentBg:'rgba(29,209,161,.1)',

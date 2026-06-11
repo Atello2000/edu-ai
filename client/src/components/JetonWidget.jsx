@@ -14,7 +14,7 @@ export default function JetonWidget() {
 
   if (balance === null) return null;
 
-  const total = monthly_allocation || 40; // 40 = plan gratuit par défaut
+  const total = monthly_allocation || 80; // 80 = plan gratuit par défaut
   const pct   = Math.max(0, Math.min(100, (balance / total) * 100));
 
   const R    = 12;

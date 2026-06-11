@@ -201,7 +201,7 @@ async function initSchema() {
     { id: 'migrate_to_mistral_model', sql: "UPDATE app_config SET value = 'mistral-small-latest' WHERE key = 'ai_model' AND value = 'llama-3.3-70b-versatile'" },
     { id: 'migrate_to_gemini_provider', sql: "UPDATE app_config SET value = 'gemini' WHERE key = 'ai_provider' AND value IN ('groq', 'mistral')" },
     { id: 'migrate_to_gemini_model', sql: "UPDATE app_config SET value = 'gemini-2.5-flash' WHERE key = 'ai_model' AND value IN ('llama-3.3-70b-versatile', 'mistral-small-latest', 'gemini-2.0-flash')" },
-    { id: 'users_jetons', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 40" },
+    { id: 'users_jetons', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons INTEGER NOT NULL DEFAULT 80" },
     { id: 'users_jetons_reset_date', sql: "ALTER TABLE users ADD COLUMN IF NOT EXISTS jetons_reset_date TEXT" },
     { id: 'create_jeton_transactions', sql: `CREATE TABLE IF NOT EXISTS jeton_transactions (
       id            SERIAL PRIMARY KEY,
@@ -271,7 +271,9 @@ async function initSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )` },
     { id: 'idx_refresh_tokens_user', sql: "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id)" },
-    { id: 'idx_refresh_tokens_expires', sql: "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at)" }
+    { id: 'idx_refresh_tokens_expires', sql: "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at)" },
+    // Passage de 40 → 80 jetons pour les utilisateurs free existants (bêta).
+    { id: 'free_jetons_80', sql: "UPDATE users SET jetons = GREATEST(jetons, 80) WHERE plan = 'free'" }
   ];
 
   const EXPECTED_CODES = new Set(['42701', '42P07', '42710']);

@@ -143,7 +143,7 @@ router.post('/register', async (req, res) => {
     // HIGH-01 : inscription atomique — le INSERT échoue si la limite bêta est atteinte
     const info = await db.prepare(
       `INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date)
-       SELECT $1, $2, $3, $4, $5, 40, $6
+       SELECT $1, $2, $3, $4, $5, 80, $6
        WHERE (SELECT COUNT(*) FROM users) < ${BETA_LIMIT}`
     ).run(emailLower, hash, (name || '').trim(), hashToken(verifyToken), verifyExp, currentMonth);
     if (!info.changes) {
