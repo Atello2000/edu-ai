@@ -395,7 +395,7 @@ function calcMaxTokens(type, textLen, count = 0) {
     return 4500;
   }
   if (type === 'quiz')  return Math.min(count * 2000 + 1000, 8000);
-  if (type === 'flash') return Math.min(count * 250 + 500, 4000);
+  if (type === 'flash') return Math.min(count * 350 + 500, 6000);
   return 2048;
 }
 

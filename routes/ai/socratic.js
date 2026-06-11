@@ -75,7 +75,7 @@ Règles STRICTES:
     let   chatModel  = '';
 
     const aiCfg = await getAiConfigForAction('socratic');
-    for await (const chunk of aiChatStream(systemPrompt, messages, 512, false, aiCfg)) {
+    for await (const chunk of aiChatStream(systemPrompt, messages, 900, false, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'socratic', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;

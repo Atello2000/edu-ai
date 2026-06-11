@@ -8,7 +8,7 @@ const logger                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost } = require('../../services/chunker');
 
-const GLOSSARY_MAX_TOKENS = 3000;
+const GLOSSARY_MAX_TOKENS = 4500;
 
 // POST /api/glossary — extraction de termes avec chunking + SSE streaming
 router.post('/glossary', async (req, res) => {

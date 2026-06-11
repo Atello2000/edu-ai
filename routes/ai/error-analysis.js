@@ -57,7 +57,7 @@ Retourne UNIQUEMENT ce JSON:
 }`;
 
     const aiCfg = await getAiConfigForAction('error-analysis');
-    const { text: raw, usage } = await aiComplete(prompt, 1200, aiCfg);
+    const { text: raw, usage } = await aiComplete(prompt, 1800, aiCfg);
     if (usage) logTokens(req.user?.id, 'error-analysis', usage.provider, usage.input, usage.output);
 
     const parsed = parseJsonResponse(raw, { patterns: [] });

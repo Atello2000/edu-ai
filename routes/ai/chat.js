@@ -84,7 +84,7 @@ Cours disponibles (${courseNames}) :${context}`;
     let   chatModel = '';
 
     const aiCfg = await getAiConfigForAction('chat');
-    const maxTokens = isLocalOrAdmin ? 8192 : 1024;
+    const maxTokens = isLocalOrAdmin ? 8192 : 2048;
     for await (const chunk of aiChatStream(systemPrompt, finalMessages, maxTokens, false, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'chat', chunk.usage.provider, chunk.usage.input, chunk.usage.output);

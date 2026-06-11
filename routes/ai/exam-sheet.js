@@ -9,7 +9,7 @@ const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup, clientErrorM
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
 
 const EXAM_MAX_FILES  = 5;
-const EXAM_MAX_TOKENS = 4200;
+const EXAM_MAX_TOKENS = 5500;
 
 // POST /api/exam-sheet — fiche de révision dense en streaming SSE (avec chunking)
 router.post('/exam-sheet', async (req, res) => {

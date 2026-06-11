@@ -63,7 +63,7 @@ Retourne UNIQUEMENT ce JSON:
 Cours "${file.name}":
 ${trimmed}`;
 
-      const { text: raw, model: callModel, usage } = await aiComplete(prompt, 1200, aiCfg);
+      const { text: raw, model: callModel, usage } = await aiComplete(prompt, 2000, aiCfg);
       if (usage) logTokens(req.user?.id, 'predict', usage.provider, usage.input, usage.output);
       if (callModel) lastModel = callModel;
 

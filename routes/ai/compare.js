@@ -68,7 +68,7 @@ ${sourcesText}`;
     const aiCfg     = await getAiConfigForAction('compare');
     let   lastModel = '';
 
-    for await (const chunk of aiStream(prompt, 2000, aiCfg)) {
+    for await (const chunk of aiStream(prompt, 3000, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'compare', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;

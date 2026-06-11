@@ -107,7 +107,7 @@ Retourne UNIQUEMENT ce JSON (sans markdown, sans explication) :
 
     const aiCfg = await getAiConfigForAction('study-plan');
     let raw = '';
-    for await (const chunk of aiStream(prompt, 2500, aiCfg)) {
+    for await (const chunk of aiStream(prompt, 3500, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'study-plan', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;

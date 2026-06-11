@@ -52,7 +52,7 @@ router.post('/mindmap', async (req, res) => {
 
       const { text: result, usage } = await aiComplete(
         promptMindmapFromSummary(ctx, file.name, combined, partials.length),
-        1200,
+        1800,
         aiCfg,
       );
       if (usage) logTokens(req.user?.id, 'mindmap', usage.provider, usage.input, usage.output);
