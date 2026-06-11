@@ -16,6 +16,8 @@ const ResetPassword  = lazy(() => import('./pages/ResetPassword.jsx'));
 const AppPage        = lazy(() => import('./pages/AppPage.jsx'));
 const Profile        = lazy(() => import('./pages/Profile.jsx'));
 const Admin          = lazy(() => import('./pages/Admin.jsx'));
+const CGU            = lazy(() => import('./pages/Legal.jsx').then(m => ({ default: m.CGU })));
+const Confidentialite = lazy(() => import('./pages/Legal.jsx').then(m => ({ default: m.Confidentialite })));
 
 function PageLoader() {
   return <div className="page-loader">Chargement…</div>;
@@ -225,6 +227,8 @@ export default function App() {
         <Route path="/app"             element={<ProtectedRoute><AppPage /></ProtectedRoute>} />
         <Route path="/profile"         element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/admin"           element={<AdminRoute><Admin /></AdminRoute>} />
+        <Route path="/cgu"             element={<CGU />} />
+        <Route path="/confidentialite" element={<Confidentialite />} />
         <Route path="*"                element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

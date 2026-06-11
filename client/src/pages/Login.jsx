@@ -165,6 +165,10 @@ export default function Login() {
                 <input type="password" name="password" placeholder="8 caractères minimum" required autoComplete="new-password" minLength="8" value={form.password} onChange={onChange} />
               </div>
               <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Création…' : 'Créer mon compte'}</button>
+              <p className="auth-legal-note">
+                En créant un compte, vous acceptez les <Link to="/cgu">Conditions d'utilisation</Link> et
+                la <Link to="/confidentialite">Politique de confidentialité</Link>.
+              </p>
             </form>
           )}
         </div>

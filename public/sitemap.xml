@@ -17,4 +17,18 @@
     <priority>0.6</priority>
   </url>
 
+  <url>
+    <loc>https://jangalai.online/cgu</loc>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://jangalai.online/confidentialite</loc>
+    <lastmod>2026-06-11</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
 </urlset>

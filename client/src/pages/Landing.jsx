@@ -287,6 +287,8 @@ export default function Landing() {
           <a href="#faq">FAQ</a>
           <Link to="/login">Connexion</Link>
           <Link to="/login?tab=register" className="footer-cta-link">Inscription gratuite</Link>
+          <Link to="/cgu">CGU</Link>
+          <Link to="/confidentialite">Confidentialité</Link>
         </div>
         <div>© 2026 Jangalai</div>
       </footer>
