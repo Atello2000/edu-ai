@@ -13,6 +13,8 @@ const DEFAULT_COSTS = {
 // Taille chunk par défaut
 const DEFAULT_CHUNK_SIZE = 80_000;
 
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 function chunkCount(textLen, chunkSize = DEFAULT_CHUNK_SIZE) {
   const size = chunkSize || DEFAULT_CHUNK_SIZE;
   return Math.max(1, Math.ceil(textLen / size));
@@ -428,7 +430,7 @@ export default function ActionsPanel({
               <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
               <Badge action="chat" dynCosts={dynCosts} hasFiles={hasFiles} />
             </div>
-            <button className="act-btn gold" id="chat-open-btn" disabled={!hasFiles} onClick={onOpenChat}>Ouvrir</button>
+            <button className="act-btn gold" id="chat-open-btn" disabled={!isLocal && !hasFiles} onClick={onOpenChat}>Ouvrir</button>
           </div>
 
           <div className="act-card act-card-wide" data-color="purple">

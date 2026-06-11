@@ -538,9 +538,19 @@ export default function AppPage() {
     if (files.length) { setActivePanel('glossary-section'); generateGlossary(files); }
   }, [resetGlossary, generateGlossary]);
 
+  const handleAddChatFile = useCallback((newFile) => {
+    setChatFiles(prev => {
+      if (prev.some(f => f.name === newFile.name && f.size === newFile.size)) {
+        return prev;
+      }
+      return [...prev, newFile];
+    });
+  }, []);
+
   const handleOpenChat = useCallback(() => {
-    const files = selectedFilesRef.current;
-    if (!files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
+    const files = selectedFilesRef.current || [];
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    if (!isLocal && !files.length) { toast.warn('Chargez d\'abord des fichiers.'); return; }
     setChatFiles(files);
     eventBus.emit('nav:section', 'chat-section');
     setActivePanel('chat-section');
@@ -1088,6 +1098,7 @@ export default function AppPage() {
                 loading={chatLoading}
                 onSend={sendChat}
                 onClear={resetChat}
+                onAddFile={handleAddChatFile}
               />
             </Suspense>
           </ErrorBoundary>

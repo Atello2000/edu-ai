@@ -17,23 +17,30 @@ export function useChat() {
     setHistory([]);
   }
 
-  const send = useCallback(async (text, { files = [] } = {}) => {
+  const send = useCallback(async (text, { files = [], image = null, attachmentName = null } = {}) => {
     const t = text?.trim();
-    if (!t) return;
+    if (!t && !image && !attachmentName) return;
+
+    // Contenu envoyé à l'API : jamais vide (certains providers rejettent un
+    // message utilisateur vide). Sans texte tapé, on décrit la pièce jointe.
+    const apiContent = t || `J'ai joint le document « ${attachmentName ?? 'image'} ». Présente brièvement son contenu.`;
+    // Texte affiché dans la bulle : le texte tapé, sinon le nom du fichier
+    // joint (sauf image seule, où la miniature suffit).
+    const displayText = t || (image ? '' : `📎 ${attachmentName}`);
 
     const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const userMsg = { role: 'user', text: t, time };
+    const userMsg = { role: 'user', text: displayText, time, image };
     const aiMsgId = Date.now();
 
     setMessages(prev => [...prev, userMsg, { role: 'typing', id: aiMsgId }]);
-    setHistory(prev => [...prev, { role: 'user', content: t }]);
+    setHistory(prev => [...prev, { role: 'user', content: apiContent }]);
     setLoading(true);
 
     try {
       const res = await apiFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files, messages: [...history, { role: 'user', content: t }] }),
+        body: JSON.stringify({ files, messages: [...history, { role: 'user', content: apiContent }] }),
       });
       if (!res.ok) throw new Error('Erreur serveur');
 

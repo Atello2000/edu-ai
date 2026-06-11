@@ -20,6 +20,12 @@ function checkMagicBytes(filePath, ext) {
     if (ext === '.pdf')                     return buf.slice(0, 4).toString() === '%PDF';
     if (ext === '.pptx' || ext === '.docx') return buf[0] === 0x50 && buf[1] === 0x4B; // ZIP/PK
     if (ext === '.ppt')                     return buf[0] === 0xD0 && buf[1] === 0xCF; // OLE2
+    if (process.env.NODE_ENV !== 'production') {
+      if (ext === '.doc')                     return buf[0] === 0xD0 && buf[1] === 0xCF; // OLE2
+      if (ext === '.png')                     return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47;
+      if (ext === '.jpg' || ext === '.jpeg') return buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF;
+      if (ext === '.webp')                    return buf.slice(0, 4).toString() === 'RIFF';
+    }
     return false;
   } catch { return false; }
 }
@@ -39,10 +45,16 @@ const upload = multer({
   dest: uploadsAbsDir + path.sep,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (['.pdf', '.ppt', '.pptx', '.docx'].includes(ext)) {
+    const isDev = process.env.NODE_ENV !== 'production';
+    const allowed = isDev
+      ? ['.pdf', '.ppt', '.pptx', '.docx', '.doc', '.png', '.jpg', '.jpeg', '.webp']
+      : ['.pdf', '.ppt', '.pptx', '.docx'];
+    if (allowed.includes(ext)) {
       cb(null, true);
     } else {
-      req.fileTypeError = 'Seuls les fichiers PDF, PPT, PPTX et DOCX sont acceptés.';
+      req.fileTypeError = isDev
+        ? 'Seuls les fichiers PDF, PPT, PPTX, DOCX, DOC et images (PNG, JPG, JPEG, WEBP) sont acceptés.'
+        : 'Seuls les fichiers PDF, PPT, PPTX et DOCX sont acceptés.';
       cb(null, false);
     }
   },

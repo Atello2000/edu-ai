@@ -15,8 +15,12 @@ router.post('/chat', async (req, res) => {
   let deducted = 0; // jetons à rembourser si l'IA échoue après déduction
 
   try {
-    const { files, messages } = req.body;
-    if (!files?.length) {
+    const { files = [], messages } = req.body;
+    // En local uniquement, le chat peut s'ouvrir sans fichiers (les documents
+    // s'attachent ensuite depuis le chat). En production, un contexte de
+    // cours reste obligatoire.
+    const isLocalDev = process.env.NODE_ENV !== 'production';
+    if (!files.length && !isLocalDev) {
       send({ type: 'error', message: 'Aucun fichier sélectionné' });
       return res.end();
     }
@@ -43,14 +47,27 @@ router.post('/chat', async (req, res) => {
 
     // Contexte cours
     let context = '';
+    const isLocalOrAdmin = process.env.NODE_ENV !== 'production' || !!req.user?.is_admin;
     for (const file of files) {
       const text = await getFileText(file);
-      context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, LIMITS.chatChars)}`;
+      if (isLocalOrAdmin) {
+        context += `\n\n=== COURS : ${file.name} ===\n${text}`;
+      } else {
+        context += `\n\n=== COURS : ${file.name} ===\n${text.slice(0, LIMITS.chatChars)}`;
+      }
     }
 
     const courseNames = files.map(f => `"${f.name}"`).join(', ');
     const ctx = userContext(req.user);
-    const systemPrompt = `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. Sois clair, concis et pédagogique. Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
+    const speedPromptStyle = isLocalOrAdmin
+      ? "Sois clair, complet, précis et pédagogique, et n'hésite pas à détailler tes explications."
+      : "Sois clair, concis et pédagogique.";
+
+    // Sans fichiers (chat vide, local uniquement) : assistant général — le
+    // prompt « uniquement à partir des cours fournis » ferait tout refuser.
+    const systemPrompt = !files.length
+      ? `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant. ${speedPromptStyle} Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras).`
+      : `${ctx}Tu es un assistant pédagogique expert et bienveillant. Tu réponds aux questions de l'étudiant uniquement à partir des cours fournis. ${speedPromptStyle} Réponds toujours en français. Utilise du markdown pour structurer tes réponses (listes, gras). Si la question sort du contexte des cours, dis-le poliment.
 
 Règle de citation : à la fin de ta réponse, si tu as utilisé des informations d'un cours précis, ajoute une ligne de sources sous cette forme exacte :
 > 📖 Source : [nom du fichier]
@@ -67,7 +84,8 @@ Cours disponibles (${courseNames}) :${context}`;
     let   chatModel = '';
 
     const aiCfg = await getAiConfigForAction('chat');
-    for await (const chunk of aiChatStream(systemPrompt, finalMessages, 1024, false, aiCfg)) {
+    const maxTokens = isLocalOrAdmin ? 8192 : 1024;
+    for await (const chunk of aiChatStream(systemPrompt, finalMessages, maxTokens, false, aiCfg)) {
       if (chunk.usage) {
         logTokens(req.user?.id, 'chat', chunk.usage.provider, chunk.usage.input, chunk.usage.output);
         continue;
