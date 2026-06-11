@@ -416,23 +416,46 @@ export default function ActionsPanel({
           )}
         </div>
 
-        {/* ── Voir plus : Chat, Fiche, Carte mentale, Glossaire ─────────── */}
-        {showMore && <>
-          <div className="act-card act-card-wide" data-color="gold">
-            <div className="act-card-icon gold">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                <circle cx="9" cy="11" r=".6" fill="currentColor"/><circle cx="12" cy="11" r=".6" fill="currentColor"/><circle cx="15" cy="11" r=".6" fill="currentColor"/>
-              </svg>
-            </div>
-            <div className="act-card-body">
-              <strong>Chat avec le cours</strong>
-              <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
-              <Badge action="chat" dynCosts={dynCosts} hasFiles={hasFiles} />
-            </div>
-            <button className="act-btn gold" id="chat-open-btn" disabled={!isLocal && !hasFiles} onClick={onOpenChat}>Ouvrir</button>
+        {/* ── Toujours visibles : Chat + Carte mentale ──────────────────── */}
+        <div className="act-card act-card-wide" data-color="gold">
+          <div className="act-card-icon gold">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              <circle cx="9" cy="11" r=".6" fill="currentColor"/><circle cx="12" cy="11" r=".6" fill="currentColor"/><circle cx="15" cy="11" r=".6" fill="currentColor"/>
+            </svg>
           </div>
+          <div className="act-card-body">
+            <strong>Chat avec le cours</strong>
+            <span>Posez n&apos;importe quelle question sur vos fichiers chargés</span>
+            <Badge action="chat" dynCosts={dynCosts} hasFiles={hasFiles} />
+          </div>
+          <button className="act-btn gold" id="chat-open-btn" disabled={!isLocal && !hasFiles} onClick={onOpenChat}>Ouvrir</button>
+        </div>
 
+        <div className="act-card act-card-wide" data-color="teal">
+          <div className="act-card-icon teal">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
+              <line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/>
+            </svg>
+          </div>
+          <div className="act-card-body">
+            <strong>Carte mentale</strong>
+            <span>Visualise le cours sous forme d&apos;arbre interactif</span>
+            <Badge action="mindmap" dynCosts={dynCosts} hasFiles={hasFiles} />
+          </div>
+          <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>
+            {mindmapMd ? 'Voir la carte' : 'Créer'}
+          </button>
+          {mindmapMd && (
+            <button className="regen-link" id="mindmap-regen-btn" onClick={handleMindmapRegen}>
+              ↺ Régénérer
+            </button>
+          )}
+        </div>
+
+        {/* ── Voir plus : Fiche d'examen + Glossaire ────────────────────── */}
+        {showMore && <>
           <div className="act-card act-card-wide" data-color="purple">
             <div className="act-card-icon purple">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -448,28 +471,6 @@ export default function ActionsPanel({
               {examLoading ? 'Génération…' : examMd ? 'Voir la fiche' : 'Créer'}
             </button>
             {examMd && <button className="regen-link" id="exam-sheet-regen-btn" onClick={onExamRegen}>↺ Régénérer</button>}
-          </div>
-
-          <div className="act-card act-card-wide" data-color="teal">
-            <div className="act-card-icon teal">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>
-                <line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/>
-              </svg>
-            </div>
-            <div className="act-card-body">
-              <strong>Carte mentale</strong>
-              <span>Visualise le cours sous forme d&apos;arbre interactif</span>
-              <Badge action="mindmap" dynCosts={dynCosts} hasFiles={hasFiles} />
-            </div>
-            <button className="act-btn teal" id="mindmap-action-btn" disabled={!hasFiles} onClick={handleMindmap}>
-              {mindmapMd ? 'Voir la carte' : 'Créer'}
-            </button>
-            {mindmapMd && (
-              <button className="regen-link" id="mindmap-regen-btn" onClick={handleMindmapRegen}>
-                ↺ Régénérer
-              </button>
-            )}
           </div>
 
           <div className="act-card act-card-wide" data-color="gold">
