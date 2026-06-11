@@ -223,7 +223,7 @@ export function Confidentialite() {
         <h2>6. Durées de conservation</h2>
         <ul>
           <li><strong>Compte et bibliothèque</strong> : conservés tant que le compte est actif ; supprimés à la suppression du compte.</li>
-          <li><strong>Cache des générations IA</strong> : 6 heures maximum.</li>
+          <li><strong>Cache des générations IA</strong> : 24 heures maximum.</li>
           <li><strong>Contenus partagés par lien</strong> : 7 jours, puis suppression automatique.</li>
           <li><strong>Historique de consommation de jetons</strong> : 6 mois.</li>
           <li><strong>Transactions de paiement</strong> : durée légale de conservation comptable.</li>

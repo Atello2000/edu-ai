@@ -18,6 +18,7 @@ const Profile        = lazy(() => import('./pages/Profile.jsx'));
 const Admin          = lazy(() => import('./pages/Admin.jsx'));
 const CGU            = lazy(() => import('./pages/Legal.jsx').then(m => ({ default: m.CGU })));
 const Confidentialite = lazy(() => import('./pages/Legal.jsx').then(m => ({ default: m.Confidentialite })));
+const SharePage      = lazy(() => import('./pages/SharePage.jsx'));
 
 function PageLoader() {
   return <div className="page-loader">Chargement…</div>;
@@ -229,6 +230,7 @@ export default function App() {
         <Route path="/admin"           element={<AdminRoute><Admin /></AdminRoute>} />
         <Route path="/cgu"             element={<CGU />} />
         <Route path="/confidentialite" element={<Confidentialite />} />
+        <Route path="/share/:token"    element={<SharePage />} />
         <Route path="*"                element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

@@ -1,6 +1,7 @@
 /**
  * topicCache.js — cache DB pour les topics (flashcards/quiz sans fichier)
- * Durée : 3 jours. Non critique : les erreurs sont silencieuses.
+ * Durée : 24 h, alignée sur la politique de confidentialité (« cache des
+ * générations IA : 24 heures maximum »). Non critique : erreurs silencieuses.
  */
 const crypto = require('crypto');
 const db     = require('../../db');
@@ -21,7 +22,7 @@ async function getCachedTopic(key) {
 
 async function setCachedTopic(key, data) {
   try {
-    const expiresAt = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
     await db.prepare(
       `INSERT INTO ai_cache (cache_key, result, expires_at) VALUES (?, ?, ?)
        ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at

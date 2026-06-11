@@ -1,0 +1,107 @@
+.share-page {
+  min-height: 100vh;
+  background: #f4f4f0;
+  color: #1a1d24;
+  font-family: 'Outfit', Arial, sans-serif;
+}
+
+.share-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px clamp(20px, 6vw, 64px);
+  background: #080c16;
+}
+
+.share-logo { display: inline-flex; text-decoration: none; }
+.share-header .jlogo-word { color: #fff; }
+.share-header .jlogo-word em { color: #3d7eff; }
+
+.share-cta {
+  color: #fff;
+  background: #3d7eff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.share-cta:hover { background: #2f6fea; }
+
+.share-content {
+  width: min(92vw, 760px);
+  margin: 32px auto 56px;
+}
+
+.share-status { text-align: center; color: #8a8f99; padding: 60px 0; }
+
+.share-kicker {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #8a8f99;
+  margin: 0 0 6px;
+}
+
+.share-title {
+  font-size: clamp(1.4rem, 4vw, 1.9rem);
+  margin: 0 0 24px;
+  color: #111;
+}
+
+.share-card {
+  background: #fff;
+  border: 1px solid #e5e5e0;
+  border-radius: 14px;
+  padding: clamp(20px, 4vw, 36px);
+  margin-bottom: 20px;
+}
+
+.share-card-name {
+  font-size: 1.05rem;
+  margin: 0 0 14px;
+  color: #111;
+}
+
+.share-markdown { line-height: 1.7; font-size: 0.95rem; color: #2c313a; }
+.share-markdown h1, .share-markdown h2, .share-markdown h3 { color: #111; margin: 1.2em 0 0.5em; }
+.share-markdown h1 { font-size: 1.25rem; }
+.share-markdown h2 { font-size: 1.1rem; }
+.share-markdown h3 { font-size: 1rem; }
+.share-markdown ul, .share-markdown ol { padding-left: 20px; }
+.share-markdown li { margin-bottom: 4px; }
+.share-markdown strong { color: #111; }
+.share-markdown code { background: #f1f1ec; padding: 1px 5px; border-radius: 4px; font-size: 0.85em; }
+.share-markdown blockquote { border-left: 3px solid #3d7eff; margin: 0.8em 0; padding: 2px 14px; color: #555; }
+
+.share-error {
+  text-align: center;
+  padding: 60px 20px;
+}
+.share-error h1 { font-size: 1.4rem; color: #111; margin: 0 0 10px; }
+.share-error p { color: #555; margin: 0 0 8px; }
+
+.share-footer-cta {
+  text-align: center;
+  margin-top: 32px;
+  padding: 28px;
+  background: #fff;
+  border: 1px solid #e5e5e0;
+  border-radius: 14px;
+}
+.share-footer-cta p { color: #555; margin: 0 0 16px; }
+
+.share-btn {
+  display: inline-block;
+  background: #3d7eff;
+  color: #fff;
+  padding: 11px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 8px;
+}
+.share-btn:hover { background: #2f6fea; }
