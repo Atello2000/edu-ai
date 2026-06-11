@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import Logo from '../components/Logo.jsx';
 import './Legal.css';
 
-const CONTACT_EMAIL = 'abdoullahsakho@gmail.com';
+const CONTACT_EMAIL = 'contact@jangalai.online';
 const LAST_UPDATE   = '11 juin 2026';
 
 function LegalLayout({ title, children }) {
