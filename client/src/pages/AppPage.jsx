@@ -23,6 +23,8 @@ import { useSessions } from '../hooks/useSessions.js';
 import { usePrepareSession } from '../hooks/usePrepareSession.js';
 import { useJetons } from '../hooks/useJetons.js';
 import { useAiSuite } from '../hooks/useAiSuite.js';
+import { usePaymentFlow } from '../hooks/usePaymentFlow.js';
+import { useAppPreferences } from '../hooks/useAppPreferences.js';
 import GenerationCard from '../components/GenerationCard.jsx';
 
 // Sections lourdes — chargées à la demande (lazy, mount-once)
@@ -41,64 +43,22 @@ import PlansModal from '../components/PlansModal';
 import eventBus from '../utils/eventBus';
 import { apiFetch } from '../utils/apiFetch';
 
-// ── Préférences utilisateur (localStorage) ───────────────────────────────────
-const PREFS_KEY = 'jangalai-prefs';
-function getPrefs() {
-  try { return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}'); }
-  catch { return {}; }
-}
 
 export default function AppPage() {
   const { user, refreshSession } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showSettings,   setShowSettings]   = useState(false);
-  const [showPlansModal, setShowPlansModal] = useState(false);
-  const [showCongratsModal, setShowCongratsModal] = useState(false);
-  const [congratsPlan, setCongratsPlan] = useState('');
   const [activityKey,    setActivityKey]    = useState(0);
   const [showPomodoro,   setShowPomodoro]   = useState(false);
 
-  const [isWaitingPayment, setIsWaitingPayment] = useState(false);
-  const pollingIntervalRef = useRef(null);
-
-  // Écouter l'ouverture des plans depuis n'importe quel widget
-  useEffect(() => {
-    const showPlansFn = () => setShowPlansModal(true);
-    eventBus.on('plans:open', showPlansFn);
-    return () => eventBus.off('plans:open', showPlansFn);
-  }, []);
-
-  // Nettoyage du poller sur démontage
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-    };
-  }, []);
-
-  // Intercepter les retours de paiement (PayTech success/cancel)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const payment = params.get('payment');
-    const plan = params.get('plan');
-
-    if (payment === 'success') {
-      const selectedPlan = plan || 'pro';
-      setTimeout(() => {
-        setCongratsPlan(selectedPlan);
-        setShowCongratsModal(true);
-      }, 0);
-      
-      // Mettre à jour la session utilisateur et le quota de jetons
-      if (typeof refreshSession === 'function') refreshSession();
-      eventBus.emit('quota:refresh');
-
-      // Nettoyer l'URL propre sans recharger la page
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (payment === 'cancel') {
-      toast.warn('Paiement annulé. Vous pouvez réessayer quand vous le souhaitez.');
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, [refreshSession]);
+  const {
+    showPlansModal, setShowPlansModal,
+    showCongratsModal, setShowCongratsModal,
+    congratsPlan,
+    isWaitingPayment,
+    handleSelectPlan,
+    handleCancelWaiting,
+  } = usePaymentFlow({ refreshSession });
 
   // ── État upload ────────────────────────────────────────────────────────────
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -121,24 +81,14 @@ export default function AppPage() {
   const selectedFilesRef = useRef(selectedFiles);
   useEffect(() => { selectedFilesRef.current = selectedFiles; }, [selectedFiles]);
 
-  // ── Paramètres Quiz / Flashcards (levés depuis ActionsPanel) ──────────────
-  const [quizCount,      setQuizCount]      = useState(() => Number(getPrefs().quizCount)     || 5);
-  const [quizDifficulty, setQuizDifficulty] = useState(() => getPrefs().quizDifficulty        || 'moyen');
-  const [fcCount,        setFcCount]        = useState(() => Number(getPrefs().fcCount)        || 10);
-  const [examMode,       setExamMode]       = useState(false);
-  const [examMins,       setExamMins]       = useState(10);
-
-  // Synchroniser avec les prefs modifiées depuis SettingsDrawer
-  useEffect(() => {
-    return eventBus.on('prefs:changed', () => {
-      const p = getPrefs();
-      if (p.quizCount)      setQuizCount(Number(p.quizCount));
-      if (p.quizDifficulty) setQuizDifficulty(p.quizDifficulty);
-      if (p.fcCount)        setFcCount(Number(p.fcCount));
-      if (p.reduceMotion)   document.documentElement.classList.add('reduce-motion');
-      else                  document.documentElement.classList.remove('reduce-motion');
-    });
-  }, []);
+  // ── Paramètres Quiz / Flashcards ──────────────────────────────────────────
+  const {
+    quizCount, setQuizCount,
+    quizDifficulty, setQuizDifficulty,
+    fcCount, setFcCount,
+    examMode, setExamMode,
+    examMins, setExamMins,
+  } = useAppPreferences();
 
   // ── Panel navigation ──────────────────────────────────────────────────────
   const [activePanel, setActivePanel] = useState('dashboard-panel');
@@ -247,70 +197,6 @@ export default function AppPage() {
     restoreFcFrom([{ name: 'Révision du jour', flashcards: due }]);
     setActivePanel('flashcard-section');
   }, [restoreFcFrom]);
-
-  const handleCancelWaiting = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-    setIsWaitingPayment(false);
-    toast.info("Attente du paiement annulée.");
-  }, []);
-
-  const handleSelectPlan = useCallback(async (planKey) => {
-    try {
-      const res = await apiFetch('/api/payment/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planKey })
-      });
-      const data = await res.json();
-      if (data.error) {
-        toast.error(data.error);
-        return;
-      }
-      if (data.redirectUrl) {
-        setShowPlansModal(false);
-        window.location.assign(data.redirectUrl);
-
-        // 4. Lancer le poller en tâche de fond (toutes les 3 secondes)
-        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-        const start = Date.now();
-        
-        pollingIntervalRef.current = setInterval(async () => {
-          // Timeout de sécurité après 15 minutes
-          if (Date.now() - start > 15 * 60 * 1000) {
-            clearInterval(pollingIntervalRef.current);
-            setIsWaitingPayment(false);
-            toast.warn("Délai de paiement dépassé. Vous pouvez réessayer.");
-            return;
-          }
-
-          try {
-            const checkRes = await fetch('/api/auth/me');
-            if (checkRes.ok) {
-              const checkData = await checkRes.json();
-              if (checkData.user && checkData.user.plan !== 'free') {
-                // Le webhook IPN a validé la transaction !
-                clearInterval(pollingIntervalRef.current);
-                setIsWaitingPayment(false);
-                setCongratsPlan(checkData.user.plan);
-                setShowCongratsModal(true);
-
-                // Rafraîchir les informations
-                if (typeof refreshSession === 'function') refreshSession();
-                eventBus.emit('quota:refresh');
-              }
-            }
-          } catch { /* polling silencieux */ }
-        }, 3000);
-
-      } else {
-        toast.error("Impossible d'initier le paiement.");
-      }
-    } catch {
-      toast.error('Erreur lors du lancement du paiement.');
-    }
-  }, [refreshSession]);
 
   // ── Handlers features avancées (utilisent selectedFilesRef — pas de deps stales) ──
   const handleSocratic = useCallback(() => {
@@ -852,7 +738,6 @@ export default function AppPage() {
             uploadedFiles={uploadedFiles}
             onGoUpload={() => setActivePanel('upload-section')}
             onMindmapLoading={setMindmapLoading}
-            mindmapMd={mindmapMd}
             onMindmapChange={setMindmapMd}
             saveSession={saveSession}
             summaryResults={summaryResults}

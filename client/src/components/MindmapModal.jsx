@@ -18,7 +18,6 @@ function loadMarkmapModules() {
 }
 
 export default function MindmapModal({
-  mindmapMd,
   onMindmapChange,
   saveSession,
   uploadedFiles = [],

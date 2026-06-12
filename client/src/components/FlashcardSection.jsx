@@ -92,6 +92,7 @@ export default function FlashcardSection({
       const due = cards
         .map((c, i) => ({ c, i }))
         .filter(({ c }) => getSRSStatus(c.front) === 'due');
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSrsSessionCards(due);
       setSrsIndex(0);
     } else {

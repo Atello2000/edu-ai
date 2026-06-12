@@ -200,8 +200,8 @@ export function useFlashcards({ saveSession } = {}) {
   }, [saveSession]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function markCard(cardIdx, stateOrQuality) {
-    let quality = 4;
-    let state = 'known';
+    let quality;
+    let state;
 
     if (typeof stateOrQuality === 'number') {
       quality = stateOrQuality;
