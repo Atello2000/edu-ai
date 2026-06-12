@@ -53,7 +53,8 @@ export function usePaymentFlow({ refreshSession }) {
       if (!data.redirectUrl) { toast.error("Impossible d'initier le paiement."); return; }
 
       setShowPlansModal(false);
-      window.location.assign(data.redirectUrl);
+      window.open(data.redirectUrl, '_blank', 'noopener');
+      setIsWaitingPayment(true);
 
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
       const start = Date.now();
