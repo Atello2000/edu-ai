@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
+import { apiFetch } from '../utils/apiFetch';
+import toast from '../utils/toast';
 
 const SUGGESTIONS = [
   'Quels sont les points clés ?',
@@ -33,6 +35,11 @@ function ChatBubble({ msg }) {
   if (msg.role === 'user') {
     return (
       <div className="chat-msg user">
+        {msg.image && (
+          <div className="chat-image-preview">
+            <img src={msg.image} alt="Pièce jointe" />
+          </div>
+        )}
         <div className="chat-bubble"
           dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(window.marked?.parse(msg.text) ?? msg.text) }}
         />
@@ -70,11 +77,15 @@ function ChatBubble({ msg }) {
 }
 
 /* ── Composant principal ──────────────────────────────────────────────────── */
-export default function ChatSection({ files = [], messages = [], loading, onSend, onClear }) {
+export default function ChatSection({ files = [], messages = [], loading, onSend, onClear, onAddFile }) {
   const [input,       setInput]       = useState('');
   const [activeFiles, setActiveFiles] = useState(() => new Set(files.map((_, i) => i)));
+  const [attachedFile, setAttachedFile] = useState(null);
+  const [attachedFilePreview, setAttachedFilePreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const messagesRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     // Réinitialise la sélection quand la liste de fichiers change
@@ -87,6 +98,11 @@ export default function ChatSection({ files = [], messages = [], loading, onSend
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Pas de révocation automatique de l'object URL ici : après envoi, la bulle
+  // du message la référence encore (msg.image). Elle n'est révoquée que si
+  // l'utilisateur retire la pièce jointe sans l'envoyer (handleRemoveAttach) ;
+  // sinon elle vit jusqu'au déchargement de la page.
 
   function getActiveChatFiles() {
     if (!activeFiles.size) return files;
@@ -105,11 +121,106 @@ export default function ChatSection({ files = [], messages = [], loading, onSend
     setActiveFiles(new Set(files.map((_, i) => i)));
   }
 
-  function handleSend(text) {
+  function handleAttachClick() {
+    fileInputRef.current?.click();
+  }
+
+  function handleFileAttach(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Le fichier dépasse la limite maximale de 50 Mo.');
+      return;
+    }
+
+    const ext = file.name.split('.').pop().toLowerCase();
+    const isImage = ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
+
+    // L'aperçu du brouillon précédent n'a pas été envoyé : on peut le révoquer.
+    if (attachedFilePreview) {
+      URL.revokeObjectURL(attachedFilePreview);
+    }
+
+    setAttachedFile(file);
+    if (isImage) {
+      setAttachedFilePreview(URL.createObjectURL(file));
+    } else {
+      setAttachedFilePreview(null);
+    }
+  }
+
+  function handleRemoveAttach() {
+    setAttachedFile(null);
+    if (attachedFilePreview) {
+      URL.revokeObjectURL(attachedFilePreview);
+      setAttachedFilePreview(null);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }
+
+  async function handleSend(text) {
     const t = text ?? input.trim();
-    if (!t) return;
-    onSend(t, { files: getActiveChatFiles() });
+    if (!t && !attachedFile) return;
+
+    let uploadedFile = null;
+    let localUploading = false;
+
+    if (attachedFile) {
+      setUploading(true);
+      localUploading = true;
+      const formData = new FormData();
+      formData.append('files', attachedFile);
+
+      try {
+        const res = await apiFetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || "Erreur lors de l'upload");
+        }
+        const data = await res.json();
+        if (data.success && data.files?.length) {
+          uploadedFile = data.files[0];
+          if (onAddFile) {
+            onAddFile(uploadedFile);
+          }
+        } else {
+          throw new Error("Erreur de traitement");
+        }
+      } catch (err) {
+        toast.error(`Impossible d'importer le fichier : ${err.message}`);
+        setUploading(false);
+        return;
+      }
+    }
+
+    // Copie : getActiveChatFiles() peut retourner le prop `files` (état du
+    // parent) — un push direct le muterait.
+    const activeFilesToSend = [...getActiveChatFiles()];
+    if (uploadedFile) {
+      if (!activeFilesToSend.some(f => f.name === uploadedFile.name)) {
+        activeFilesToSend.push(uploadedFile);
+      }
+    }
+
+    onSend(t || '', {
+      files: activeFilesToSend,
+      image: attachedFilePreview,
+      attachmentName: uploadedFile?.name ?? null,
+    });
+
     setInput('');
+    setAttachedFile(null);
+    setAttachedFilePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (localUploading) {
+      setUploading(false);
+    }
   }
 
   function handleKeyDown(e) {
@@ -160,8 +271,57 @@ export default function ChatSection({ files = [], messages = [], loading, onSend
         {messages.map((m, i) => <ChatBubble key={i} msg={m} />)}
       </div>
 
+      {/* Attached file preview bar */}
+      {attachedFile && attachedFilePreview && (
+        <div className="chat-image-bar" style={{ marginBottom: '.5rem' }}>
+          <img src={attachedFilePreview} className="chat-image-thumb" alt="Miniature" />
+          <span style={{ fontSize: '.75rem', color: '#22c55e', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            {attachedFile.name}
+          </span>
+          <button type="button" className="chat-attach-remove" onClick={handleRemoveAttach}>×</button>
+        </div>
+      )}
+      {attachedFile && !attachedFilePreview && (
+        <div className="chat-attach-bar" style={{ marginBottom: '.5rem' }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--blue)' }}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span style={{ fontSize: '.75rem', color: 'var(--blue)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            {attachedFile.name}
+          </span>
+          <button type="button" className="chat-attach-remove" onClick={handleRemoveAttach}>×</button>
+        </div>
+      )}
+
       {/* Input row */}
       <div className="chat-input-row">
+        {isLocal && (
+          <>
+            <button
+              type="button"
+              className={`chat-attach-btn${attachedFile ? ' active' : ''}`}
+              onClick={handleAttachClick}
+              disabled={uploading || loading}
+              title="Attacher un document (PDF, Word) ou une image"
+            >
+              {uploading ? (
+                <div className="mini-spinner" style={{ marginRight: 0, width: '12px', height: '12px' }} />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp"
+              style={{ display: 'none' }}
+              onChange={handleFileAttach}
+            />
+          </>
+        )}
         <textarea
           id="chat-input"
           className="chat-input"
@@ -179,7 +339,7 @@ export default function ChatSection({ files = [], messages = [], loading, onSend
         <button
           id="chat-send-btn"
           className="chat-send-btn"
-          disabled={loading || !input.trim()}
+          disabled={loading || uploading || (!input.trim() && !attachedFile)}
           onClick={() => handleSend()}
           title="Envoyer"
         >

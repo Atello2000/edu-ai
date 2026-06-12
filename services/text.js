@@ -537,6 +537,18 @@ async function _extractCore(buffer, ext, originalName) {
   if (ext === '.ppt') {
     return extractLegacyPpt(buffer, originalName);
   }
+  if (process.env.NODE_ENV !== 'production') {
+    if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+      const mime = MIME_MAP[ext] || 'image/png';
+      const desc = await describeImageWithGemini(buffer.toString('base64'), mime);
+      return desc ? `[Image : ${desc}]` : 'Image sans description lisible.';
+    }
+    if (ext === '.doc') {
+      const ast = await officeParser.parseOffice(buffer, OFFICE_PARSER_CONFIG);
+      const { value: parsed } = await ast.to('md');
+      return parsed || '';
+    }
+  }
   // Garde anti-ZIP bomb AVANT officeParser : c'est lui qui décompresse
   // l'archive en premier — la même garde dans extractAndDescribeOfficeImages
   // arriverait trop tard pour protéger la mémoire du serveur.
