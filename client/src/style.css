@@ -3546,11 +3546,17 @@ body:has(.maintenance-banner) header { top: 2.8rem; }
   border-top: 1px solid var(--border);
   position: relative;
 }
-.act-advanced-section .act-section-label {
+.act-section-toggle {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer;
   padding: 0 0 .65rem;
-  grid-column: unset;
-  display: flex; align-items: center; gap: .45rem;
+  color: var(--muted);
+  font-size: .72rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
 }
+.act-section-toggle:hover { color: var(--text); }
+.act-section-toggle > span { display: flex; align-items: center; gap: .45rem; }
 
 /* Badge Pro dans le label */
 .act-pro-badge {
