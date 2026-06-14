@@ -25,7 +25,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="auth-side" style={{ width: '100%', minHeight: '100vh', borderLeft: 'none' }}>
+    <div className="auth-side" style={{ width: '100%', minHeight: '100dvh', borderLeft: 'none' }}>
       <div className="auth-card" style={{ maxWidth: 400 }}>
         <div className="auth-logo">
           <h1><Logo size={36} /></h1>

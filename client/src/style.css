@@ -187,6 +187,7 @@ body {
   font-family:'Outfit',sans-serif;
   font-weight:300;
   min-height:100vh;
+  min-height:100dvh;
   overflow-x:hidden;
   -webkit-font-smoothing:antialiased;
 }
@@ -1965,7 +1966,7 @@ kbd {
 }
 
 /* ── Dashboard ─────────────────────────────────────────────────────────────── */
-.dashboard-panel { min-height:calc(100vh - 120px); display:flex; flex-direction:column; }
+.dashboard-panel { min-height:calc(100vh - 120px); min-height:calc(100dvh - 120px); display:flex; flex-direction:column; }
 
 .dash-greeting { margin-bottom:1.8rem; }
 .dash-greeting-title {
