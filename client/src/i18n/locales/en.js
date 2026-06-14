@@ -260,4 +260,22 @@ export default {
       copyright: '© 2026 Jangalai',
     },
   },
+
+  app: {
+    header: {
+      home: 'Dashboard',
+      streak: '{n}-day study streak! Keep it up! 🔥',
+      toDark: 'Switch to dark mode',
+      toLight: 'Switch to light mode',
+      pomoOpen: 'Open the Focus timer',
+      pomoClose: 'Close the Focus timer',
+    },
+    menu: {
+      profile: 'My profile',
+      settings: 'Settings',
+      admin: 'Administration',
+      logout: 'Log out',
+    },
+    plans: { free: 'Free', pro: '✦ Pro', max: '★ Max' },
+  },
 };

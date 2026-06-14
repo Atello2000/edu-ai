@@ -4,6 +4,7 @@ import UserMenu from './UserMenu.jsx';
 import JetonWidget from './JetonWidget.jsx';
 import { apiFetch } from '../utils/apiFetch';
 import eventBus from '../utils/eventBus';
+import { useT } from '../i18n';
 
 /**
  * AppHeader — barre supérieure de l'app : retour tableau de bord, logo, jetons, menu.
@@ -24,6 +25,7 @@ export default function AppHeader({
   onTogglePomodoro,
   showPomodoro,
 }) {
+  const { t } = useT();
   const [streak, setStreak] = useState(0);
   const [theme, setTheme] = useState(() => {
     return document.documentElement.getAttribute('data-theme') || localStorage.getItem('jangalai-theme') || 'light';
@@ -79,7 +81,7 @@ export default function AppHeader({
       <button
         className={`back-home-btn${activePanel === 'dashboard-panel' ? ' hidden' : ''}`}
         id="back-home-btn"
-        title="Tableau de bord"
+        title={t('app.header.home')}
         onClick={onHome}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -89,14 +91,14 @@ export default function AppHeader({
       </div>
       <div className="header-right">
         {streak > 0 && (
-          <div className="streak-badge" title={`Série d'étude de ${streak} jours ! Gardez le rythme ! 🔥`}>
+          <div className="streak-badge" title={t('app.header.streak', { n: streak })}>
             🔥 {streak}
           </div>
         )}
         <button
           className="theme-toggle-btn"
           onClick={toggleTheme}
-          title={theme === 'light' ? 'Passer en mode sombre' : 'Passer en mode clair'}
+          title={theme === 'light' ? t('app.header.toDark') : t('app.header.toLight')}
         >
           {theme === 'light' ? (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -112,7 +114,7 @@ export default function AppHeader({
         <button
           className={`pomo-toggle-btn${showPomodoro ? ' active' : ''}`}
           onClick={onTogglePomodoro}
-          title={showPomodoro ? 'Fermer le minuteur Focus' : 'Ouvrir le minuteur Focus'}
+          title={showPomodoro ? t('app.header.pomoClose') : t('app.header.pomoOpen')}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

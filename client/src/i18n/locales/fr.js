@@ -261,4 +261,22 @@ export default {
       copyright: '© 2026 Jangalai',
     },
   },
+
+  app: {
+    header: {
+      home: 'Tableau de bord',
+      streak: "Série d'étude de {n} jours ! Gardez le rythme ! 🔥",
+      toDark: 'Passer en mode sombre',
+      toLight: 'Passer en mode clair',
+      pomoOpen: 'Ouvrir le minuteur Focus',
+      pomoClose: 'Fermer le minuteur Focus',
+    },
+    menu: {
+      profile: 'Mon profil',
+      settings: 'Paramètres',
+      admin: 'Administration',
+      logout: 'Se déconnecter',
+    },
+    plans: { free: 'Gratuit', pro: '✦ Pro', max: '★ Max' },
+  },
 };
