@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useT } from '../i18n';
 import Logo from '../components/Logo';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import './Login.css';
 
 function GoogleIcon() {
@@ -121,6 +122,7 @@ export default function Login() {
       </div>
 
       <div className="auth-side">
+        <LanguageSwitcher className="auth-lang" />
         <div className="auth-card">
           <div className="auth-logo">
             <h1><Logo size={36} /></h1>

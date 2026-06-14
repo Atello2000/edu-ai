@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import { useT } from '../i18n';
 import Logo from '../components/Logo';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import './Landing.css';
 
 function useFadeUp() {
@@ -77,6 +78,7 @@ export default function Landing() {
           <a href="#faq">{t('landing.nav.faq')}</a>
         </div>
         <div className="nav-actions">
+          <LanguageSwitcher />
           <Link to="/login" className="btn-outline">{t('landing.nav.login')}</Link>
           <Link to="/login?tab=register" className="btn-primary">{t('landing.nav.start')}</Link>
         </div>
