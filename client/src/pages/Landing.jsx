@@ -191,7 +191,7 @@ export default function Landing() {
               <div className="plan-price">0 F CFA</div>
               <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>40 jetons</strong> offerts à l'inscription</div>
+                <div className="plan-feat"><strong>80 jetons</strong> offerts à l'inscription</div>
                 <div className="plan-feat">Résumés, quiz, flashcards</div>
                 <div className="plan-feat">Chat avec le cours</div>
                 <div className="plan-feat">Carte mentale & fiche d'examen</div>

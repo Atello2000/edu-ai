@@ -1,15 +1,17 @@
 /**
- * summaryPdf.js — export PDF d'un résumé via jsPDF (bundlé npm).
+ * summaryPdf.js — export PDF d'un résumé via jsPDF.
+ * jsPDF (~bundle lourd) est chargé dynamiquement : il ne pèse sur le bundle
+ * que lorsque l'utilisateur déclenche réellement un export PDF.
  */
-import { jsPDF } from 'jspdf';
 import { buildSummarySections, stripMd, sanitizePdf } from './summaryUtils';
 
 /**
  * @param {string} fileName  Nom de base du fichier (sans extension)
  * @param {string} summaryMd Markdown complet du résumé
- * @returns {Promise<void>}
+ * @returns {Promise<import('jspdf').jsPDF>}
  */
-export function buildSummaryDoc(fileName, summaryMd) {
+export async function buildSummaryDoc(fileName, summaryMd) {
+  const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF('p', 'mm', 'a4');
 
   const PW = pdf.internal.pageSize.getWidth();
@@ -257,5 +259,6 @@ export function buildSummaryDoc(fileName, summaryMd) {
 }
 
 export async function exportSummaryToPDF(fileName, summaryMd) {
-  buildSummaryDoc(fileName, summaryMd).save(fileName + '_résumé.pdf');
+  const pdf = await buildSummaryDoc(fileName, summaryMd);
+  pdf.save(fileName + '_résumé.pdf');
 }

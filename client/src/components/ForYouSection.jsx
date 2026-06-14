@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { apiFetch } from '../utils/apiFetch';
+import { getLang } from '../utils/lang';
 import toast from '../utils/toast';
 import { useAuth } from '../hooks/useAuth';
 import { sm2Update, cardHash } from '../hooks/useFlashcards.js';
@@ -129,7 +130,7 @@ export default function ForYouSection({ onActivity }) {
       const r = await apiFetch('/api/topic', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, type, count: type === 'quiz' ? 5 : 8, lang: 'fr' }),
+        body: JSON.stringify({ topic, type, count: type === 'quiz' ? 5 : 8, lang: getLang() }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);

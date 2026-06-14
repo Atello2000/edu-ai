@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
+import { getLang, getSpeechLang } from '../utils/lang';
 
 /**
  * Barre de synthèse vocale (Text-to-Speech).
@@ -77,8 +78,9 @@ export default function TTSBar() {
       setVoices(vs);
       setVoiceName(prev => {
         if (prev) return prev;
-        const fr = vs.find(v => v.lang.startsWith('fr'));
-        return fr ? fr.name : (vs[0]?.name ?? '');
+        const pref = getLang();
+        const match = vs.find(v => v.lang.startsWith(pref));
+        return match ? match.name : (vs[0]?.name ?? '');
       });
     }
     loadVoices();
@@ -91,7 +93,7 @@ export default function TTSBar() {
   function applySpeak(md) {
     const text = ttsPlainText(md);
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'fr-FR';
+    utter.lang = getSpeechLang();
     utter.rate = parseFloat(rateRef.current);
     const v = speechSynthesis.getVoices().find(vv => vv.name === voiceNameRef.current);
     if (v) utter.voice = v;
@@ -169,9 +171,10 @@ export default function TTSBar() {
 
   if (!visible) return null;
 
-  const frVoices    = voices.filter(v => v.lang.startsWith('fr'));
-  const otherVoices = voices.filter(v => !v.lang.startsWith('fr'));
-  const allVoices   = [...frVoices, ...otherVoices];
+  const pref          = getLang();
+  const prefVoices    = voices.filter(v => v.lang.startsWith(pref));
+  const otherVoices   = voices.filter(v => !v.lang.startsWith(pref));
+  const allVoices     = [...prefVoices, ...otherVoices];
 
   return (
     <div className="tts-bar" id="tts-bar">

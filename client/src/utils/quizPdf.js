@@ -1,7 +1,6 @@
 /**
- * quizPdf.js — export PDF d'un quiz QCM via jsPDF.
+ * quizPdf.js — export PDF d'un quiz QCM via jsPDF (chargé dynamiquement).
  */
-import { jsPDF } from 'jspdf';
 import { sanitizePdf } from './summaryUtils';
 
 const C = {
@@ -24,7 +23,8 @@ const C = {
  * @param {Object} answers   — { [idx]: letter } réponses de l'utilisateur (optionnel)
  * @param {Object} score     — { correct, total } (optionnel)
  */
-export function exportQuizToPDF(title, questions, answers = {}, score = null) {
+export async function exportQuizToPDF(title, questions, answers = {}, score = null) {
+  const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF('p', 'mm', 'a4');
   const PW = pdf.internal.pageSize.getWidth();
   const PH = pdf.internal.pageSize.getHeight();
