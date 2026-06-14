@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useT } from '../i18n';
 import Logo from '../components/Logo';
 import './Login.css';
 
@@ -17,17 +18,15 @@ function GoogleIcon() {
 
 export default function Login() {
   const { login, register } = useAuth();
+  const { t } = useT();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState(() => searchParams.get('tab') === 'register' ? 'register' : 'login');
   const [error, setError] = useState(() => {
-    const e = searchParams.get('error');
-    if (e === 'beta_full')    return 'L\'accès est limité pendant la bêta. Revenez bientôt !';
-    if (e === 'google_denied') return 'Connexion Google annulée.';
-    if (e === 'invalid_token') return 'Lien de vérification invalide ou déjà utilisé. Si vous avez confirmé depuis un autre appareil, connectez-vous.';
-    if (e === 'token_expired') return 'Lien expiré. Reconnectez-vous pour en recevoir un nouveau.';
-    if (e) return 'Une erreur est survenue lors de l\'authentification.';
-    return '';
+    const code = searchParams.get('error');
+    if (!code) return '';
+    const known = ['beta_full', 'google_denied', 'invalid_token', 'token_expired'];
+    return t(`auth.errors.${known.includes(code) ? code : 'generic'}`);
   });
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -73,50 +72,50 @@ export default function Login() {
             <div className="mock-window">
               <div className="mock-titlebar">
                 <div className="mock-dot r"/><div className="mock-dot y"/><div className="mock-dot g"/>
-                <span className="mock-title-text">Jangalai — Tableau de bord</span>
+                <span className="mock-title-text">{t('auth.preview.dashboard')}</span>
               </div>
               <div className="mock-body">
-                <div className="mock-greeting">Bonjour, <em>Aminata</em> — Bonne session !</div>
+                <div className="mock-greeting">{t('auth.preview.greeting', { name: 'Aminata' })}</div>
                 <div className="mock-actions">
                   <div className="mock-action purple">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    Résumé
+                    {t('auth.preview.summary')}
                   </div>
                   <div className="mock-action blue">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3d7eff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    Quiz
+                    {t('auth.preview.quiz')}
                   </div>
                   <div className="mock-action gold">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d4a94c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                    Fiches
+                    {t('auth.preview.sheets')}
                   </div>
                   <div className="mock-action teal">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1dd1a1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    Chat IA
+                    {t('auth.preview.chat')}
                   </div>
                 </div>
                 <div className="mock-stats">
-                  <div className="mock-stat"><div className="mock-stat-val">12</div><div className="mock-stat-lbl">Cours résumés</div></div>
-                  <div className="mock-stat"><div className="mock-stat-val">84</div><div className="mock-stat-lbl">Flashcards</div></div>
-                  <div className="mock-stat"><div className="mock-stat-val">7</div><div className="mock-stat-lbl">Quiz passés</div></div>
+                  <div className="mock-stat"><div className="mock-stat-val">12</div><div className="mock-stat-lbl">{t('auth.preview.statSummaries')}</div></div>
+                  <div className="mock-stat"><div className="mock-stat-val">84</div><div className="mock-stat-lbl">{t('auth.preview.statFlashcards')}</div></div>
+                  <div className="mock-stat"><div className="mock-stat-val">7</div><div className="mock-stat-lbl">{t('auth.preview.statQuiz')}</div></div>
                 </div>
                 <div className="mock-fc-row">
                   <div className="mock-fc front">
-                    <div className="mock-fc-q">Question</div>
-                    <div className="mock-fc-a">Qu'est-ce que la mitose ?</div>
-                    <div className="mock-fc-tag blue">Biologie</div>
+                    <div className="mock-fc-q">{t('auth.preview.question')}</div>
+                    <div className="mock-fc-a">{t('auth.preview.fcQuestion')}</div>
+                    <div className="mock-fc-tag blue">{t('auth.preview.fcTag')}</div>
                   </div>
                   <div className="mock-fc back">
-                    <div className="mock-fc-q">Réponse</div>
-                    <div className="mock-fc-a">Division cellulaire produisant 2 cellules filles identiques.</div>
-                    <div className="mock-fc-tag teal">✓ Correct</div>
+                    <div className="mock-fc-q">{t('auth.preview.answer')}</div>
+                    <div className="mock-fc-a">{t('auth.preview.fcAnswer')}</div>
+                    <div className="mock-fc-tag teal">{t('auth.preview.fcCorrect')}</div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           <div className="mockup-tagline">
-            <p><strong>Résumés · Quiz · Flashcards · Chat IA</strong><br/>Tout ce dont vous avez besoin pour maîtriser vos cours.</p>
+            <p><strong>{t('auth.preview.featuresLine')}</strong><br/>{t('auth.preview.featuresSub')}</p>
           </div>
         </div>
       </div>
@@ -125,54 +124,53 @@ export default function Login() {
         <div className="auth-card">
           <div className="auth-logo">
             <h1><Logo size={36} /></h1>
-            <p>Plateforme IA pour vos cours</p>
+            <p>{t('auth.tagline')}</p>
           </div>
 
           <div className="auth-tabs">
-            <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); }}>Connexion</button>
-            <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); }}>Inscription</button>
+            <button className={`auth-tab ${tab === 'login' ? 'active' : ''}`} onClick={() => { setTab('login'); setError(''); }}>{t('auth.tabs.login')}</button>
+            <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); }}>{t('auth.tabs.register')}</button>
           </div>
 
           {error && <div className="auth-error show">{error}</div>}
 
           <a href="/api/auth/google" className="google-btn">
-            <GoogleIcon /> Continuer avec Google
+            <GoogleIcon /> {t('auth.google')}
           </a>
 
-          <div className="auth-divider">{tab === 'register' ? "ou s'inscrire par e-mail" : 'ou se connecter par e-mail'}</div>
+          <div className="auth-divider">{tab === 'register' ? t('auth.dividerRegister') : t('auth.dividerLogin')}</div>
 
           {tab === 'login' ? (
             <form className="auth-form" onSubmit={handleLogin}>
               <div className="form-group">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="votre.email@domaine.com" required autoComplete="email" value={form.email} onChange={onChange} />
+                <label>{t('auth.email')}</label>
+                <input type="email" name="email" placeholder={t('auth.emailPlaceholder')} required autoComplete="email" value={form.email} onChange={onChange} />
               </div>
               <div className="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" placeholder="••••••••" required autoComplete="current-password" value={form.password} onChange={onChange} />
+                <label>{t('auth.password')}</label>
+                <input type="password" name="password" placeholder={t('auth.passwordPlaceholder')} required autoComplete="current-password" value={form.password} onChange={onChange} />
               </div>
-              <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Connexion…' : 'Se connecter'}</button>
-              <p className="forgot-link"><Link to="/forgot-password">Mot de passe oublié ?</Link></p>
+              <button type="submit" className="auth-btn" disabled={loading}>{loading ? t('auth.loginLoading') : t('auth.login')}</button>
+              <p className="forgot-link"><Link to="/forgot-password">{t('auth.forgot')}</Link></p>
             </form>
           ) : (
             <form className="auth-form" onSubmit={handleRegister}>
               <div className="form-group">
-                <label>Email</label>
-                <input type="email" name="email" placeholder="votre.email@domaine.com" required autoComplete="email" value={form.email} onChange={onChange} />
+                <label>{t('auth.email')}</label>
+                <input type="email" name="email" placeholder={t('auth.emailPlaceholder')} required autoComplete="email" value={form.email} onChange={onChange} />
               </div>
               <div className="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" placeholder="8 caractères minimum" required autoComplete="new-password" minLength="8" value={form.password} onChange={onChange} />
+                <label>{t('auth.password')}</label>
+                <input type="password" name="password" placeholder={t('auth.passwordMinPlaceholder')} required autoComplete="new-password" minLength="8" value={form.password} onChange={onChange} />
               </div>
-              <button type="submit" className="auth-btn" disabled={loading}>{loading ? 'Création…' : 'Créer mon compte'}</button>
+              <button type="submit" className="auth-btn" disabled={loading}>{loading ? t('auth.registerLoading') : t('auth.register')}</button>
               <p className="auth-legal-note">
-                En créant un compte, vous acceptez les <Link to="/cgu">Conditions d'utilisation</Link> et
-                la <Link to="/confidentialite">Politique de confidentialité</Link>.
+                {t('auth.legalPrefix')}<Link to="/cgu">{t('auth.terms')}</Link>{t('auth.legalMid')}<Link to="/confidentialite">{t('auth.privacy')}</Link>{t('auth.legalSuffix')}
               </p>
             </form>
           )}
         </div>
-        <p className="landing-link">Découvrir la plateforme → <Link to="/">En savoir plus</Link></p>
+        <p className="landing-link">{t('auth.discover')}<Link to="/">{t('auth.learnMore')}</Link></p>
       </div>
     </div>
   );

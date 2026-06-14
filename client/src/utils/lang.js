@@ -5,12 +5,20 @@
  * le SettingsDrawer. Repli sur 'fr' si rien n'est stocké.
  */
 
+const SUPPORTED = ['fr', 'en', 'ar', 'es'];
+
 export function getLang() {
   try {
-    return JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang || 'fr';
-  } catch {
-    return 'fr';
-  }
+    const stored = JSON.parse(localStorage.getItem('jangalai-prefs') || '{}').lang;
+    if (stored) return stored;
+  } catch { /* prefs illisibles */ }
+  // Aucune préférence enregistrée : on suit la langue du navigateur si elle est
+  // supportée, sinon français. (Le SettingsDrawer permet de la changer ensuite.)
+  try {
+    const nav = (navigator.language || '').slice(0, 2).toLowerCase();
+    if (SUPPORTED.includes(nav)) return nav;
+  } catch { /* pas de navigator */ }
+  return 'fr';
 }
 
 /** Code BCP-47 pour la synthèse vocale / Intl (ex. 'fr' → 'fr-FR', 'ar' → 'ar-SA'). */
