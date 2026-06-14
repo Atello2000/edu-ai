@@ -44,6 +44,12 @@ if (!fs.existsSync(DIST)) {
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
+    // SEO : la version pré-rendue servie aux crawlers doit toujours être en
+    // français (langue canonique), quelle que soit la locale du Chrome headless.
+    // On force la préférence avant que React ne lise getLang().
+    await page.evaluateOnNewDocument(() => {
+      try { localStorage.setItem('jangalai-prefs', JSON.stringify({ lang: 'fr' })); } catch { /* ignore */ }
+    });
     await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle0', timeout: 30000 });
 
     // Attend que le contenu principal soit rendu
