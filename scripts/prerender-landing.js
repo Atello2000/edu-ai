@@ -30,17 +30,39 @@ const ROUTES = [
   { route: '/confidentialite', out: path.join('confidentialite', 'index.html') },
 ];
 
-// Vérifie que puppeteer est disponible (devDependency — peut manquer selon l'env)
-let puppeteer;
-try {
-  puppeteer = require('puppeteer');
-} catch {
-  console.warn('⚠ prerender : puppeteer non disponible (devDependency). Ignoré, SPA normale.');
-  process.exit(0);
-}
-
 const http    = require('http');
 const express = require('express');
+
+// Sélection du moteur Chromium selon l'environnement :
+//  - Sur Vercel (conteneur de build serverless) : puppeteer-core + @sparticuz/chromium.
+//    Le Chromium bundlé de `puppeteer` ne se lance pas dans le conteneur Vercel
+//    (bibliothèques système manquantes) ; @sparticuz fournit un binaire compatible.
+//  - En local / dev : `puppeteer` complet avec son Chromium intégré.
+// Dégradation gracieuse : si rien n'est disponible, on saute le prerender.
+async function resolveBrowser() {
+  if (process.env.VERCEL) {
+    const chromium  = require('@sparticuz/chromium');
+    const puppeteer = require('puppeteer-core');
+    return {
+      puppeteer,
+      launchOptions: {
+        args: chromium.args,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      },
+    };
+  }
+  const puppeteer = require('puppeteer');
+  return { puppeteer, launchOptions: { headless: true, args: ['--no-sandbox'] } };
+}
+
+// Vérifie que le moteur Chromium attendu est installé avant d'aller plus loin.
+try {
+  require.resolve(process.env.VERCEL ? '@sparticuz/chromium' : 'puppeteer');
+} catch {
+  console.warn('⚠ prerender : moteur Chromium non disponible. Ignoré, SPA normale.');
+  process.exit(0);
+}
 
 if (!fs.existsSync(path.join(DIST, 'index.html'))) {
   console.warn('⚠ client/dist/index.html introuvable — lance npm run build d\'abord. Ignoré.');
@@ -48,6 +70,7 @@ if (!fs.existsSync(path.join(DIST, 'index.html'))) {
 }
 
 (async () => {
+  const { puppeteer, launchOptions } = await resolveBrowser();
   // Mini-serveur statique pour servir le build React à Chrome headless.
   const miniApp = express();
   miniApp.use(express.static(DIST));
@@ -57,7 +80,7 @@ if (!fs.existsSync(path.join(DIST, 'index.html'))) {
   const { port } = server.address();
   const base = `http://127.0.0.1:${port}`;
 
-  const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+  const browser = await puppeteer.launch(launchOptions);
   try {
     for (const { route, out } of ROUTES) {
       const page = await browser.newPage();
