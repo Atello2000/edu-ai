@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useJetons } from '../hooks/useJetons.js';
 import { apiFetch } from '../utils/apiFetch';
@@ -30,6 +30,7 @@ const PLAN_INFO = {
 
 export default function Profile() {
   const { user, setUser } = useAuth();
+  const navigate = useNavigate();
   const { balance, history, monthly_allocation } = useJetons();
   const [nameVal, setNameVal]   = useState('');
   const [nameAlert, setNameAlert] = useState(null);
@@ -38,6 +39,11 @@ export default function Profile() {
   const [newPwd, setNewPwd]     = useState('');
   const [pwdAlert, setPwdAlert] = useState(null);
   const [pwdBusy, setPwdBusy]   = useState(false);
+  const [exportBusy, setExportBusy] = useState(false);
+  const [dangerAlert, setDangerAlert] = useState(null);
+  const [delOpen, setDelOpen]   = useState(false);
+  const [delPwd, setDelPwd]     = useState('');
+  const [delBusy, setDelBusy]   = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -79,6 +85,46 @@ export default function Profile() {
       flash(setPwdAlert, 'Mot de passe changé !', 'success');
       setCurPwd(''); setNewPwd('');
     }
+  }
+
+  async function exportData() {
+    setExportBusy(true);
+    try {
+      const r = await apiFetch('/api/auth/account/export');
+      if (!r.ok) throw new Error('Échec de l\'export des données.');
+      const blob = await r.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `jangalai-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      flash(setDangerAlert, 'Export téléchargé.', 'success');
+    } catch (err) {
+      flash(setDangerAlert, err.message, 'error');
+    } finally {
+      setExportBusy(false);
+    }
+  }
+
+  async function deleteAccount(e) {
+    e.preventDefault();
+    setDelBusy(true);
+    const r = await apiFetch('/api/auth/account', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: delPwd }),
+    });
+    const d = await r.json().catch(() => ({}));
+    setDelBusy(false);
+    if (!r.ok || d.error) {
+      flash(setDangerAlert, d.error || 'Échec de la suppression.', 'error');
+      return;
+    }
+    if (setUser) setUser(null);
+    navigate('/', { replace: true });
   }
 
   if (!user) return null;
@@ -156,7 +202,7 @@ export default function Profile() {
               </div>
               <div className="jeton-summary-card">
                 <span className="jsc-label">Allocation mensuelle</span>
-                <strong className="jsc-value">{monthly_allocation !== null ? monthly_allocation : '40'}</strong>
+                <strong className="jsc-value">{monthly_allocation !== null ? monthly_allocation : '80'}</strong>
                 <span className="jsc-sub text-muted">jetons / mois</span>
               </div>
             </div>
@@ -305,6 +351,51 @@ export default function Profile() {
               {pwdBusy ? 'Modification…' : 'Changer le mot de passe'}
             </button>
           </form>
+        </div>
+
+        <div className="profile-section">
+          <h3>Données &amp; confidentialité</h3>
+          {dangerAlert && <div className={`alert ${dangerAlert.type}`}>{dangerAlert.msg}</div>}
+
+          <div className="form-group">
+            <label>Exporter mes données</label>
+            <p className="privacy-hint">Téléchargez l&apos;ensemble de vos données personnelles (profil, bibliothèque, activité, jetons, paiements) au format JSON.</p>
+            <button type="button" className="save-btn" onClick={exportData} disabled={exportBusy}>
+              {exportBusy ? 'Préparation…' : 'Télécharger mes données (JSON)'}
+            </button>
+          </div>
+
+          <div className="danger-zone">
+            <label>Supprimer mon compte</label>
+            <p className="privacy-hint">Cette action est <strong>irréversible</strong>. Votre compte et toutes vos données (bibliothèque, historique, jetons, partages) seront définitivement effacés.</p>
+            {!delOpen ? (
+              <button type="button" className="danger-btn" onClick={() => { setDelOpen(true); setDangerAlert(null); }}>
+                Supprimer mon compte
+              </button>
+            ) : (
+              <form onSubmit={deleteAccount}>
+                <div className="form-group">
+                  <label>Confirmez avec votre mot de passe</label>
+                  <input
+                    type="password"
+                    value={delPwd}
+                    onChange={e => setDelPwd(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                  />
+                  <p className="privacy-hint">Laissez vide si vous vous connectez uniquement avec Google.</p>
+                </div>
+                <div className="danger-actions">
+                  <button type="button" className="save-btn save-btn-ghost" onClick={() => { setDelOpen(false); setDelPwd(''); }} disabled={delBusy}>
+                    Annuler
+                  </button>
+                  <button type="submit" className="danger-btn" disabled={delBusy}>
+                    {delBusy ? 'Suppression…' : 'Supprimer définitivement'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </div>

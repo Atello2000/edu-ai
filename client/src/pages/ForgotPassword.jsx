@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useT } from '../i18n';
 import Logo from '../components/Logo';
 import './Login.css';
 
 export default function ForgotPassword() {
+  const { t } = useT();
   const [email, setEmail]   = useState('');
   const [done, setDone]     = useState(false);
   const [loading, setLoading] = useState(false);
@@ -25,22 +27,22 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="auth-side" style={{ width: '100%', minHeight: '100vh', borderLeft: 'none' }}>
+    <div className="auth-side" style={{ width: '100%', minHeight: '100dvh', borderLeft: 'none' }}>
       <div className="auth-card" style={{ maxWidth: 400 }}>
         <div className="auth-logo">
           <h1><Logo size={36} /></h1>
-          <p>Réinitialisation du mot de passe</p>
+          <p>{t('auth.forgotPage.subtitle')}</p>
         </div>
 
         {done ? (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📬</div>
-            <p style={{ color: 'var(--text)', marginBottom: '.5rem', fontWeight: 600 }}>Email envoyé !</p>
+            <p style={{ color: 'var(--text)', marginBottom: '.5rem', fontWeight: 600 }}>{t('auth.forgotPage.sentTitle')}</p>
             <p style={{ color: 'var(--muted)', fontSize: '.88rem', lineHeight: 1.6 }}>
-              Si cet email existe dans notre base, vous recevrez un lien de réinitialisation dans quelques minutes.
+              {t('auth.forgotPage.sentBody')}
             </p>
             <Link to="/login" className="auth-btn" style={{ display: 'block', marginTop: '1.5rem', textAlign: 'center', textDecoration: 'none' }}>
-              Retour à la connexion
+              {t('auth.forgotPage.backToLogin')}
             </Link>
           </div>
         ) : (
@@ -48,17 +50,17 @@ export default function ForgotPassword() {
             {error && <div className="auth-error show">{error}</div>}
             <form className="auth-form" onSubmit={handleSubmit}>
               <p style={{ color: 'var(--muted)', fontSize: '.88rem', lineHeight: 1.6, marginBottom: '.5rem' }}>
-                Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe.
+                {t('auth.forgotPage.intro')}
               </p>
               <div className="form-group">
-                <label>Email</label>
-                <input type="email" placeholder="vous@email.com" required value={email} onChange={e => setEmail(e.target.value)} />
+                <label>{t('auth.email')}</label>
+                <input type="email" placeholder={t('auth.forgotPage.emailPlaceholder')} required value={email} onChange={e => setEmail(e.target.value)} />
               </div>
               <button type="submit" className="auth-btn" disabled={loading}>
-                {loading ? 'Envoi…' : 'Envoyer le lien'}
+                {loading ? t('auth.forgotPage.sending') : t('auth.forgotPage.send')}
               </button>
             </form>
-            <p className="landing-link"><Link to="/login">← Retour à la connexion</Link></p>
+            <p className="landing-link"><Link to="/login">{t('auth.forgotPage.backLink')}</Link></p>
           </>
         )}
       </div>

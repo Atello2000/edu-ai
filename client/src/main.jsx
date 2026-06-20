@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth.jsx';
 import { ThemeProvider } from './hooks/useTheme.jsx';
+import { LangProvider } from './i18n';
 import { ConfirmProvider } from './components/ConfirmModal.jsx';
 import ToastContainer from './components/ToastContainer.jsx';
 import App from './App.jsx';
@@ -57,14 +58,16 @@ function applySwUpdate(sw) {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <ConfirmProvider>
-            <App />
-            <ToastContainer />
-          </ConfirmProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      <LangProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ConfirmProvider>
+              <App />
+              <ToastContainer />
+            </ConfirmProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </LangProvider>
     </BrowserRouter>
   </StrictMode>
 );

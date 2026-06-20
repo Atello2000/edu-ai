@@ -3,6 +3,7 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   padding: 2rem;
 }
@@ -243,3 +244,48 @@
   color: var(--rose);
   background: var(--rose-bg);
 }
+
+/* ── Données & confidentialité ── */
+.privacy-hint {
+  font-size: .78rem;
+  color: var(--muted);
+  margin: .25rem 0 .6rem;
+  line-height: 1.5;
+}
+.danger-zone {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-sub);
+}
+.danger-zone > label {
+  display: block;
+  font-weight: 600;
+  color: var(--rose);
+  margin-bottom: .15rem;
+}
+.danger-btn {
+  width: 100%;
+  background: var(--rose-bg);
+  color: var(--rose);
+  border: 1px solid var(--rose);
+  border-radius: var(--radius-xs);
+  padding: .75rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s;
+}
+.danger-btn:hover { opacity: .85; }
+.danger-btn:disabled { opacity: .5; cursor: not-allowed; }
+.save-btn-ghost {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-sub);
+}
+.danger-actions {
+  display: flex;
+  gap: .6rem;
+}
+.danger-actions .save-btn,
+.danger-actions .danger-btn { width: 50%; }

@@ -2,7 +2,7 @@
  * services/jetons.js — système de crédits (jetons) par action
  *
  * Coûts identiques quel que soit le plan.
- * La différence entre plans = allocation mensuelle (free:40, pro:150, max:400).
+ * La différence entre plans = allocation mensuelle (free:80, pro:150, max:400).
  *
  * Rechargement automatique mensuel selon le plan.
  * Toutes les écritures sont atomiques (UPDATE … WHERE jetons >= cost).
@@ -29,7 +29,7 @@ const JETON_COSTS = {
 };
 
 // ── Allocation par plan ───────────────────────────────────────────────────────
-// Free : 40 jetons offerts une seule fois à l'inscription (pas de rechargement mensuel).
+// Free : 80 jetons offerts une seule fois à l'inscription (pas de rechargement mensuel).
 // Pro/Max : rechargement mensuel automatique.
 const MONTHLY_JETONS = {
   free: 80,   // allocation unique à l'inscription

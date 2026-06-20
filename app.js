@@ -170,22 +170,11 @@ app.use('/api/feedback', csrfAndAuth, require('./routes/feedback'));
 // Gérée désormais par le service de maintenance (services/maintenance.js)
 
 
-// SEO — Dynamic rendering : sert la landing pré-rendue aux crawlers
-// Crawlers reçoivent landing-prerender.html (HTML statique complet).
-// Les vrais utilisateurs reçoivent l'app React normale.
-const PRERENDER_PATH = path.join(__dirname, 'public', 'landing-prerender.html');
-const CRAWLER_RE = /googlebot|bingbot|yandexbot|duckduckbot|slurp|twitterbot|facebookexternalhit|linkedinbot|whatsapp|telegrambot|applebot/i;
-
+// SPA fallback — toutes les routes non-API renvoient index.html.
+// (Le SEO/prerendering est géré côté Vercel par scripts/prerender-landing.js,
+// qui écrit le HTML rendu directement dans dist/. Le backend DO ne sert pas le
+// front public, donc plus de dynamic-rendering par user-agent ici.)
 if (fs.existsSync(reactDist)) {
-  app.get('/', (req, res, next) => {
-    const ua = req.headers['user-agent'] || '';
-    if (CRAWLER_RE.test(ua) && fs.existsSync(PRERENDER_PATH)) {
-      return res.sendFile(PRERENDER_PATH);
-    }
-    next();
-  });
-
-  // SPA fallback — toutes les routes non-API renvoient index.html
   app.get('*', (req, res) => {
     res.sendFile(path.join(reactDist, 'index.html'));
   });
