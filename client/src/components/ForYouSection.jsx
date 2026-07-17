@@ -201,6 +201,7 @@ export default function ForYouSection({ onActivity, onUpload, onSRSReview }) {
             eyebrow: 'Diagnostic recommandé',
             title: `Tester ${untestedTopic.name}`,
             detail: 'Ce cours n’a pas encore été évalué. Mesurez votre maîtrise avant de le relire.',
+            meta: '5 questions · environ 3 min',
             action: 'Lancer le diagnostic',
             tone: 'blue',
             run: () => generate(untestedTopic.name, 'quiz'),
@@ -224,10 +225,14 @@ export default function ForYouSection({ onActivity, onUpload, onSRSReview }) {
     <div className="foryou-section">
 
       <section className={`daily-priority daily-${priority.tone}`} aria-labelledby="daily-priority-title">
+        <div className="daily-priority-marker" aria-hidden="true">
+          <IconQuiz />
+        </div>
         <div className="daily-priority-copy">
           <span className="daily-eyebrow">{priority.eyebrow}</span>
           <h2 id="daily-priority-title">{priority.title}</h2>
           <p>{priority.detail}</p>
+          {priority.meta && <span className="daily-priority-meta">{priority.meta}</span>}
         </div>
         <button className="daily-primary-action" onClick={priority.run} disabled={!priority.run || isLoading}>
           {isLoading ? 'Préparation…' : priority.action}
