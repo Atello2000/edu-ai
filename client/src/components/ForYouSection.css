@@ -453,16 +453,15 @@
   margin-bottom: .7rem;
   background: var(--card);
   border: 1px solid var(--border);
-  border-left-width: 3px;
   border-radius: 12px;
   --daily-accent: var(--gold);
   --daily-accent-bg: var(--gold-bg);
   box-shadow: 0 8px 28px rgba(15,23,42,.04);
 }
-.daily-teal { border-left-color: var(--teal); --daily-accent: var(--teal); --daily-accent-bg: var(--teal-bg); }
-.daily-rose { border-left-color: var(--rose); --daily-accent: var(--rose); --daily-accent-bg: var(--rose-bg); }
-.daily-blue { border-left-color: var(--blue); --daily-accent: var(--blue); --daily-accent-bg: var(--blue-bg); }
-.daily-gold { border-left-color: var(--gold); }
+.daily-teal { --daily-accent: var(--teal); --daily-accent-bg: var(--teal-bg); }
+.daily-rose { --daily-accent: var(--rose); --daily-accent-bg: var(--rose-bg); }
+.daily-blue { --daily-accent: var(--blue); --daily-accent-bg: var(--blue-bg); }
+
 .daily-priority-marker {
   display: flex; align-items: center; justify-content: center;
   width: 42px; height: 42px; border-radius: 11px;
