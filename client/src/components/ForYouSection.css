@@ -442,3 +442,95 @@
   .fy-fc-card { height: 160px; }
   .fy-fc-front p, .fy-fc-back p { font-size: .88rem; }
 }
+
+/* ── Priorité quotidienne ───────────────────────────────────────── */
+.daily-priority {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.2rem;
+  margin-bottom: .7rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 12px;
+}
+.daily-teal { border-left-color: var(--teal); }
+.daily-rose { border-left-color: var(--rose); }
+.daily-blue { border-left-color: var(--blue); }
+.daily-gold { border-left-color: var(--gold); }
+.daily-eyebrow {
+  display: block; margin-bottom: .22rem; color: var(--muted);
+  font: 600 .64rem 'DM Mono', monospace; letter-spacing: .06em; text-transform: uppercase;
+}
+.daily-priority h2 { margin: 0; color: var(--text); font: 650 1.12rem 'Outfit', sans-serif; }
+.daily-priority p {
+  margin: .3rem 0 0; max-width: 58ch; color: var(--muted);
+  font: 400 .82rem/1.45 'Outfit', sans-serif;
+}
+.daily-primary-action {
+  min-height: 42px; padding: .65rem 1rem; border: 0; border-radius: 9px;
+  background: var(--gold); color: #111827; cursor: pointer;
+  font: 650 .8rem 'Outfit', sans-serif;
+  transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease;
+}
+.daily-primary-action:hover:not(:disabled) {
+  transform: translateY(-1px); box-shadow: 0 6px 18px rgba(212,169,76,.2);
+}
+.daily-primary-action:disabled { cursor: wait; opacity: .55; }
+.daily-primary-action:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.daily-exam-row {
+  display: flex; align-items: center; justify-content: space-between; gap: .8rem;
+  margin-bottom: 1.25rem; padding: .55rem .7rem;
+  border: 1px solid var(--border-sub); border-radius: 8px; background: var(--surface);
+}
+.daily-exam-row > div { display: flex; flex-direction: column; gap: .08rem; }
+.daily-exam-label { color: var(--text); font: 600 .75rem 'Outfit', sans-serif; }
+.daily-exam-status { color: var(--muted); font: 400 .65rem 'DM Mono', monospace; }
+.daily-exam-row input {
+  min-height: 36px; padding: .35rem .5rem; border: 1px solid var(--border);
+  border-radius: 7px; background: var(--card); color: var(--text); color-scheme: dark;
+  font: 500 .74rem 'Outfit', sans-serif;
+}
+.daily-exam-row input:focus-visible { outline: 2px solid var(--gold-glow); border-color: var(--gold); }
+@media (max-width: 540px) {
+  .daily-priority { grid-template-columns: 1fr; }
+  .daily-primary-action { width: 100%; }
+  .daily-exam-row { align-items: stretch; flex-direction: column; }
+  .daily-exam-row input { width: 100%; box-sizing: border-box; }
+}
+.daily-plan {
+  margin-bottom: 1.35rem; overflow: hidden; border: 1px solid var(--border);
+  border-radius: 10px; background: var(--card);
+}
+.daily-plan-header {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+  padding: .75rem .9rem; border-bottom: 1px solid var(--border-sub);
+}
+.daily-plan-header > div { display: flex; flex-direction: column; gap: .1rem; }
+.daily-plan-title { color: var(--text); font: 650 .82rem 'Outfit', sans-serif; }
+.daily-plan-meta { color: var(--muted); font: 400 .64rem 'DM Mono', monospace; }
+.daily-plan-countdown {
+  padding: .22rem .48rem; border-radius: 6px; background: var(--gold-bg); color: var(--gold);
+  font: 650 .68rem 'DM Mono', monospace;
+}
+.daily-plan-list { list-style: none; margin: 0; padding: .25rem .9rem; }
+.daily-plan-list li {
+  display: grid; grid-template-columns: 24px minmax(0,1fr) auto; align-items: center; gap: .55rem;
+  min-height: 54px; border-bottom: 1px solid var(--border-sub);
+}
+.daily-plan-list li:last-child { border-bottom: 0; }
+.daily-plan-index {
+  display: flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  border-radius: 50%; background: var(--surface); color: var(--muted);
+  font: 600 .65rem 'DM Mono', monospace;
+}
+.daily-plan-list button {
+  display: flex; flex-direction: column; gap: .08rem; min-width: 0; padding: .45rem 0;
+  border: 0; background: transparent; text-align: left; cursor: pointer;
+}
+.daily-plan-list button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.daily-plan-task { overflow: hidden; color: var(--text); font: 600 .78rem 'Outfit', sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.daily-plan-reason { color: var(--muted); font: 400 .65rem 'Outfit', sans-serif; }
+.daily-plan-minutes { color: var(--muted); font: 500 .63rem 'DM Mono', monospace; white-space: nowrap; }
