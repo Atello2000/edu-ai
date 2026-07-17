@@ -421,7 +421,8 @@ export default function AppPage() {
   const handleGlossaryRegen = useCallback(() => {
     resetGlossary();
     const files = selectedFilesRef.current;
-    if (files.length) { setActivePanel('glossary-section'); generateGlossary(files); }
+    // Régénération explicite → on force l'IA (ignore la dérivation depuis le cache résumé)
+    if (files.length) { setActivePanel('glossary-section'); generateGlossary(files, { force: true }); }
   }, [resetGlossary, generateGlossary]);
 
   const handleAddChatFile = useCallback((newFile) => {

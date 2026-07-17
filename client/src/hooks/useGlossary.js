@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import eventBus from '../utils/eventBus';
+import { getLang } from '../utils/lang';
 
 /**
  * useGlossary — extraction de termes via SSE (streaming progressif).
@@ -12,8 +13,11 @@ export function useGlossary() {
   const [error,    setError]    = useState(null);
   const xhrRef = useRef(null);
 
-  const generate = useCallback((files, lang = 'fr') => {
+  const generate = useCallback((files, opts = {}) => {
     if (!files?.length) return;
+
+    const lang  = opts.lang || getLang();
+    const force = !!opts.force; // force=true → ignore le cache résumé, régénère via IA
 
     // Annuler une génération en cours
     xhrRef.current?.abort();
@@ -85,7 +89,7 @@ export function useGlossary() {
       setProgress(null);
     };
 
-    xhr.send(JSON.stringify({ files, lang }));
+    xhr.send(JSON.stringify({ files, lang, force }));
   }, []);
 
   const reset = useCallback(() => {

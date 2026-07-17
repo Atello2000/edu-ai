@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const { prepare } = require('../db');
 const logger  = require('../services/logger');
+const { computeTopicMastery, buildDailyPlan } = require('../services/mastery');
 
 async function calcStreak(userId) {
   const rows = (await prepare(
@@ -93,9 +94,31 @@ router.get('/summary', async (req, res, next) => {
        GROUP BY topic`
     ).all(uid);
 
+    const quizHistory = await prepare(
+      `SELECT topic, score, total, created_at
+       FROM activity
+       WHERE user_id = ? AND type = 'quiz' AND total > 0
+         AND created_at >= NOW() - INTERVAL '90 days'
+       ORDER BY created_at DESC`
+    ).all(uid);
+
+    const dueRow = await prepare(
+      `SELECT COUNT(*) AS n FROM srs_progress
+       WHERE user_id = ? AND next_review <= ? AND front <> ''`
+    ).get(uid, Date.now());
+
+    const mastery = computeTopicMastery(quizHistory);
+    const examDate = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.examDate || ''))
+      ? req.query.examDate
+      : null;
+    const dailyPlan = buildDailyPlan({
+      mastery,
+      dueCards: Number(dueRow?.n || 0),
+      examDate,
+    });
     const streak = await calcStreak(uid);
 
-    res.json({ streak, totalSessions, recentActivity, topTopics, bestScores });
+    res.json({ streak, totalSessions, recentActivity, topTopics, bestScores, mastery, dailyPlan });
   } catch (err) {
     logger.error('GET /activity/summary error', { message: err.message });
     next(err);

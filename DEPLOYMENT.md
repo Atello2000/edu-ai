@@ -1,18 +1,18 @@
 # JangalAI Deployment
 
-Recommended production layout:
+Production architecture:
 
 ```text
 jangalai.online      -> Vercel frontend
-api.jangalai.online  -> Render backend
-Postgres             -> Supabase
+api.jangalai.online  -> DigitalOcean App Platform backend
+Postgres             -> Neon
 ```
 
-## 1. Supabase
+## 1. Neon
 
-Create a Supabase project and copy the Postgres connection string.
+Create a Neon project and copy its pooled Postgres connection string.
 
-Use the pooled connection string when possible for deployed apps, then set it in Render:
+Configure it in DigitalOcean App Platform:
 
 ```text
 DATABASE_URL=postgresql://...
@@ -21,16 +21,17 @@ DB_SSL_REJECT_UNAUTHORIZED=false
 
 The app creates and migrates its schema on backend startup.
 
-## 2. Render
+## 2. DigitalOcean App Platform
 
-Create a new Render Blueprint from this repository, or create a Web Service manually:
+The backend is declared in `.do/app.yaml` and deployed from `main`:
 
 ```text
-Service name: jangalai-api
-Build command: npm ci --include=dev && npm run build
-Start command: npm start
+App name: jangalai-api
+Region: London
+Build: Dockerfile
+HTTP port: 10000
 Health check: /api/health
-Plan: Free for initial testing, then Starter/Standard when you have traffic
+Automatic deployment: deploy_on_push
 ```
 
 Set the custom domain:
@@ -39,8 +40,8 @@ Set the custom domain:
 api.jangalai.online
 ```
 
-Required environment variables are listed in `render.yaml`. Values with `sync: false`
-must be added in the Render dashboard.
+Secrets referenced by `.do/app.yaml` must be configured in the DigitalOcean
+dashboard and must never be committed to the repository.
 
 ## 3. Vercel
 
@@ -66,10 +67,13 @@ Configure:
 
 ```text
 jangalai.online      -> Vercel
-api.jangalai.online  -> Render
+api.jangalai.online  -> DigitalOcean App Platform
 ```
 
-After DNS is live, redeploy Render first, then Vercel.
+After DNS is live, deploy DigitalOcean first, verify the API health, then Vercel.
+
+Merging into `main` triggers both production deployments: DigitalOcean rebuilds
+the backend and Vercel rebuilds the frontend. Neon remains the external database.
 
 ## 5. Smoke test
 

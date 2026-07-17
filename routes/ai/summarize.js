@@ -1,6 +1,5 @@
 const express = require('express');
 const router  = express.Router();
-const crypto  = require('crypto');
 const { aiStream, aiComplete, calcMaxTokens, MODEL_LABEL } = require('../../services/ai');
 const { getAiConfigForAction }                 = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
@@ -8,33 +7,9 @@ const { logTokens }                            = require('../../services/tokens'
 const logger                                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost, chunkSizeFor } = require('../../services/chunker');
-const { prepare }                              = require('../../db');
+const { summarizeCacheKey, getCached, setCache } = require('../../services/summaryCache');
 
-const CACHE_TTL_H    = 24; // heures
 const CHUNK_PARALLEL = 1;  // chunks traités séquentiellement pour respecter les quotas
-
-function summarizeCacheKey(text, lang, user) {
-  const profile = `${user?.level || ''}|${Array.isArray(user?.domains) ? user.domains.join(',') : (user?.domains || '')}`;
-  return crypto.createHash('sha256').update(`summarize:v4:${lang}:${profile}:${text}`).digest('hex');
-}
-
-async function getCached(key) {
-  try {
-    const row = await prepare('SELECT result FROM ai_cache WHERE cache_key = ? AND expires_at > NOW()').get(key);
-    return row?.result || null;
-  } catch { return null; }
-}
-
-async function setCache(key, result) {
-  try {
-    const exp = new Date(Date.now() + CACHE_TTL_H * 3600 * 1000).toISOString();
-    await prepare(
-      `INSERT INTO ai_cache (cache_key, result, expires_at) VALUES (?, ?, ?)
-       ON CONFLICT (cache_key) DO UPDATE SET result = EXCLUDED.result, expires_at = EXCLUDED.expires_at
-       RETURNING cache_key`
-    ).run(key, result, exp);
-  } catch { /* best-effort */ }
-}
 
 // POST /api/summarize — résumé pédagogique en streaming SSE
 router.post('/summarize', async (req, res) => {

@@ -10,7 +10,7 @@ const { sendVerifyEmail, sendResetEmail } = require('../services/email');
 const { doubleCsrfProtection } = require('../middleware/csrf');
 const logger   = require('../services/logger');
 
-const { REFRESH_COOKIE_OPTS, issueRefreshToken, consumeRefreshToken, revokeAllForUser } = require('../services/refreshTokens');
+const { REFRESH_COOKIE_OPTS, issueRefreshToken, consumeRefreshToken, revokeAllForUser, issuedAtAfterRevocation } = require('../services/refreshTokens');
 
 const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BETA_LIMIT = parseInt(process.env.BETA_USER_LIMIT || '100', 10);
@@ -31,9 +31,11 @@ function getAppUrl(req) {
 }
 
 async function setToken(res, userId, req) {
-  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
+  const row = await db.prepare('SELECT session_invalidated_at FROM users WHERE id = ?').get(userId);
+  const issuedAt = issuedAtAfterRevocation(row?.session_invalidated_at);
+  const token = jwt.sign({ userId, iat: issuedAt }, JWT_SECRET, { expiresIn: '1h' });
   res.cookie('jangalai.token',   token, ACCESS_COOKIE_OPTS);
-  res.cookie('jangalai.refresh', await issueRefreshToken(userId), REFRESH_COOKIE_OPTS);
+  res.cookie('jangalai.refresh', await issueRefreshToken(userId, issuedAt), REFRESH_COOKIE_OPTS);
   if (req) generateAndSetCsrfToken(req, res);
 }
 

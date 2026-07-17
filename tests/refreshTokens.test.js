@@ -51,7 +51,7 @@ jest.mock('../db', () => {
 });
 
 const db = require('../db');
-const { issueRefreshToken, consumeRefreshToken } = require('../services/refreshTokens');
+const { issueRefreshToken, consumeRefreshToken, issuedAtAfterRevocation } = require('../services/refreshTokens');
 
 beforeEach(() => {
   db.__tokens.clear();
@@ -110,4 +110,10 @@ test('JWT valide mais inconnu en base : rejeté sans révocation', async () => {
 test('token invalide ou absent : rejeté', async () => {
   expect(await consumeRefreshToken(null)).toBeNull();
   expect(await consumeRefreshToken('not-a-jwt')).toBeNull();
+});
+test('reconnexion immédiate : iat est strictement postérieur à la révocation', () => {
+  const invalidatedAt = '2026-07-17T12:00:00.900Z';
+  const issuedAt = issuedAtAfterRevocation(invalidatedAt, Date.parse('2026-07-17T12:00:00.950Z'));
+
+  expect(issuedAt * 1000).toBeGreaterThan(new Date(invalidatedAt).getTime());
 });
