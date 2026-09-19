@@ -171,7 +171,7 @@ footer { padding: 2.5rem; border-top: 1px solid var(--border); display: flex; al
 .footer-links a:hover { color: var(--blue); }
 .footer-cta-link { color: var(--blue) !important; font-weight: 600; }
 
-.page-loader { display: flex; align-items: center; justify-content: center; min-height: 100vh; color: var(--muted); font-family: 'Outfit', sans-serif; }
+.page-loader { display: flex; align-items: center; justify-content: center; min-height: 100vh; min-height: 100dvh; color: var(--muted); font-family: 'Outfit', sans-serif; }
 
 .nav-links { display: none; }
 @media (min-width: 768px) { .nav-links { display: flex; } }

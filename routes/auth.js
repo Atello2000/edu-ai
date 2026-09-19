@@ -11,7 +11,7 @@ const { doubleCsrfProtection } = require('../middleware/csrf');
 const { MONTHLY_JETONS } = require('../services/jetons');
 const logger   = require('../services/logger');
 
-const { REFRESH_COOKIE_OPTS, issueRefreshToken, consumeRefreshToken, revokeAllForUser } = require('../services/refreshTokens');
+const { REFRESH_COOKIE_OPTS, issueRefreshToken, consumeRefreshToken, revokeAllForUser, issuedAtAfterRevocation } = require('../services/refreshTokens');
 
 const EMAIL_RE   = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const BETA_LIMIT = parseInt(process.env.BETA_USER_LIMIT || '100', 10);
@@ -32,13 +32,11 @@ function getAppUrl(req) {
 }
 
 async function setToken(res, userId, req) {
-  // A login immediately after revocation must be newer than its DB timestamp.
-  const session = await db.prepare('SELECT session_invalidated_at FROM users WHERE id = ?').get(userId);
-  const cutoff = session?.session_invalidated_at ? Math.ceil(new Date(session.session_invalidated_at).getTime() / 1000) : 0;
-  const iat = Math.max(Math.floor(Date.now() / 1000), cutoff);
-  const token = jwt.sign({ userId, iat }, JWT_SECRET, { expiresIn: '1h' });
+  const row = await db.prepare('SELECT session_invalidated_at FROM users WHERE id = ?').get(userId);
+  const issuedAt = issuedAtAfterRevocation(row?.session_invalidated_at);
+  const token = jwt.sign({ userId, iat: issuedAt }, JWT_SECRET, { expiresIn: '1h' });
   res.cookie('jangalai.token',   token, ACCESS_COOKIE_OPTS);
-  res.cookie('jangalai.refresh', await issueRefreshToken(userId, iat), REFRESH_COOKIE_OPTS);
+  res.cookie('jangalai.refresh', await issueRefreshToken(userId, issuedAt), REFRESH_COOKIE_OPTS);
   if (req) generateAndSetCsrfToken(req, res);
 }
 
@@ -438,6 +436,100 @@ router.get('/google/callback', async (req, res) => {
   } catch (err) {
     logger.error('Google OAuth error', { message: err.message, stack: err.stack });
     res.redirect(`${getAppUrl(req)}/login?error=google_error`);
+  }
+});
+
+// ── GET /api/auth/account/export ──────────────────────────────────────────────
+// Export RGPD : toutes les données personnelles de l'utilisateur en un seul JSON
+// téléchargeable. Lecture seule → pas de protection CSRF nécessaire, mais la
+// session reste obligatoire.
+router.get('/account/export', async (req, res) => {
+  try {
+    const decoded = await getTokenUser(req, res);
+    if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
+    const uid = decoded.userId;
+
+    const user = await db.prepare(
+      `SELECT id, email, name, plan, level, domains, specialty, jetons, jetons_reset_date,
+              email_verified, onboarding_done, created_at, plan_expires_at
+         FROM users WHERE id = ?`
+    ).get(uid);
+    if (!user) return res.status(401).json({ error: 'Session invalide.' });
+
+    const [folders, files, activity, jetonTransactions, srsProgress, messages, payments, sharedContent, tokenUsage] =
+      await Promise.all([
+        db.prepare('SELECT id, name, icon, created_at FROM folders WHERE user_id = ? ORDER BY id').all(uid),
+        db.prepare(
+          `SELECT ff.id, ff.folder_id, ff.orig_name, ff.size, ff.text, ff.truncated, ff.created_at
+             FROM folder_files ff JOIN folders f ON f.id = ff.folder_id
+            WHERE f.user_id = ? ORDER BY ff.id`
+        ).all(uid),
+        db.prepare('SELECT topic, type, score, total, created_at FROM activity WHERE user_id = ? ORDER BY created_at').all(uid),
+        db.prepare('SELECT action, amount, balance_after, note, created_at FROM jeton_transactions WHERE user_id = ? ORDER BY created_at').all(uid),
+        db.prepare('SELECT card_hash, front, back, interval_days, ease_factor, repetitions, next_review, updated_at FROM srs_progress WHERE user_id = ?').all(uid),
+        db.prepare('SELECT message, is_read, created_at FROM user_messages WHERE user_id = ? ORDER BY created_at').all(uid),
+        db.prepare('SELECT ref_command, plan, amount, status, paid_at, created_at FROM payments WHERE user_id = ? ORDER BY created_at').all(uid),
+        db.prepare('SELECT token, type, title, content, expires_at, created_at FROM shared_content WHERE user_id = ? ORDER BY created_at').all(uid),
+        db.prepare('SELECT date, action, provider, input_tokens, output_tokens, created_at FROM token_usage WHERE user_id = ? ORDER BY created_at').all(uid),
+      ]);
+
+    const payload = {
+      export_version: 1,
+      exported_at: new Date().toISOString(),
+      profile: user,
+      library: { folders, files },
+      activity,
+      jeton_transactions: jetonTransactions,
+      srs_progress: srsProgress,
+      messages,
+      payments,
+      shared_content: sharedContent,
+      token_usage: tokenUsage,
+    };
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="jangalai-donnees-${stamp}.json"`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(JSON.stringify(payload, null, 2));
+  } catch (err) {
+    logger.error('account export failed', { message: err.message });
+    res.status(500).json({ error: 'Export impossible pour le moment. Réessayez.' });
+  }
+});
+
+// ── DELETE /api/auth/account ──────────────────────────────────────────────────
+// Suppression définitive du compte et de toutes les données associées.
+// La cascade FK (ON DELETE CASCADE) efface dossiers, fichiers, activité,
+// transactions, SRS, messages, paiements, partages, sessions et tokens.
+router.delete('/account', doubleCsrfProtection, async (req, res) => {
+  try {
+    const decoded = await getTokenUser(req, res);
+    if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
+
+    const user = await db.prepare('SELECT id, email, password FROM users WHERE id = ?').get(decoded.userId);
+    if (!user) return res.status(401).json({ error: 'Session invalide.' });
+
+    // Compte avec mot de passe → re-confirmation obligatoire (le compte Google
+    // sans mot de passe est déjà protégé par la session + CSRF).
+    if (user.password) {
+      const { password } = req.body || {};
+      if (!password) return res.status(400).json({ error: 'Mot de passe requis pour confirmer la suppression.' });
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) return res.status(401).json({ error: 'Mot de passe incorrect.' });
+    }
+
+    await revokeAllForUser(user.id).catch(() => {});
+    await db.prepare('DELETE FROM users WHERE id = ?').run(user.id);
+    logger.info('ACCOUNT', { action: 'self_delete', userId: user.id });
+
+    const base = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
+    res.clearCookie('jangalai.token',   base);
+    res.clearCookie('jangalai.refresh', base);
+    res.json({ ok: true });
+  } catch (err) {
+    logger.error('account delete failed', { message: err.message });
+    res.status(500).json({ error: 'Suppression impossible pour le moment. Réessayez.' });
   }
 });
 

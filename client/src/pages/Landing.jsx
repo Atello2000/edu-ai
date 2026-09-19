@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import { useT } from '../i18n';
 import Logo from '../components/Logo';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 import './Landing.css';
 
 function useFadeUp() {
@@ -58,6 +60,7 @@ function FaqItem({ q, a }) {
 
 export default function Landing() {
   const { user } = useAuth();
+  const { t } = useT();
   useTheme();
   const navigate = useNavigate();
 
@@ -70,73 +73,74 @@ export default function Landing() {
       <nav>
         <Link to="/" className="nav-logo"><Logo size={28} /></Link>
         <div className="nav-links">
-          <a href="#features">Fonctionnalités</a>
-          <a href="#pricing">Tarifs</a>
-          <a href="#faq">FAQ</a>
+          <a href="#features">{t('landing.nav.features')}</a>
+          <a href="#pricing">{t('landing.nav.pricing')}</a>
+          <a href="#faq">{t('landing.nav.faq')}</a>
         </div>
         <div className="nav-actions">
-          <Link to="/login" className="btn-outline">Connexion</Link>
-          <Link to="/login?tab=register" className="btn-primary">Commencer</Link>
+          <LanguageSwitcher />
+          <Link to="/login" className="btn-outline">{t('landing.nav.login')}</Link>
+          <Link to="/login?tab=register" className="btn-primary">{t('landing.nav.start')}</Link>
         </div>
       </nav>
 
       <section className="hero">
-        <div className="hero-eyebrow fade-up">Révision assistée par IA</div>
-        <h1 className="fade-up fade-up-delay-1">Révisez plus vite,<br />apprenez <em>différemment</em></h1>
+        <div className="hero-eyebrow fade-up">{t('landing.hero.eyebrow')}</div>
+        <h1 className="fade-up fade-up-delay-1">{t('landing.hero.title1')}<br />{t('landing.hero.title2')}<em>{t('landing.hero.titleEm')}</em></h1>
         <p className="fade-up fade-up-delay-2">
-          Importez votre cours, choisissez votre objectif. Jangalai s'occupe du reste.
+          {t('landing.hero.subtitle')}
         </p>
         <div className="hero-btns fade-up fade-up-delay-3">
-          <Link to="/login?tab=register" className="btn-hero">Commencer gratuitement →</Link>
+          <Link to="/login?tab=register" className="btn-hero">{t('landing.hero.ctaPrimary')}</Link>
           <a href="#how-it-works" className="btn-hero-outline">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg> Voir comment ça marche
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg> {t('landing.hero.ctaSecondary')}
           </a>
         </div>
-        <p className="hero-social-proof fade-up fade-up-delay-4">100% gratuit pour commencer · Aucun engagement</p>
+        <p className="hero-social-proof fade-up fade-up-delay-4">{t('landing.hero.socialProof')}</p>
       </section>
 
 
       <div className="mockup-section">
-        <div className="section-label fade-up">Aperçu de l'application</div>
-        <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '2.5rem' }}>Votre assistant de révision <em>personnalisé</em></h2>
+        <div className="section-label fade-up">{t('landing.mockup.label')}</div>
+        <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '2.5rem' }}>{t('landing.mockup.title')}<em>{t('landing.mockup.titleEm')}</em></h2>
         <div className="app-mockup fade-up fade-up-delay-2">
           <div className="mockup-bar">
             <div className="mockup-dot red"/><div className="mockup-dot yellow"/><div className="mockup-dot green"/>
-            <div className="mockup-url">jangalai.online · Flashcards</div>
+            <div className="mockup-url">{t('landing.mockup.url')}</div>
           </div>
           <div className="mockup-body">
             <div className="mockup-sidebar">
-              <div className="mockup-sidebar-title">Mes cours</div>
-              <div className="mockup-file active"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Biochimie S3.pdf</div>
-              <div className="mockup-file"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span> Marketing Mix.pptx</div>
-              <div className="mockup-file"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> Droit des contrats.pdf</div>
-              <div className="mockup-file"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/><path d="M14 13h2a2 2 0 0 1 0 4h-2"/></svg></span> Maths Appliquées.docx</div>
-              <div style={{ marginTop: '1.5rem', padding: '.5rem .6rem', background: 'var(--blue-bg)', border: '1px dashed rgba(61,126,255,.3)', borderRadius: '8px', fontSize: '.72rem', color: 'var(--blue)', textAlign: 'center' }}>+ Ajouter un cours</div>
+              <div className="mockup-sidebar-title">{t('landing.mockup.myCourses')}</div>
+              <div className="mockup-file active"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> {t('landing.mockup.file1')}</div>
+              <div className="mockup-file"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span> {t('landing.mockup.file2')}</div>
+              <div className="mockup-file"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> {t('landing.mockup.file3')}</div>
+              <div className="mockup-file"><span className="fi"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="12" y1="17" x2="8" y2="17"/><path d="M14 13h2a2 2 0 0 1 0 4h-2"/></svg></span> {t('landing.mockup.file4')}</div>
+              <div style={{ marginTop: '1.5rem', padding: '.5rem .6rem', background: 'var(--blue-bg)', border: '1px dashed rgba(61,126,255,.3)', borderRadius: '8px', fontSize: '.72rem', color: 'var(--blue)', textAlign: 'center' }}>{t('landing.mockup.addCourse')}</div>
             </div>
             <div className="mockup-main">
               <div className="mockup-tabs">
-                <div className="mockup-tab">Résumé</div>
-                <div className="mockup-tab">Quiz</div>
-                <div className="mockup-tab active">Flashcards</div>
-                <div className="mockup-tab">Chat</div>
-                <div className="mockup-tab">Fiche exam</div>
-                <div className="mockup-tab">Carte mentale</div>
+                <div className="mockup-tab">{t('landing.mockup.tabSummary')}</div>
+                <div className="mockup-tab">{t('landing.mockup.tabQuiz')}</div>
+                <div className="mockup-tab active">{t('landing.mockup.tabFlashcards')}</div>
+                <div className="mockup-tab">{t('landing.mockup.tabChat')}</div>
+                <div className="mockup-tab">{t('landing.mockup.tabExam')}</div>
+                <div className="mockup-tab">{t('landing.mockup.tabMindmap')}</div>
               </div>
-              <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.75rem' }}>Carte 7 sur 24 · Biochimie S3</div>
+              <div style={{ fontSize: '.72rem', color: 'var(--muted)', marginBottom: '.75rem' }}>{t('landing.mockup.cardCounter')}</div>
               <div className="mockup-card-preview">
-                <div className="mockup-card-q">Qu'est-ce que la phosphorylation oxydative ?</div>
-                <div className="mockup-card-a">Processus métabolique dans lequel l'énergie libérée par l'oxydation des nutriments est utilisée pour synthétiser de l'ATP à partir d'ADP et de phosphate inorganique, principalement dans les mitochondries.</div>
+                <div className="mockup-card-q">{t('landing.mockup.cardQ')}</div>
+                <div className="mockup-card-a">{t('landing.mockup.cardA')}</div>
                 <div className="mockup-card-footer">
-                  <div className="mockup-btn hard">Difficile</div>
-                  <div className="mockup-btn ok">Correct</div>
-                  <div className="mockup-btn easy">Facile</div>
+                  <div className="mockup-btn hard">{t('landing.mockup.btnHard')}</div>
+                  <div className="mockup-btn ok">{t('landing.mockup.btnOk')}</div>
+                  <div className="mockup-btn easy">{t('landing.mockup.btnEasy')}</div>
                 </div>
               </div>
               <div className="mockup-progress">
-                <span>Progression</span>
+                <span>{t('landing.mockup.progress')}</span>
                 <div className="mockup-progress-bar"><div className="mockup-progress-fill"/></div>
                 <span>68%</span>
-                <span style={{ marginLeft: 'auto', color: 'var(--teal)', display:'inline-flex', alignItems:'center', gap:'.25rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 13a6 6 0 0 0 12 0c0-5-6-7-6-13z"/><path d="M10 17.5a2.5 2.5 0 0 0 4 0c.5-1-1-2.5-2-3-1 .5-2.5 2-2 3z"/></svg> 5j de suite</span>
+                <span style={{ marginLeft: 'auto', color: 'var(--teal)', display:'inline-flex', alignItems:'center', gap:'.25rem' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 6-6 8-6 13a6 6 0 0 0 12 0c0-5-6-7-6-13z"/><path d="M10 17.5a2.5 2.5 0 0 0 4 0c.5-1-1-2.5-2-3-1 .5-2.5 2-2 3z"/></svg> {t('landing.mockup.streak')}</span>
               </div>
             </div>
           </div>
@@ -144,110 +148,110 @@ export default function Landing() {
       </div>
 
       <div className="section" id="how-it-works">
-        <div className="section-label fade-up">Comment ça marche</div>
-        <h2 className="fade-up fade-up-delay-1">Trois étapes vers la <em>maîtrise</em></h2>
+        <div className="section-label fade-up">{t('landing.how.label')}</div>
+        <h2 className="fade-up fade-up-delay-1">{t('landing.how.title')}<em>{t('landing.how.titleEm')}</em></h2>
         <div className="steps-grid">
-          <div className="step-card fade-up fade-up-delay-1"><div className="step-number">01</div><div className="step-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><h3>Configurez votre profil</h3><p>Indiquez votre niveau d'études, vos domaines et votre spécialité. En 60 secondes, Jangalai connaît votre filière et adapte chaque contenu généré à votre contexte.</p></div>
-          <div className="step-card fade-up fade-up-delay-2"><div className="step-number">02</div><div className="step-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><h3>Définissez votre objectif</h3><p>Examen demain ? Besoin de mémoriser ? Après chaque chargement, indiquez votre objectif. Jangalai adapte la difficulté, le nombre de questions et le type de contenu — ou lancez « Préparer ma session » pour tout générer en un seul clic.</p></div>
-          <div className="step-card fade-up fade-up-delay-3"><div className="step-number">03</div><div className="step-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div><h3>Révisez, corrigez, progressez</h3><p>L'algorithme SM-2 planifie vos flashcards au bon moment. Après chaque quiz, révisez vos erreurs en un clic ou convertissez-les en flashcards. Votre streak quotidien vous garde motivé jusqu'aux examens.</p></div>
+          <div className="step-card fade-up fade-up-delay-1"><div className="step-number">01</div><div className="step-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><h3>{t('landing.how.step1Title')}</h3><p>{t('landing.how.step1Desc')}</p></div>
+          <div className="step-card fade-up fade-up-delay-2"><div className="step-number">02</div><div className="step-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><h3>{t('landing.how.step2Title')}</h3><p>{t('landing.how.step2Desc')}</p></div>
+          <div className="step-card fade-up fade-up-delay-3"><div className="step-number">03</div><div className="step-icon"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div><h3>{t('landing.how.step3Title')}</h3><p>{t('landing.how.step3Desc')}</p></div>
         </div>
       </div>
 
       <div className="section" id="features" style={{ paddingTop: 0 }}>
-        <div className="section-label fade-up">Fonctionnalités</div>
-        <h2 className="fade-up fade-up-delay-1">Tout ce dont vous avez besoin pour <em>réussir</em></h2>
+        <div className="section-label fade-up">{t('landing.features.label')}</div>
+        <h2 className="fade-up fade-up-delay-1">{t('landing.features.title')}<em>{t('landing.features.titleEm')}</em></h2>
         <div className="features-grid">
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><h3>Préparer ma session</h3><p>Un seul bouton génère simultanément résumé, quiz et flashcards — adaptés à l'objectif que vous avez choisi. Idéal la veille d'un examen.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg></div><h3>Objectif de session</h3><p>Examen demain, comprendre, mémoriser ou s'entraîner : Jangalai adapte la difficulté, le nombre de questions et le volume de cartes à votre besoin du moment.</p></div>
-          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>Résumés structurés</h3><p>5 sections claires en secondes : objectifs, points clés, résumé détaillé, concepts importants et à retenir.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><h3>{t('landing.features.f1Title')}</h3><p>{t('landing.features.f1Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg></div><h3>{t('landing.features.f2Title')}</h3><p>{t('landing.features.f2Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div><h3>{t('landing.features.f3Title')}</h3><p>{t('landing.features.f3Desc')}</p></div>
           
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5"/></svg></div><h3>Quiz QCM & correction</h3><p>3 niveaux de difficulté, mode examen avec chronomètre. Après le score, révisez vos erreurs en un clic ou convertissez-les en flashcards.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg></div><h3>Flashcards intelligentes</h3><p>Algorithme SM-2 — vous révisez ce que vous ne maîtrisez pas encore, exactement au bon moment. Répétitions optimales et notifications de rappel.</p></div>
-          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><h3>Chat avec le cours</h3><p>Posez n'importe quelle question sur vos fichiers. Joignez une image, un schéma ou un devoir pour le faire corriger par l'IA.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5"/></svg></div><h3>{t('landing.features.f4Title')}</h3><p>{t('landing.features.f4Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="8" width="16" height="12" rx="2"/><path d="M6 8V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg></div><h3>{t('landing.features.f5Title')}</h3><p>{t('landing.features.f5Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><h3>{t('landing.features.f6Title')}</h3><p>{t('landing.features.f6Desc')}</p></div>
           
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><h3>Fiche d&apos;examen</h3><p>Définitions, pièges à éviter, tableaux comparatifs et questions probables générés en un clic depuis vos cours.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/></svg></div><h3>Carte mentale</h3><p>Visualisez la structure du cours sous forme d'arbre interactif. Zoomez, naviguez et repérez les connexions entre concepts en un coup d'œil.</p></div>
-          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><h3>Pour vous — sans fichier</h3><p>Votre espace personnalisé suggère des sujets clés de votre domaine. Générez des flashcards ou un quiz en un clic, sans rien charger.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><h3>{t('landing.features.f7Title')}</h3><p>{t('landing.features.f7Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="12" y1="13" x2="5" y2="17"/><line x1="12" y1="13" x2="19" y2="17"/></svg></div><h3>{t('landing.features.f8Title')}</h3><p>{t('landing.features.f8Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><h3>{t('landing.features.f9Title')}</h3><p>{t('landing.features.f9Desc')}</p></div>
           
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="1"/><rect x="12" y="7" width="3" height="11" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg></div><h3>Suivi &amp; streak quotidien</h3><p>Historique des révisions, scores par sujet, streak de jours consécutifs. Restez motivé avec une progression visible chaque jour.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg></div><h3>Dialogue Socratique</h3><p>Échangez avec un tuteur virtuel utilisant la méthode socratique. Il vous pose des questions progressives pour vous amener à trouver les réponses par vous-même.</p></div>
-          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></div><h3>Prédicteur d'examen</h3><p>Analyse le contenu de vos cours et prédit avec précision les notions, concepts et questions les plus probables à l'examen, avec des scores de probabilité.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="7" rx="1"/><rect x="12" y="7" width="3" height="11" rx="1"/><rect x="17" y="4" width="3" height="14" rx="1"/></svg></div><h3>{t('landing.features.f10Title')}</h3><p>{t('landing.features.f10Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01"/><path d="M12 10h.01"/><path d="M16 10h.01"/></svg></div><h3>{t('landing.features.f11Title')}</h3><p>{t('landing.features.f11Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon gold"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg></div><h3>{t('landing.features.f12Title')}</h3><p>{t('landing.features.f12Desc')}</p></div>
           
-          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><h3>Plan d'étude intelligent</h3><p>Générez un calendrier de révision structuré jusqu'à la date de votre évaluation. Chaque jour, des tâches précises et planifiées vous rapprochent de la réussite.</p></div>
-          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5"/></svg></div><h3>Analyse des erreurs</h3><p>L'IA analyse vos mauvaises réponses de quiz, identifie vos schémas d'erreurs récurrents, et crée des flashcards de remédiation immédiate.</p></div>
-          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h3>Minuteur Pomodoro</h3><p>Un chronomètre de concentration flottant, interactif et tactile (entièrement fluide sur mobile) pour découper vos sessions de révision en intervalles efficaces.</p></div>
+          <div className="feature-card fade-up fade-up-delay-1"><div className="feat-icon blue"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><h3>{t('landing.features.f13Title')}</h3><p>{t('landing.features.f13Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-2"><div className="feat-icon purple"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2.5"/></svg></div><h3>{t('landing.features.f14Title')}</h3><p>{t('landing.features.f14Desc')}</p></div>
+          <div className="feature-card fade-up fade-up-delay-3"><div className="feat-icon teal"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h3>{t('landing.features.f15Title')}</h3><p>{t('landing.features.f15Desc')}</p></div>
         </div>
       </div>
 
 
       <div className="pricing-section" id="pricing">
         <div className="pricing-inner">
-          <div className="section-label fade-up">Tarifs</div>
-          <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '.75rem' }}>Simple et <em>transparent</em></h2>
-          <p className="fade-up fade-up-delay-2" style={{ color: 'var(--muted)', fontSize: '.95rem', marginBottom: '2.5rem' }}>Commencez gratuitement et passez à la vitesse supérieure selon vos besoins.</p>
+          <div className="section-label fade-up">{t('landing.pricing.label')}</div>
+          <h2 className="fade-up fade-up-delay-1" style={{ marginBottom: '.75rem' }}>{t('landing.pricing.title')}<em>{t('landing.pricing.titleEm')}</em></h2>
+          <p className="fade-up fade-up-delay-2" style={{ color: 'var(--muted)', fontSize: '.95rem', marginBottom: '2.5rem' }}>{t('landing.pricing.subtitle')}</p>
           <div className="pricing-grid">
             <div className="price-card fade-up fade-up-delay-1">
-              <div className="plan-name">Gratuit</div>
-              <div className="plan-price">0 F CFA</div>
-              <div className="plan-desc">Pour découvrir Jangalai sans engagement</div>
+              <div className="plan-name">{t('landing.pricing.freeName')}</div>
+              <div className="plan-price">{t('landing.pricing.freePrice')}</div>
+              <div className="plan-desc">{t('landing.pricing.freeDesc')}</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>40 jetons</strong> offerts à l'inscription</div>
-                <div className="plan-feat">Résumés, quiz, flashcards</div>
-                <div className="plan-feat">Chat avec le cours</div>
-                <div className="plan-feat">Carte mentale & fiche d'examen</div>
-                <div className="plan-feat">Préparer ma session inclus</div>
-                <div className="plan-feat">Fichiers jusqu'à 5 Mo · PDF, PPT, DOCX</div>
-                <div className="plan-feat">10 sessions sauvegardées</div>
-                <div className="plan-feat">Bibliothèque jusqu'à 15 cours</div>
+                <div className="plan-feat"><strong>{t('landing.pricing.freeJetons')}</strong>{t('landing.pricing.freeJetonsRest')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF2')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF3')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF4')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF5')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF6')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF7')}</div>
+                <div className="plan-feat">{t('landing.pricing.freeF8')}</div>
               </div>
-              <Link to="/login"><button className="plan-cta">Commencer gratuitement</button></Link>
+              <Link to="/login"><button className="plan-cta">{t('landing.pricing.freeCta')}</button></Link>
             </div>
 
             {/* ── Recharge ponctuelle ── */}
             <div className="price-card price-card-topup fade-up fade-up-delay-2">
-              <div className="plan-name">Recharge</div>
-              <div className="plan-price topup-price">1 000 <span>F CFA</span></div>
-              <div className="plan-desc">Un crédit ponctuel, sans abonnement</div>
+              <div className="plan-name">{t('landing.pricing.topupName')}</div>
+              <div className="plan-price topup-price">{t('landing.pricing.topupPrice')} <span>{t('landing.pricing.topupCurrency')}</span></div>
+              <div className="plan-desc">{t('landing.pricing.topupDesc')}</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>+50 jetons</strong> ajoutés immédiatement</div>
-                <div className="plan-feat">Votre plan reste inchangé</div>
-                <div className="plan-feat">Paiement unique, sans engagement</div>
-                <div className="plan-feat">Wave, Orange Money, carte</div>
-                <div className="plan-feat">Disponible à tout moment</div>
+                <div className="plan-feat"><strong>{t('landing.pricing.topupJetons')}</strong>{t('landing.pricing.topupJetonsRest')}</div>
+                <div className="plan-feat">{t('landing.pricing.topupF2')}</div>
+                <div className="plan-feat">{t('landing.pricing.topupF3')}</div>
+                <div className="plan-feat">{t('landing.pricing.topupF4')}</div>
+                <div className="plan-feat">{t('landing.pricing.topupF5')}</div>
               </div>
-              <Link to="/login?tab=register"><button className="plan-cta plan-cta-topup">Recharger mes jetons</button></Link>
+              <Link to="/login?tab=register"><button className="plan-cta plan-cta-topup">{t('landing.pricing.topupCta')}</button></Link>
             </div>
 
             <div className="price-card featured fade-up fade-up-delay-3">
-              <div className="plan-name">Pro</div>
-              <div className="plan-price">2 500 F CFA <span>/ mois</span></div>
-              <div className="plan-desc">Pour les étudiants en période d'examen</div>
+              <div className="plan-name">{t('landing.pricing.proName')}</div>
+              <div className="plan-price">{t('landing.pricing.proPrice')} <span>{t('landing.pricing.perMonth')}</span></div>
+              <div className="plan-desc">{t('landing.pricing.proDesc')}</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>150 jetons</strong> rechargés / mois</div>
-                <div className="plan-feat">Prédicteur de questions d'examen</div>
-                <div className="plan-feat">Plan de révision & mode socratique</div>
-                <div className="plan-feat">Analyse des erreurs récurrentes</div>
-                <div className="plan-feat">Fichiers jusqu'à 10 Mo</div>
-                <div className="plan-feat">30 sessions sauvegardées</div>
-                <div className="plan-feat">Bibliothèque jusqu'à 50 cours</div>
-                <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
+                <div className="plan-feat"><strong>{t('landing.pricing.proJetons')}</strong>{t('landing.pricing.proJetonsRest')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF2')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF3')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF4')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF5')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF6')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF7')}</div>
+                <div className="plan-feat">{t('landing.pricing.proF8')}</div>
               </div>
-              <Link to="/login"><button className="plan-cta">S'abonner au plan Pro</button></Link>
+              <Link to="/login"><button className="plan-cta">{t('landing.pricing.proCta')}</button></Link>
             </div>
             <div className="price-card fade-up fade-up-delay-4">
-              <div className="plan-name">Max</div>
-              <div className="plan-price">5 000 F CFA <span>/ mois</span></div>
-              <div className="plan-desc">Pour une révision intensive sans limites</div>
+              <div className="plan-name">{t('landing.pricing.maxName')}</div>
+              <div className="plan-price">{t('landing.pricing.maxPrice')} <span>{t('landing.pricing.perMonth')}</span></div>
+              <div className="plan-desc">{t('landing.pricing.maxDesc')}</div>
               <div className="plan-features">
-                <div className="plan-feat"><strong>400 jetons</strong> rechargés / mois</div>
-                <div className="plan-feat">Tout le plan Pro inclus</div>
-                <div className="plan-feat">Export PDF fiche d'examen</div>
-                <div className="plan-feat">Fichiers jusqu'à 20 Mo</div>
-                <div className="plan-feat">Sessions illimitées</div>
-                <div className="plan-feat">Bibliothèque jusqu'à 100 cours</div>
-                <div className="plan-feat">Wave, OM & Cartes (Visa/Mastercard)</div>
+                <div className="plan-feat"><strong>{t('landing.pricing.maxJetons')}</strong>{t('landing.pricing.maxJetonsRest')}</div>
+                <div className="plan-feat">{t('landing.pricing.maxF2')}</div>
+                <div className="plan-feat">{t('landing.pricing.maxF3')}</div>
+                <div className="plan-feat">{t('landing.pricing.maxF4')}</div>
+                <div className="plan-feat">{t('landing.pricing.maxF5')}</div>
+                <div className="plan-feat">{t('landing.pricing.maxF6')}</div>
+                <div className="plan-feat">{t('landing.pricing.maxF7')}</div>
               </div>
-              <Link to="/login"><button className="plan-cta">S'abonner au plan Max</button></Link>
+              <Link to="/login"><button className="plan-cta">{t('landing.pricing.maxCta')}</button></Link>
             </div>
           </div>
 
@@ -255,42 +259,42 @@ export default function Landing() {
       </div>
  
       <div className="section" id="faq">
-        <div className="section-label fade-up">FAQ</div>
-        <h2 className="fade-up fade-up-delay-1">Questions <em>fréquentes</em></h2>
+        <div className="section-label fade-up">{t('landing.faq.label')}</div>
+        <h2 className="fade-up fade-up-delay-1">{t('landing.faq.title')}<em>{t('landing.faq.titleEm')}</em></h2>
         <div className="faq fade-up fade-up-delay-2">
-          <FaqItem q="Comment fonctionne le système de jetons (crédits) ?" a="Jangalai utilise un système de jetons transparent. Chaque action IA consomme un nombre de jetons précis (ex. Résumé : 3 jetons, Quiz QCM : 2 jetons, Flashcards : 2 jetons, Message Chat : 1 jeton, Fiche d'examen : 3 jetons). Le plan Gratuit offre 80 jetons à l'inscription — une allocation unique pour découvrir l'application. Les plans Pro (150 jetons) et Max (400 jetons) sont crédités à chaque paiement confirmé. Vous pouvez aussi acheter des jetons supplémentaires à tout moment via la recharge ponctuelle. Votre historique complet est disponible dans votre profil." />
-          <FaqItem q="Qu'est-ce que « Préparer ma session » ?" a="C'est le moyen le plus rapide de démarrer une révision complète. En un clic, Jangalai génère simultanément un résumé, un quiz et des flashcards à partir de vos cours — le tout adapté à l'objectif que vous avez défini (examen demain, comprendre, mémoriser ou s'entraîner). Parfait la veille d'une évaluation." />
-          <FaqItem q="Comment fonctionne l'objectif de session ?" a="Juste après avoir chargé votre cours, Jangalai vous demande votre objectif du moment. « Examen demain » génère un quiz difficile court et des fiches essentielles. « Mémoriser » maximise le nombre de flashcards. « S'entraîner » crée beaucoup de questions variées. Vous pouvez toujours passer cette étape et régler les paramètres manuellement." />
-          <FaqItem q="Comment fonctionne « Revoir mes erreurs » ?" a="Après avoir soumis un quiz, le score affiche un bouton « Revoir les erreurs » qui relance un quiz avec uniquement les questions manquées. Vous pouvez aussi cliquer « Erreurs → Flashcards » pour transformer ces questions en cartes de révision instantanément, sans appel à l'IA." />
-          <FaqItem q="Comment l'IA s'adapte-t-elle à mon profil ?" a="Lors de l'inscription, vous renseignez votre niveau (Licence, Master, Doctorat…) et votre domaine. Ces informations sont injectées dans chaque génération — vocabulaire, exemples, niveau de détail et complexité des questions sont calibrés à votre filière. L'objectif de session affine encore davantage le contenu généré." />
-          <FaqItem q="Puis-je réviser sans charger de fichier ?" a="Oui. La section « Pour vous » de votre tableau de bord propose des sujets clés de votre domaine. En un clic, vous générez des flashcards ou un quiz sur n'importe quel sujet, sans rien importer." />
-          <FaqItem q="Quels types de fichiers sont acceptés ?" a="PDF, PowerPoint (PPT/PPTX) et Word (DOCX) jusqu'à 20 Mo par fichier. Vous pouvez charger plusieurs fichiers simultanément pour un résumé ou quiz multi-documents." />
-          <FaqItem q="Comment fonctionne la révision espacée ?" a="L'algorithme SM-2 planifie la révision de chaque flashcard au moment optimal selon vos performances passées. Les cartes maîtrisées reviennent moins souvent, les difficiles plus fréquemment. Des notifications push vous rappellent quand des cartes sont à réviser." />
-          <FaqItem q="Mes cours sont-ils stockés sur vos serveurs ?" a="Le contenu textuel est conservé lorsque vous classez un cours dans une matière, ce qui vous permet de le réutiliser sans le recharger. Les fichiers originaux (PDF, PPT) ne sont pas conservés." />
-          <FaqItem q="Les plans payants sont-ils disponibles ?" a="Oui ! Les abonnements Pro et Max sont maintenant ouverts. Vous pouvez vous abonner instantanément et en toute sécurité en payant avec Wave, Orange Money ou par carte bancaire." />
-          <FaqItem q="Puis-je acheter des jetons sans m'abonner ?" a="Oui. La recharge ponctuelle vous permet d'ajouter 50 jetons pour 1 000 F CFA, sans modifier votre plan en cours. C'est idéal si vous avez épuisé vos jetons en milieu de mois ou si vous souhaitez tester l'application avant de vous abonner. La recharge est disponible depuis la section Tarifs de l'application." />
+          <FaqItem q={t('landing.faq.q1')} a={t('landing.faq.a1')} />
+          <FaqItem q={t('landing.faq.q2')} a={t('landing.faq.a2')} />
+          <FaqItem q={t('landing.faq.q3')} a={t('landing.faq.a3')} />
+          <FaqItem q={t('landing.faq.q4')} a={t('landing.faq.a4')} />
+          <FaqItem q={t('landing.faq.q5')} a={t('landing.faq.a5')} />
+          <FaqItem q={t('landing.faq.q6')} a={t('landing.faq.a6')} />
+          <FaqItem q={t('landing.faq.q7')} a={t('landing.faq.a7')} />
+          <FaqItem q={t('landing.faq.q8')} a={t('landing.faq.a8')} />
+          <FaqItem q={t('landing.faq.q9')} a={t('landing.faq.a9')} />
+          <FaqItem q={t('landing.faq.q10')} a={t('landing.faq.a10')} />
+          <FaqItem q={t('landing.faq.q11')} a={t('landing.faq.a11')} />
         </div>
       </div>
 
       <div className="cta-section">
-        <h2 className="fade-up">Révisez mieux.<br /><em>Commencez aujourd'hui.</em></h2>
-        <p className="fade-up fade-up-delay-1">Jangalai est disponible 24h/24, sans rendez-vous, sans abonnement requis. Chargez votre cours, choisissez votre objectif — résumé, quiz, flashcards — et commencez à réviser en moins d'une minute.</p>
-        <Link to="/login?tab=register" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>Créer mon compte gratuit →</Link>
-        <div className="cta-note fade-up fade-up-delay-3">Gratuit · Aucune carte bancaire requise · Prêt en 60 secondes</div>
+        <h2 className="fade-up">{t('landing.cta.title1')}<br /><em>{t('landing.cta.titleEm')}</em></h2>
+        <p className="fade-up fade-up-delay-1">{t('landing.cta.subtitle')}</p>
+        <Link to="/login?tab=register" className="btn-hero fade-up fade-up-delay-2" style={{ display: 'inline-flex' }}>{t('landing.cta.button')}</Link>
+        <div className="cta-note fade-up fade-up-delay-3">{t('landing.cta.note')}</div>
       </div>
 
       <footer>
         <div className="footer-brand"><Logo size={24} /></div>
         <div className="footer-links">
-          <a href="#features">Fonctionnalités</a>
-          <a href="#pricing">Tarifs</a>
-          <a href="#faq">FAQ</a>
-          <Link to="/login">Connexion</Link>
-          <Link to="/login?tab=register" className="footer-cta-link">Inscription gratuite</Link>
-          <Link to="/cgu">CGU</Link>
-          <Link to="/confidentialite">Confidentialité</Link>
+          <a href="#features">{t('landing.footer.features')}</a>
+          <a href="#pricing">{t('landing.footer.pricing')}</a>
+          <a href="#faq">{t('landing.footer.faq')}</a>
+          <Link to="/login">{t('landing.footer.login')}</Link>
+          <Link to="/login?tab=register" className="footer-cta-link">{t('landing.footer.register')}</Link>
+          <Link to="/cgu">{t('landing.footer.cgu')}</Link>
+          <Link to="/confidentialite">{t('landing.footer.privacy')}</Link>
         </div>
-        <div>© 2026 Jangalai</div>
+        <div>{t('landing.footer.copyright')}</div>
       </footer>
     </>
   );

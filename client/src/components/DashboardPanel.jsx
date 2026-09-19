@@ -1,7 +1,6 @@
 import DashboardStats from './DashboardStats.jsx';
 import ForYouSection from './ForYouSection.jsx';
 import ActivitySection from './ActivitySection.jsx';
-import SRSReviewWidget from './SRSReviewWidget.jsx';
 import TopicStatsWidget from './TopicStatsWidget.jsx';
 import eventBus from '../utils/eventBus';
 
@@ -52,8 +51,7 @@ export default function DashboardPanel({
         </div>
         <DashboardStats onLastSession={onLastSession} />
       </div>
-      <ForYouSection onActivity={onActivity} />
-      <SRSReviewWidget onReview={onSRSReview} />
+      <ForYouSection onActivity={onActivity} onUpload={onUpload} onSRSReview={onSRSReview} />
       <TopicStatsWidget />
       <div className="dash-bottom-links">
         <button className="dash-link" onClick={onHistory}>

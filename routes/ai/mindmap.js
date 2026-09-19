@@ -5,8 +5,10 @@ const { getAiConfigForAction }  = require('../../services/aiConfig');
 const { checkAndDeduct, refundJetons, JETON_COSTS } = require('../../services/jetons');
 const { logTokens }             = require('../../services/tokens');
 const logger                    = require('../../services/logger');
-const { userContext, getFileText, clientErrorMessage } = require('./helpers');
+const { VALID_LANGS, userContext, getFileText, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost } = require('../../services/chunker');
+const { summarizeCacheKey, getCached } = require('../../services/summaryCache');
+const { deriveMindmapFromSummary } = require('../../services/derive');
 
 // POST /api/mindmap — génère un markdown hiérarchique pour markmap (avec chunking)
 router.post('/mindmap', async (req, res) => {
@@ -16,6 +18,21 @@ router.post('/mindmap', async (req, res) => {
     if (!file) return res.status(400).json({ error: 'Fichier manquant' });
 
     const text   = await getFileText(file);
+
+    // ── Dérivation locale (0 appel IA) si un résumé est déjà en cache ──────────
+    // Le résumé contient déjà le plan + les concepts : on en reconstruit la carte.
+    // Le résumé a déjà été payé : cette dérivation locale ne coûte aucun jeton.
+    if (!req.body.force) {
+      const lang = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
+      const summary = await getCached(summarizeCacheKey(text, lang, req.user));
+      if (summary) {
+        const md = deriveMindmapFromSummary(summary, lang);
+        if (md) {
+          return res.json({ markdown: md, derived: true, cost: 0 });
+        }
+      }
+    }
+
     const chunks = splitIntoChunks(text);
     const cost   = chunkCost(JETON_COSTS.mindmap, chunks.length);
 

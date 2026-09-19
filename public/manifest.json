@@ -2,7 +2,7 @@
   "name": "Jangalai",
   "short_name": "Jangalai",
   "description": "Résumés, quiz et flashcards générés par IA",
-  "start_url": "/app.html",
+  "start_url": "/app",
   "display": "standalone",
   "background_color": "#080c16",
   "theme_color": "#080c16",

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { apiFetch } from '../utils/apiFetch';
+import { getLang } from '../utils/lang';
 import toast from '../utils/toast';
 import eventBus from '../utils/eventBus';
 import JetonIcon from './JetonIcon.jsx';
@@ -195,9 +196,10 @@ export default function ActionsPanel({
 
     try {
       const file = files[0];
+      // lang aligné sur le résumé → permet la dérivation locale (0 jeton) si déjà résumé
       const res  = await apiFetch('/api/mindmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file }),
+        body: JSON.stringify({ file, lang: getLang() }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');
@@ -220,9 +222,10 @@ export default function ActionsPanel({
 
     try {
       const file = files[0];
+      // Régénération explicite → force l'IA (ignore la dérivation depuis le cache résumé)
       const res  = await apiFetch('/api/mindmap', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ file }),
+        body: JSON.stringify({ file, lang: getLang(), force: true }),
       });
       const data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || 'Erreur serveur');

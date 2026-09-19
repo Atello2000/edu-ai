@@ -80,6 +80,16 @@ jest.mock('../middleware/csrf', () => ({
   generateAndSetCsrfToken: ()               => 'mock-csrf',
 }));
 
+// Désactive tout rate-limiting : la suite enchaîne plus de 5 inscriptions et
+// dépasserait sinon le registerLimiter (5/h/IP), faussant les tests de session.
+// Le module est utilisé en appel direct (app.js) ET en export nommé { rateLimit }
+// (middleware/rateLimit.js) → le mock doit supporter les deux formes.
+jest.mock('express-rate-limit', () => {
+  const passthrough = () => (req, res, next) => next();
+  passthrough.rateLimit = passthrough;
+  return passthrough;
+});
+
 jest.mock('../services/email', () => ({
   sendVerifyEmail: jest.fn(async () => {}),
   sendResetEmail:  jest.fn(async () => {}),
@@ -192,5 +202,71 @@ describe('POST /api/auth/forgot-password', () => {
   it('répond 400 si email absent', async () => {
     const r = await request(app).post('/api/auth/forgot-password').send({});
     expect(r.status).toBe(400);
+  });
+});
+
+// ── Export des données (RGPD) ───────────────────────────────────────────────────
+describe('GET /api/auth/account/export', () => {
+  it('refuse sans session', async () => {
+    const r = await request(app).get('/api/auth/account/export');
+    expect(r.status).toBe(401);
+  });
+
+  it('exporte les données de l\'utilisateur connecté en pièce jointe JSON', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/register')
+      .send({ email: 'export@example.com', password: 'securepass123', name: 'Export' });
+
+    const r = await agent.get('/api/auth/account/export');
+    expect(r.status).toBe(200);
+    expect(r.headers['content-disposition']).toMatch(/attachment/);
+    expect(r.headers['content-type']).toMatch(/application\/json/);
+
+    const data = JSON.parse(r.text);
+    expect(data.export_version).toBe(1);
+    expect(data.profile.email).toBe('export@example.com');
+    expect(Array.isArray(data.activity)).toBe(true);
+    expect(data.library).toHaveProperty('folders');
+  });
+});
+
+// ── Suppression de compte (RGPD) ────────────────────────────────────────────────
+describe('DELETE /api/auth/account', () => {
+  it('refuse sans session', async () => {
+    const r = await request(app).delete('/api/auth/account').send({});
+    expect(r.status).toBe(401);
+  });
+
+  it('refuse avec un mot de passe incorrect', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/register')
+      .send({ email: 'del-bad@example.com', password: 'securepass123', name: 'Del' });
+
+    const r = await agent.delete('/api/auth/account').send({ password: 'mauvais-mdp' });
+    expect(r.status).toBe(401);
+    expect(r.body.error).toMatch(/incorrect/i);
+  });
+
+  it('refuse si le mot de passe est absent (compte avec mot de passe)', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/register')
+      .send({ email: 'del-empty@example.com', password: 'securepass123', name: 'Del' });
+
+    const r = await agent.delete('/api/auth/account').send({});
+    expect(r.status).toBe(400);
+  });
+
+  it('supprime le compte avec le bon mot de passe', async () => {
+    const agent = request.agent(app);
+    await agent.post('/api/auth/register')
+      .send({ email: 'del-ok@example.com', password: 'securepass123', name: 'Del' });
+
+    const r = await agent.delete('/api/auth/account').send({ password: 'securepass123' });
+    expect(r.status).toBe(200);
+    expect(r.body.ok).toBe(true);
+
+    // La session est invalidée et le compte n'existe plus.
+    const me = await agent.get('/api/auth/me');
+    expect(me.status).toBe(401);
   });
 });

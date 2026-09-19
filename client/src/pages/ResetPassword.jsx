@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useT } from '../i18n';
 import Logo from '../components/Logo';
 import './Login.css';
 
 export default function ResetPassword() {
+  const { t }          = useT();
   const [searchParams] = useSearchParams();
   const navigate       = useNavigate();
   const { setUser }    = useAuth();
@@ -17,7 +19,7 @@ export default function ResetPassword() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (password !== confirm) return setError('Les mots de passe ne correspondent pas.');
+    if (password !== confirm) return setError(t('auth.resetPage.mismatch'));
     setLoading(true); setError('');
     try {
       const r = await fetch('/api/auth/reset-password', {
@@ -36,36 +38,36 @@ export default function ResetPassword() {
   }
 
   if (!token) return (
-    <div className="auth-side" style={{ width: '100%', minHeight: '100vh', borderLeft: 'none' }}>
+    <div className="auth-side" style={{ width: '100%', minHeight: '100dvh', borderLeft: 'none' }}>
       <div className="auth-card" style={{ maxWidth: 400, textAlign: 'center' }}>
-        <p style={{ color: 'var(--muted)' }}>Lien invalide.</p>
+        <p style={{ color: 'var(--muted)' }}>{t('auth.resetPage.invalidLink')}</p>
         <Link to="/login" className="auth-btn" style={{ display: 'block', marginTop: '1rem', textDecoration: 'none', textAlign: 'center' }}>
-          Retour à la connexion
+          {t('auth.resetPage.backToLogin')}
         </Link>
       </div>
     </div>
   );
 
   return (
-    <div className="auth-side" style={{ width: '100%', minHeight: '100vh', borderLeft: 'none' }}>
+    <div className="auth-side" style={{ width: '100%', minHeight: '100dvh', borderLeft: 'none' }}>
       <div className="auth-card" style={{ maxWidth: 400 }}>
         <div className="auth-logo">
           <h1><Logo size={36} /></h1>
-          <p>Nouveau mot de passe</p>
+          <p>{t('auth.resetPage.subtitle')}</p>
         </div>
 
         {error && <div className="auth-error show">{error}</div>}
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Nouveau mot de passe</label>
-            <input type="password" placeholder="8 caractères minimum" required minLength="8" value={password} onChange={e => setPassword(e.target.value)} />
+            <label>{t('auth.resetPage.newPassword')}</label>
+            <input type="password" placeholder={t('auth.passwordMinPlaceholder')} required minLength="8" value={password} onChange={e => setPassword(e.target.value)} />
           </div>
           <div className="form-group">
-            <label>Confirmer le mot de passe</label>
-            <input type="password" placeholder="Répétez le mot de passe" required minLength="8" value={confirm} onChange={e => setConfirm(e.target.value)} />
+            <label>{t('auth.resetPage.confirmPassword')}</label>
+            <input type="password" placeholder={t('auth.resetPage.confirmPlaceholder')} required minLength="8" value={confirm} onChange={e => setConfirm(e.target.value)} />
           </div>
           <button type="submit" className="auth-btn" disabled={loading}>
-            {loading ? 'Enregistrement…' : 'Enregistrer le mot de passe'}
+            {loading ? t('auth.resetPage.saving') : t('auth.resetPage.save')}
           </button>
         </form>
       </div>

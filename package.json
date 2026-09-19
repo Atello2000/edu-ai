@@ -34,9 +34,11 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@sparticuz/chromium": "^149.0.0",
     "jest": "^30.4.2",
     "nodemon": "^3.1.0",
     "puppeteer": "^25.1.0",
+    "puppeteer-core": "^25.1.0",
     "sharp": "^0.34.5",
     "supertest": "^7.2.2"
   }

@@ -1,5 +1,6 @@
 .admin-page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
   font-family: 'Outfit', sans-serif;
   color: var(--text);
@@ -8,7 +9,7 @@
 
 .admin-loading {
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; color: var(--muted);
+  min-height: 100vh; min-height: 100dvh; color: var(--muted);
 }
 
 .admin-header {

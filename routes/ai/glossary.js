@@ -7,6 +7,8 @@ const { logTokens }            = require('../../services/tokens');
 const logger                   = require('../../services/logger');
 const { VALID_LANGS, langLabel, userContext, getFileText, parseJsonResponse, sseSetup, clientErrorMessage } = require('./helpers');
 const { splitIntoChunks, chunkCost } = require('../../services/chunker');
+const { summarizeCacheKey, getCached } = require('../../services/summaryCache');
+const { deriveGlossaryFromSummary } = require('../../services/derive');
 
 const GLOSSARY_MAX_TOKENS = 4500;
 
@@ -25,6 +27,34 @@ router.post('/glossary', async (req, res) => {
     const lang   = VALID_LANGS.includes(req.body.lang) ? req.body.lang : 'fr';
     const inLang = langLabel(lang);
     const ctx    = userContext(req.user);
+
+    // ── 0. Dérivation locale (0 appel IA) si TOUS les fichiers sont déjà résumés ──
+    // La section "Concepts importants" du résumé fournit déjà term + définition.
+    // Le résumé a déjà été payé : cette dérivation locale ne coûte aucun jeton.
+    if (!req.body.force) {
+      const derived = [];
+      let allDerivable = true;
+      for (const file of files) {
+        const text    = await getFileText(file);
+        const summary = await getCached(summarizeCacheKey(text, lang, req.user));
+        const terms   = summary ? deriveGlossaryFromSummary(summary) : null;
+        if (!terms) { allDerivable = false; break; }
+        derived.push(...terms);
+      }
+      if (allDerivable && derived.length) {
+        const seen  = new Set();
+        const terms = derived
+          .filter(t => {
+            const key = t.term.toLowerCase().trim();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .sort((a, b) => a.term.localeCompare(b.term, 'fr', { sensitivity: 'base' }));
+        send({ type: 'end', terms, derived: true, cost: 0 });
+        return res.end();
+      }
+    }
 
     // ── 1. Charger textes + calculer coût total ───────────────────────────
     const fileData  = [];

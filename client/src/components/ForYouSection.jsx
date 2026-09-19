@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { apiFetch } from '../utils/apiFetch';
+import { getLang } from '../utils/lang';
 import toast from '../utils/toast';
 import { useAuth } from '../hooks/useAuth';
 import { sm2Update, cardHash } from '../hooks/useFlashcards.js';
@@ -10,7 +11,9 @@ const IconQuiz   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="n
 const IconSearch = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
 const IconDoc    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>;
 
-const HISTORY_KEY = 'jangalai-sessions';
+const HISTORY_KEY   = 'jangalai-sessions';
+const SRS_KEY       = 'jangalai-srs';
+const EXAM_DATE_KEY = 'jangalai-exam-date';
 
 /** Supprime les marqueurs Markdown courants (gras, italique, code) du texte affiché. */
 function stripMd(text = '') {
@@ -49,7 +52,7 @@ async function postActivity(topic, type, score = null, total = null) {
   }).catch(() => {});
 }
 
-export default function ForYouSection({ onActivity }) {
+export default function ForYouSection({ onActivity, onUpload, onSRSReview }) {
   const { user } = useAuth();
   const [custom, setCustom]           = useState('');
   const [loadingKey, setLoadingKey]   = useState('');
@@ -60,6 +63,8 @@ export default function ForYouSection({ onActivity }) {
   const [flipped, setFlipped]         = useState(false);
   const touchStartX = useRef(null);
   const [activityData, setActivityData] = useState(null);
+  const [examDate, setExamDate] = useState(() => localStorage.getItem(EXAM_DATE_KEY) || '');
+  const activitySummaryUrl = `/api/activity/summary${examDate ? `?examDate=${encodeURIComponent(examDate)}` : ''}`;
   const [historyKey, setHistoryKey]   = useState(0); // incrémenté pour forcer un recalcul
   const cache = useRef(new Map());
 
@@ -93,11 +98,11 @@ export default function ForYouSection({ onActivity }) {
   // ── Charger les scores d'activité ─────────────────────────────────
   useEffect(() => {
     if (!user?.onboarding_done) return;
-    apiFetch('/api/activity/summary')
+    apiFetch(activitySummaryUrl)
       .then(r => r.json())
       .then(d => setActivityData(d))
       .catch(() => {});
-  }, [user?.id, user?.onboarding_done]);
+  }, [user?.id, user?.onboarding_done, activitySummaryUrl]);
 
   // Meilleur score pour un topic donné
   function getBestScore(topicName) {
@@ -129,7 +134,7 @@ export default function ForYouSection({ onActivity }) {
       const r = await apiFetch('/api/topic', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ topic, type, count: type === 'quiz' ? 5 : 8, lang: 'fr' }),
+        body: JSON.stringify({ topic, type, count: type === 'quiz' ? 5 : 8, lang: getLang() }),
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error);
@@ -145,7 +150,7 @@ export default function ForYouSection({ onActivity }) {
     postActivity(resultTopic, 'quiz', score, total).then(() => {
       onActivity?.();
       setActivityData(null);
-      apiFetch('/api/activity/summary')
+      apiFetch(activitySummaryUrl)
         .then(r => r.json()).then(d => setActivityData(d)).catch(() => {});
     });
   }
@@ -153,12 +158,135 @@ export default function ForYouSection({ onActivity }) {
   if (!user?.onboarding_done) return null;
   const isLoading = loadingKey !== '';
 
+  let dueCards = 0;
+  try {
+    dueCards = Object.values(JSON.parse(localStorage.getItem(SRS_KEY) || '{}'))
+      .filter(card => card.nextReview <= Date.now() && card.front).length;
+  } catch { /* stockage local illisible */ }
+
+  const masteryTopics = activityData?.mastery || [];
+  const weakestTopic = masteryTopics.find(topic => topic.mastery < 75);
+  const testedNames = new Set(masteryTopics.map(topic => topic.topic.toLocaleLowerCase('fr')));
+  const untestedTopic = recentTopics.find(topic => !testedNames.has(topic.name.toLocaleLowerCase('fr')));
+  const dailyPlan = activityData?.dailyPlan;
+
+  let examDays = null;
+  if (examDate) {
+    const end = new Date(`${examDate}T00:00:00`);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    examDays = Math.max(0, Math.round((end.getTime() - today.getTime()) / 86400000));
+  }
+
+  const priority = dueCards > 0
+    ? {
+        eyebrow: 'Mémoire à consolider',
+        title: `Réviser ${dueCards} carte${dueCards > 1 ? 's' : ''} due${dueCards > 1 ? 's' : ''}`,
+        detail: 'Commencez par les notions que vous risquez d’oublier aujourd’hui.',
+        action: 'Lancer la révision',
+        tone: 'teal',
+        run: onSRSReview,
+      }
+    : weakestTopic
+      ? {
+          eyebrow: 'Point faible détecté',
+          title: `Retravailler ${weakestTopic.topic}`,
+          detail: `Votre maîtrise est estimée à ${weakestTopic.mastery} %. Un quiz ciblé est prioritaire.`,
+          action: 'Faire un quiz ciblé',
+          tone: 'rose',
+          run: () => generate(weakestTopic.topic, 'quiz'),
+        }
+      : untestedTopic
+        ? {
+            eyebrow: 'Diagnostic recommandé',
+            title: `Tester ${untestedTopic.name}`,
+            detail: 'Ce cours n’a pas encore été évalué. Mesurez votre maîtrise avant de le relire.',
+            meta: '5 questions · environ 3 min',
+            action: 'Lancer le diagnostic',
+            tone: 'blue',
+            run: () => generate(untestedTopic.name, 'quiz'),
+          }
+        : {
+            eyebrow: 'Commencer une session',
+            title: 'Ajoutez votre prochain cours',
+            detail: 'Jangalai pourra ensuite identifier les notions à réviser en priorité.',
+            action: 'Charger un cours',
+            tone: 'gold',
+            run: onUpload,
+          };
+
+  function updateExamDate(value) {
+    setExamDate(value);
+    if (value) localStorage.setItem(EXAM_DATE_KEY, value);
+    else localStorage.removeItem(EXAM_DATE_KEY);
+  }
+
   return (
     <div className="foryou-section">
 
-      {/* Titre */}
+      <section className={`daily-priority daily-${priority.tone}`} aria-labelledby="daily-priority-title">
+        <div className="daily-priority-marker" aria-hidden="true">
+          <IconQuiz />
+        </div>
+        <div className="daily-priority-copy">
+          <span className="daily-eyebrow">{priority.eyebrow}</span>
+          <h2 id="daily-priority-title">{priority.title}</h2>
+          <p>{priority.detail}</p>
+          {priority.meta && <span className="daily-priority-meta">{priority.meta}</span>}
+        </div>
+        <button className="daily-primary-action" onClick={priority.run} disabled={!priority.run || isLoading}>
+          {isLoading ? 'Préparation…' : priority.action}
+        </button>
+      </section>
+
+      <div className="daily-exam-row">
+        <div>
+          <span className="daily-exam-label">Prochain examen</span>
+          <span className="daily-exam-status">
+            {examDays === null ? 'Ajoutez une date pour rythmer votre préparation' : examDays === 0 ? "Aujourd’hui" : `J-${examDays}`}
+          </span>
+        </div>
+        <input
+          type="date"
+          value={examDate}
+          min={new Date().toISOString().slice(0, 10)}
+          onChange={event => updateExamDate(event.target.value)}
+          aria-label="Date du prochain examen"
+        />
+      </div>
+
+      {dailyPlan?.tasks?.length > 0 && (
+        <div className="daily-plan" aria-label="Programme de révision du jour">
+          <div className="daily-plan-header">
+            <div>
+              <span className="daily-plan-title">Programme du jour</span>
+              <span className="daily-plan-meta">
+                {dailyPlan.plannedMinutes} min planifiées · objectif {dailyPlan.targetMinutes} min
+              </span>
+            </div>
+            {dailyPlan.examDays !== null && <span className="daily-plan-countdown">J-{dailyPlan.examDays}</span>}
+          </div>
+          <ol className="daily-plan-list">
+            {dailyPlan.tasks.map((task, index) => (
+              <li key={`${task.type}-${task.topic || index}`}>
+                <span className="daily-plan-index">{index + 1}</span>
+                <button
+                  onClick={() => task.type === 'srs' ? onSRSReview?.() : generate(task.topic, 'quiz')}
+                  disabled={isLoading}
+                >
+                  <span className="daily-plan-task">{task.title}</span>
+                  <span className="daily-plan-reason">{task.reason}</span>
+                </button>
+                <span className="daily-plan-minutes">{task.minutes} min</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Révisions secondaires */}
       <div className="foryou-header">
-        <span className="foryou-title">Révision rapide</span>
+        <span className="foryou-title">Mes cours à réviser</span>
         {recentTopics.length > 0 && (
           <button className="fy-clear-btn" onClick={clearHistory} title="Effacer l'historique">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

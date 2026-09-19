@@ -1,12 +1,13 @@
-import { jsPDF } from 'jspdf';
 import { stripMd, sanitizePdf } from './summaryUtils.js';
 
 /**
  * Génère et télécharge la fiche d'examen en PDF.
+ * jsPDF est chargé dynamiquement (économise le bundle initial).
  * @param {string} fileName  — nom de base du fichier (sans extension)
  * @param {string} md        — contenu markdown de la fiche
  */
 export async function exportExamSheetToPDF(fileName, md) {
+  const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF('p', 'mm', 'a4');
   const PW  = pdf.internal.pageSize.getWidth();
   const PH  = pdf.internal.pageSize.getHeight();

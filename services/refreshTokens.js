@@ -26,12 +26,25 @@ function hashToken(token) {
   return crypto.createHash('sha256').update(String(token)).digest('hex');
 }
 
+// Les timestamps PostgreSQL ont une précision supérieure à celle de JWT (secondes).
+// Après une révocation, le prochain token doit avoir un iat strictement supérieur,
+// même si l'utilisateur se reconnecte dans la même seconde.
+function issuedAtAfterRevocation(invalidatedAt, now = Date.now()) {
+  const nowSeconds = Math.floor(now / 1000);
+  if (!invalidatedAt) return nowSeconds;
+  const invalidatedMs = new Date(invalidatedAt).getTime();
+  if (!Number.isFinite(invalidatedMs)) return nowSeconds;
+  return Math.max(nowSeconds, Math.floor(invalidatedMs / 1000) + 1);
+}
+
 // Émet un refresh token JWT et enregistre son hash en base. Seul un token
 // présent en base est utilisable : un JWT signé mais absent (déjà tourné,
 // purgé ou forgé après fuite partielle) est rejeté.
-async function issueRefreshToken(userId, issuedAt) {
-  const jti   = crypto.randomBytes(16).toString('hex');
-  const token = jwt.sign({ userId, type: 'refresh', jti, ...(issuedAt ? { iat: issuedAt } : {}) }, REFRESH_SECRET, { expiresIn: '7d' });
+async function issueRefreshToken(userId, issuedAt = null) {
+  const jti     = crypto.randomBytes(16).toString('hex');
+  const payload = { userId, type: 'refresh', jti };
+  if (Number.isInteger(issuedAt)) payload.iat = issuedAt;
+  const token = jwt.sign(payload, REFRESH_SECRET, { expiresIn: '7d' });
   await prepare(
     'INSERT INTO refresh_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)'
   ).run(hashToken(token), userId, new Date(Date.now() + REFRESH_TTL_MS).toISOString());
@@ -94,4 +107,5 @@ module.exports = {
   issueRefreshToken,
   consumeRefreshToken,
   revokeAllForUser,
+  issuedAtAfterRevocation,
 };
