@@ -155,3 +155,51 @@ maybeDescribe('Intégration PostgreSQL (flux réels, sans mock DB)', () => {
     expect(Number(rt.n)).toBe(0);
   });
 });
+
+maybeDescribe('Payment credit atomicity against PostgreSQL', () => {
+  let db, app, request, userId;
+  const crypto = require('crypto');
+  const ref = 'PAYTECH_sub_PAYMENT_USER_pro_987654';
+  let reference;
+  beforeAll(async () => {
+    process.env.PAYTECH_API_KEY = 'integration-pay-key';
+    process.env.PAYTECH_API_SECRET = 'integration-pay-secret';
+    // The earlier suite closes its pool. Load a new module instance.
+    jest.resetModules();
+    db = require('../db');
+    await db.initSchema();
+    const user = await db.prepare("INSERT INTO users (email, jetons, email_verified) VALUES (?, 80, 1) RETURNING id")
+      .get('payment-' + Date.now() + '@example.com');
+    userId = user.id;
+    reference = ref.replace('PAYMENT_USER', String(userId));
+    await db.prepare("INSERT INTO payments (ref_command, user_id, plan, amount, status) VALUES (?, ?, 'pro', 2500, 'pending')")
+      .run(reference, userId);
+    const express = require('express');
+    app = express(); app.use(express.json());
+    app.use('/ipn', require('../routes/payment').publicRouter);
+    request = require('supertest');
+  });
+  afterAll(async () => {
+    if (userId) await db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+    await db.pool.end();
+  });
+  const notify = () => request(app).post('/ipn').send({
+    api_key_sha256: crypto.createHash('sha256').update('integration-pay-key').digest('hex'),
+    api_secret_sha256: crypto.createHash('sha256').update('integration-pay-secret').digest('hex'),
+    ref_command: reference, item_price: 2500, type_event: 'sale_complete',
+  });
+  test('ledger failure rolls back credit; concurrent retries grant only once', async () => {
+    // A check constraint on this test user's ledger injects a real SQL error.
+    const constraint = 'audit_payment_failure_' + userId;
+    await db.pool.query('ALTER TABLE jeton_transactions ADD CONSTRAINT ' + constraint + ' CHECK (user_id <> ' + userId + ') NOT VALID');
+    try {
+      expect((await notify()).status).toBe(500);
+      expect((await db.prepare('SELECT jetons FROM users WHERE id = ?').get(userId)).jetons).toBe(80);
+      expect((await db.prepare('SELECT status FROM payments WHERE ref_command = ?').get(reference)).status).toBe('pending');
+    } finally { await db.pool.query('ALTER TABLE jeton_transactions DROP CONSTRAINT ' + constraint); }
+    const results = await Promise.all([notify(), notify()]);
+    expect(results.map(r => r.status)).toEqual([200, 200]);
+    expect((await db.prepare('SELECT jetons FROM users WHERE id = ?').get(userId)).jetons).toBe(230);
+    expect(Number((await db.prepare('SELECT COUNT(*) AS n FROM jeton_transactions WHERE user_id = ?').get(userId)).n)).toBe(1);
+  });
+});

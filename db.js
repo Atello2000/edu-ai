@@ -56,16 +56,16 @@ async function query(sql, params, retries = 2) {
   }
 }
 
-function prepare(sql) {
+function prepare(sql, executeQuery = query) {
   const pgSql = toPg(sql);
   const isInsert = /^\s*INSERT/i.test(pgSql);
   return {
     async get(...params) {
-      const { rows } = await query(pgSql, params);
+      const { rows } = await executeQuery(pgSql, params);
       return rows[0] || null;
     },
     async all(...params) {
-      const { rows } = await query(pgSql, params);
+      const { rows } = await executeQuery(pgSql, params);
       return rows;
     },
     async run(...params) {
@@ -75,7 +75,7 @@ function prepare(sql) {
       const finalSql = isInsert && !pgSql.toUpperCase().includes('RETURNING')
         ? pgSql + ' RETURNING *'
         : pgSql;
-      const { rows, rowCount } = await query(finalSql, params);
+      const { rows, rowCount } = await executeQuery(finalSql, params);
       return { lastInsertRowid: rows[0]?.id, rowCount, changes: rowCount };
     },
   };
@@ -307,4 +307,19 @@ async function initSchema() {
   require('./services/logger').info('PostgreSQL schema ready');
 }
 
-module.exports = { prepare, exec, pool, initSchema };
+// A transaction uses one connection and never retries individual writes.
+async function transaction(work) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await work({ prepare: sql => prepare(sql, (text, params) => client.query(text, params)) });
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    try { await client.query('ROLLBACK'); } catch { /* preserve original error */ }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+module.exports = { prepare, exec, pool, initSchema, transaction };

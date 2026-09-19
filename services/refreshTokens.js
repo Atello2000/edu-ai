@@ -29,9 +29,9 @@ function hashToken(token) {
 // Émet un refresh token JWT et enregistre son hash en base. Seul un token
 // présent en base est utilisable : un JWT signé mais absent (déjà tourné,
 // purgé ou forgé après fuite partielle) est rejeté.
-async function issueRefreshToken(userId) {
+async function issueRefreshToken(userId, issuedAt) {
   const jti   = crypto.randomBytes(16).toString('hex');
-  const token = jwt.sign({ userId, type: 'refresh', jti }, REFRESH_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ userId, type: 'refresh', jti, ...(issuedAt ? { iat: issuedAt } : {}) }, REFRESH_SECRET, { expiresIn: '7d' });
   await prepare(
     'INSERT INTO refresh_tokens (token_hash, user_id, expires_at) VALUES (?, ?, ?)'
   ).run(hashToken(token), userId, new Date(Date.now() + REFRESH_TTL_MS).toISOString());

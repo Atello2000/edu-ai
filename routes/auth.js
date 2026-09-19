@@ -8,6 +8,7 @@ const { JWT_SECRET, REFRESH_SECRET, ACCESS_COOKIE_OPTS } = require('../middlewar
 const { generateAndSetCsrfToken } = require('../middleware/csrf');
 const { sendVerifyEmail, sendResetEmail } = require('../services/email');
 const { doubleCsrfProtection } = require('../middleware/csrf');
+const { MONTHLY_JETONS } = require('../services/jetons');
 const logger   = require('../services/logger');
 
 const { REFRESH_COOKIE_OPTS, issueRefreshToken, consumeRefreshToken, revokeAllForUser } = require('../services/refreshTokens');
@@ -31,9 +32,13 @@ function getAppUrl(req) {
 }
 
 async function setToken(res, userId, req) {
-  const token = jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
+  // A login immediately after revocation must be newer than its DB timestamp.
+  const session = await db.prepare('SELECT session_invalidated_at FROM users WHERE id = ?').get(userId);
+  const cutoff = session?.session_invalidated_at ? Math.ceil(new Date(session.session_invalidated_at).getTime() / 1000) : 0;
+  const iat = Math.max(Math.floor(Date.now() / 1000), cutoff);
+  const token = jwt.sign({ userId, iat }, JWT_SECRET, { expiresIn: '1h' });
   res.cookie('jangalai.token',   token, ACCESS_COOKIE_OPTS);
-  res.cookie('jangalai.refresh', await issueRefreshToken(userId), REFRESH_COOKIE_OPTS);
+  res.cookie('jangalai.refresh', await issueRefreshToken(userId, iat), REFRESH_COOKIE_OPTS);
   if (req) generateAndSetCsrfToken(req, res);
 }
 
@@ -143,7 +148,7 @@ router.post('/register', async (req, res) => {
     // HIGH-01 : inscription atomique — le INSERT échoue si la limite bêta est atteinte
     const info = await db.prepare(
       `INSERT INTO users (email, password, name, verify_token, verify_expires, jetons, jetons_reset_date)
-       SELECT $1, $2, $3, $4, $5, 80, $6
+       SELECT $1, $2, $3, $4, $5, ${MONTHLY_JETONS.free}, $6
        WHERE (SELECT COUNT(*) FROM users) < ${BETA_LIMIT}`
     ).run(emailLower, hash, (name || '').trim(), hashToken(verifyToken), verifyExp, currentMonth);
     if (!info.changes) {
@@ -261,29 +266,38 @@ router.post('/onboarding', doubleCsrfProtection, async (req, res) => {
 });
 
 // ── PUT /api/auth/profile ─────────────────────────────────────────────────────
-router.put('/profile', doubleCsrfProtection, async (req, res) => {
-  const decoded = await getTokenUser(req, res);
-  if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
+router.put('/profile', doubleCsrfProtection, async (req, res, next) => {
+  try {
+    const decoded = await getTokenUser(req, res);
+    if (!decoded) return res.status(401).json({ error: 'Non connecté.' });
 
-  const { name, currentPassword, newPassword } = req.body || {};
-  const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
-  if (!user) return res.status(401).json({ error: 'Session invalide.' });
+    const { name, currentPassword, newPassword } = req.body || {};
+    const user = await db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.userId);
+    if (!user) return res.status(401).json({ error: 'Session invalide.' });
 
-  if (name && name.trim())
-    await db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), user.id);
+    if (name && name.trim())
+      await db.prepare('UPDATE users SET name = ? WHERE id = ?').run(name.trim(), user.id);
 
-  if (newPassword) {
-    if (!currentPassword) return res.status(400).json({ error: 'Mot de passe actuel requis.' });
-    if (newPassword.length < 8) return res.status(400).json({ error: 'Nouveau mot de passe trop court (8 caractères minimum).' });
-    if (!user.password) return res.status(400).json({ error: 'Compte Google — définissez d\'abord un mot de passe via "Mot de passe oublié".' });
-    const match = await bcrypt.compare(currentPassword, user.password);
-    if (!match) return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
-    const hash = await bcrypt.hash(newPassword, 12);
-    await db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, user.id);
-  }
+    if (newPassword) {
+      if (!currentPassword) return res.status(400).json({ error: 'Mot de passe actuel requis.' });
+      if (newPassword.length < 8) return res.status(400).json({ error: 'Nouveau mot de passe trop court (8 caractères minimum).' });
+      if (!user.password) return res.status(400).json({ error: 'Compte Google — définissez d\'abord un mot de passe via "Mot de passe oublié".' });
+      const match = await bcrypt.compare(currentPassword, user.password);
+      if (!match) return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
+      const hash = await bcrypt.hash(newPassword, 12);
+      await db.transaction(async tx => {
+        await tx.prepare('UPDATE users SET password = ?, session_invalidated_at = NOW() WHERE id = ?').run(hash, user.id);
+        await tx.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').run(user.id);
+      });
+      const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' };
+      res.clearCookie('jangalai.token', cookieOptions);
+      res.clearCookie('jangalai.refresh', cookieOptions);
+      return res.json({ ok: true, requiresLogin: true });
+    }
 
-  const updated = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(user.id);
-  res.json({ user: withAdminFlag(updated) });
+    const updated = await db.prepare('SELECT id, email, name, plan, email_verified, created_at FROM users WHERE id = ?').get(user.id);
+    res.json({ user: withAdminFlag(updated) });
+  } catch (err) { next(err); }
 });
 
 // ── GET /api/auth/verify/:token ───────────────────────────────────────────────
@@ -411,7 +425,7 @@ router.get('/google/callback', async (req, res) => {
         const currentMonth = new Date().toISOString().slice(0, 7);
         const r = await db.prepare(
           `INSERT INTO users (email, password, name, google_id, email_verified, jetons, jetons_reset_date)
-           SELECT $1, $2, $3, $4, 1, 40, $5
+           SELECT $1, $2, $3, $4, 1, ${MONTHLY_JETONS.free}, $5
            WHERE (SELECT COUNT(*) FROM users) < ${BETA_LIMIT}`
         ).run(profile.email?.toLowerCase(), '', profile.name || profile.email, profile.id, currentMonth);
         if (!r.changes) return res.redirect(`${getAppUrl(req)}/login?error=beta_full`);

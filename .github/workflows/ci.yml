@@ -47,3 +47,12 @@ jobs:
 
       - name: Run tests (unit + integration)
         run: npx jest --runInBand
+
+      - name: Payment polling regression checks
+        run: node scripts/check-payment-polling.mjs
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix client
+
+      - name: Check frontend
+        run: npm run lint --prefix client && npm run build --prefix client

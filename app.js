@@ -10,7 +10,6 @@ const { generateAndSetCsrfToken, doubleCsrfProtection } = require('./middleware/
 
 const helmet = require('helmet');
 const logger = require('./services/logger');
-const { buildPaymentSuccessHtml } = require('./lib/payment-success-html');
 
 const app = express();
 app.set('trust proxy', 1); // Railway reverse proxy
@@ -57,22 +56,11 @@ app.get('/sw.js', (req, res) => {
   res.send(content);
 });
 
-// Route de succès de paiement avec détection intelligente (Mobile vs Desktop)
-// - Sur PC : redirection automatique instantanée vers l'application principale
-// - Sur Mobile : affichage d'une page de succès légère (lib/payment-success-html.js)
+// The provider return is not proof of settlement; the app checks the purchase.
 app.get('/payment-success', (req, res) => {
-  const VALID_PLANS = ['pro', 'max'];
-  const plan = VALID_PLANS.includes(req.query.plan) ? req.query.plan : 'pro';
-  const userAgent = req.headers['user-agent'] || '';
-  const isMobile = /mobile|android|iphone|ipad|phone/i.test(userAgent);
-  const hasToken = !!req.cookies?.['jangalai.token'];
-
-  if (isMobile) {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(buildPaymentSuccessHtml(plan, hasToken));
-  } else {
-    res.redirect(`/app?payment=success&plan=${plan}`);
-  }
+  const reference = typeof req.query.reference === 'string' ? req.query.reference : '';
+  res.setHeader('Cache-Control', 'no-store');
+  res.redirect('/app?payment=return&reference=' + encodeURIComponent(reference));
 });
 
 // En production, sert le build React en priorité

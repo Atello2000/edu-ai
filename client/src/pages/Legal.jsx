@@ -57,8 +57,8 @@ export function CGU() {
         <h2>3. Jetons et formules</h2>
         <ul>
           <li>Chaque action IA (résumé, quiz, flashcards, chat…) consomme des <strong>jetons</strong>. Le barème est affiché dans l'application.</li>
-          <li>La formule gratuite inclut une allocation mensuelle de jetons, renouvelée chaque mois sans report du solde non utilisé.</li>
-          <li>Les formules payantes <strong>Pro</strong> et <strong>Max</strong> sont des abonnements mensuels facturés en francs CFA (XOF), donnant droit à une allocation de jetons supérieure.</li>
+          <li>La formule gratuite inclut 80 jetons offerts une seule fois à l’inscription.</li>
+          <li>Les formules payantes <strong>Pro</strong> et <strong>Max</strong> sont des abonnements mensuels facturés en francs CFA (XOF), donnant droit à une allocation créditée à chaque paiement confirmé et à 31 jours d’accès au plan. Le changement de mois ne supprime pas les jetons restants, y compris les recharges achetées.</li>
           <li>En cas d'échec technique d'une génération IA, les jetons consommés sont automatiquement remboursés sur votre solde.</li>
         </ul>
       </section>

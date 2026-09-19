@@ -29,6 +29,7 @@ export default function Login() {
     if (e) return 'Une erreur est survenue lors de l\'authentification.';
     return '';
   });
+  const passwordChanged = searchParams.get('passwordChanged') === '1';
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
 
@@ -133,6 +134,7 @@ export default function Login() {
             <button className={`auth-tab ${tab === 'register' ? 'active' : ''}`} onClick={() => { setTab('register'); setError(''); }}>Inscription</button>
           </div>
 
+          {passwordChanged && <p role="status">Mot de passe modifié. Reconnectez-vous ; les anciennes sessions ont été fermées.</p>}
           {error && <div className="auth-error show">{error}</div>}
 
           <a href="/api/auth/google" className="google-btn">

@@ -15,13 +15,13 @@ const PLAN_INFO = {
     locked:   ['Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs', 'Export PDF fiche d\'examen'],
   },
   pro: {
-    jetons:   '150 jetons / mois (rechargement automatique)',
+    jetons:   '150 jetons / mois (crédités au paiement)',
     fileSize: '10 Mo max par fichier',
     features: ['Tous les outils de base', 'Prédicteur de questions', 'Plan de révision', 'Mode socratique', 'Analyse des erreurs', '30 sessions sauvegardées', 'Bibliothèque jusqu\'à 50 cours'],
     locked:   ['Export PDF fiche d\'examen'],
   },
   max: {
-    jetons:   '400 jetons / mois (rechargement automatique)',
+    jetons:   '400 jetons / mois (crédités au paiement)',
     fileSize: '20 Mo max par fichier',
     features: ['Tout le plan Pro', 'Export PDF fiche d\'examen', 'Sessions illimitées', 'Bibliothèque jusqu\'à 100 cours'],
     locked:   [],
@@ -74,6 +74,10 @@ export default function Profile() {
     });
     const d = await r.json();
     setPwdBusy(false);
+    if (d.requiresLogin) {
+      window.location.assign('/login?passwordChanged=1');
+      return;
+    }
     if (d.error) flash(setPwdAlert, d.error, 'error');
     else {
       flash(setPwdAlert, 'Mot de passe changé !', 'success');

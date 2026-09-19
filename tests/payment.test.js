@@ -15,12 +15,12 @@ jest.mock('../db', () => {
   // Mini-store des paiements : l'IPN ne crédite que les ref_command
   // préalablement enregistrées en 'pending' par le checkout.
   const payments = new Map(); // ref_command -> { user_id, plan, amount, status }
-  return {
+  const store = {
     prepare: (sql) => ({
       async get(...params) {
         if (sql.includes('FROM payments WHERE ref_command')) {
           const p = payments.get(params[0]);
-          return p ? { ...p } : null;
+          return p && (params.length < 2 || p.user_id === params[1]) ? { ref_command: params[0], ...p } : null;
         }
         if (sql.includes("UPDATE payments SET status = 'paid'")) {
           const p = payments.get(params[0]);
@@ -33,6 +33,11 @@ jest.mock('../db', () => {
         return null;
       },
       async run(...params) {
+        if (sql.includes("UPDATE payments SET status = 'paid'")) {
+          const p = payments.get(params[0]);
+          if (p) p.status = 'paid';
+          return { changes: p ? 1 : 0 };
+        }
         if (sql.includes('INSERT INTO payments')) {
           const [ref, userId, plan, amount] = params;
           payments.set(ref, { user_id: userId, plan, amount, status: 'pending' });
@@ -45,6 +50,8 @@ jest.mock('../db', () => {
     pool: { query: async () => ({ rows: [], rowCount: 0 }) },
     exec: async () => {},
   };
+  store.transaction = async work => work(store);
+  return store;
 });
 
 jest.mock('../middleware/csrf', () => ({

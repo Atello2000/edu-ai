@@ -462,11 +462,11 @@ export default function AppPage() {
           <>Votre plan actuel reste inchangé</>,
           <>Sans engagement, utilisable dès maintenant</>,
         ] : isMax ? [
-          <><strong>{jetons} jetons</strong> rechargés automatiquement chaque mois</>,
+          <><strong>{jetons} jetons</strong> crédités à chaque paiement confirmé</>,
           <>Bibliothèque étendue à <strong>100 cours</strong> (vs 15 en gratuit)</>,
           <>Fichiers jusqu&apos;à <strong>20 Mo</strong> par upload</>,
         ] : [
-          <><strong>{jetons} jetons</strong> rechargés automatiquement chaque mois</>,
+          <><strong>{jetons} jetons</strong> crédités à chaque paiement confirmé</>,
           <>Bibliothèque étendue à <strong>50 cours</strong> (vs 15 en gratuit)</>,
           <>Fichiers jusqu&apos;à <strong>10 Mo</strong> par upload</>,
         ];

@@ -49,7 +49,7 @@ protectedRouter.post('/checkout', async (req, res) => {
     });
   }
 
-  if (!plan || !PLAN_CONFIG[plan]) {
+  if (!plan || !Object.hasOwn(PLAN_CONFIG, plan)) {
     return res.status(400).json({ error: 'Plan d\'abonnement invalide ou manquant.' });
   }
 
@@ -59,10 +59,10 @@ protectedRouter.post('/checkout', async (req, res) => {
 
   // Référence unique : PAYTECH_sub_* pour abonnements, PAYTECH_topup_* pour recharges
   const txType = config.isTopup ? 'topup' : 'sub';
-  const refCommand = `PAYTECH_${txType}_${userId}_${plan}_${Date.now()}`;
+  const refCommand = `PAYTECH_${txType}_${userId}_${plan}_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
 
   const ipnUrl = `${process.env.BACKEND_URL}/api/payment/ipn`;
-  const successUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?plan=${plan}`;
+  const successUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-success?reference=${encodeURIComponent(refCommand)}`;
   const cancelUrl = `${process.env.CLIENT_URL || 'http://localhost:3000'}/app?payment=cancel`;
 
   try {
@@ -113,7 +113,7 @@ protectedRouter.post('/checkout', async (req, res) => {
       "INSERT INTO payments (ref_command, user_id, plan, amount, status) VALUES (?, ?, ?, ?, 'pending')"
     ).run(refCommand, userId, plan, config.price);
 
-    res.json({ redirectUrl: data.redirect_url });
+    res.json({ redirectUrl: data.redirect_url, reference: refCommand });
 
   } catch (err) {
     logger.error('Erreur lors de l\'initiation du checkout PayTech', { userId, plan, message: err.message });
@@ -132,7 +132,7 @@ publicRouter.post('/', async (req, res) => {
   logger.info('IPN PayTech reçu', { ref_command, type_event, item_price });
 
   // 1. Validation de l'authenticité de la requête IPN (Hashes SHA256)
-  if (!api_key_sha256 || !api_secret_sha256 || !ref_command) {
+  if (!api_key_sha256 || !api_secret_sha256 || typeof ref_command !== 'string' || !ref_command) {
     logger.warn('IPN suspect reçu sans paramètres obligatoires', { ref_command, type_event });
     return res.status(400).send('Bad Request');
   }
@@ -149,6 +149,8 @@ publicRouter.post('/', async (req, res) => {
   const rawApiSecret = process.env.PAYTECH_API_SECRET || '';
   const paytechApiKey = rawApiKey.replace(/^["']|["']$/g, '').trim();
   const paytechApiSecret = rawApiSecret.replace(/^["']|["']$/g, '').trim();
+
+  if (!paytechApiKey || !paytechApiSecret) return res.status(503).send('Payment not configured');
 
   const localKeyHash = crypto.createHash('sha256').update(paytechApiKey).digest('hex');
   const localSecretHash = crypto.createHash('sha256').update(paytechApiSecret).digest('hex');
@@ -176,11 +178,11 @@ publicRouter.post('/', async (req, res) => {
     return res.status(400).send('Invalid Reference');
   }
 
-  const txType = parts[1]; // 'sub' ou 'topup'
+
   const userId = parseInt(parts[2], 10);
   const plan   = parts[3];
 
-  if (isNaN(userId) || !PLAN_CONFIG[plan]) {
+  if (isNaN(userId) || !Object.hasOwn(PLAN_CONFIG, plan)) {
     logger.error('Données de ref_command PayTech invalides ou corrompues', { userId, plan });
     return res.status(400).send('Invalid Data');
   }
@@ -200,73 +202,31 @@ publicRouter.post('/', async (req, res) => {
   }
 
   try {
-    // La ref_command DOIT correspondre à un checkout initié par ce serveur.
-    // Un IPN forgé (hashes volés + référence inventée) est rejeté ici.
-    const pending = await db.prepare(
-      'SELECT user_id, plan, amount, status FROM payments WHERE ref_command = ?'
-    ).get(ref_command);
-    if (!pending) {
-      logger.error('IPN rejeté — ref_command inconnue (aucun checkout correspondant)', { ref_command });
-      alertPaymentRejected('référence inconnue', { ref_command, userId, plan, item_price });
-      return res.status(400).send('Unknown Reference');
-    }
-    if (pending.user_id !== userId || pending.plan !== plan) {
-      logger.error('IPN rejeté — ref_command incohérente avec le checkout enregistré', {
-        ref_command, userId, plan, expectedUser: pending.user_id, expectedPlan: pending.plan,
-      });
-      alertPaymentRejected('référence incohérente', { ref_command, userId, plan, checkout_user: pending.user_id, checkout_plan: pending.plan });
-      return res.status(400).send('Reference Mismatch');
-    }
+    const result = await db.transaction(async tx => {
+      const pending = await tx.prepare(
+        'SELECT user_id, plan, amount, status FROM payments WHERE ref_command = ? FOR UPDATE'
+      ).get(ref_command);
+      if (!pending) return { code: 400, message: 'Unknown Reference' };
+      if (pending.user_id !== userId || pending.plan !== plan || Number(pending.amount) !== receivedPrice)
+        return { code: 400, message: 'Reference Mismatch' };
+      if (pending.status === 'paid') return { code: 200, message: 'OK' };
+      if (pending.status !== 'pending') return { code: 409, message: 'Invalid Status' };
 
-    // Idempotency — passage atomique pending → paid : si une IPN concurrente
-    // ou un retry PayTech a déjà gagné la course, on ignore silencieusement.
-    const claimed = await db.prepare(
-      "UPDATE payments SET status = 'paid', paid_at = NOW() WHERE ref_command = ? AND status = 'pending' RETURNING id"
-    ).get(ref_command);
-    if (!claimed) {
-      logger.warn('IPN duplicate ignoré', { ref_command });
-      return res.status(200).send('OK');
-    }
-
-    // Vérifier si l'utilisateur existe
-    const user = await db.prepare('SELECT id, plan FROM users WHERE id = ?').get(userId);
-    if (!user) {
-      logger.error('Utilisateur non trouvé pour le crédit IPN', { userId });
-      alertPaymentRejected('utilisateur introuvable (paiement reçu mais non crédité !)', { ref_command, userId, plan, item_price });
-      return res.status(404).send('User Not Found');
-    }
-
-    // Écriture atomique : topup = jetons seuls, sub = plan + jetons + expiration
-    const updateSql = txType === 'topup'
-      ? `UPDATE users SET jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance`
-      : `UPDATE users SET plan = ?, jetons = jetons + ?, plan_expires_at = NOW() + INTERVAL '31 days' WHERE id = ? RETURNING jetons AS balance`;
-
-    const updateParams = txType === 'topup'
-      ? [config.jetons, userId]
-      : [plan, config.jetons, userId];
-
-    const row = await db.prepare(updateSql).get(...updateParams);
-
-    if (row) {
-      const note = txType === 'topup'
-        ? `Recharge PayTech (+${config.jetons} jetons)`
-        : `Abonnement PayTech ${plan.toUpperCase()} (+${config.jetons} jetons)`;
-
-      await db.prepare(`
-        INSERT INTO jeton_transactions (user_id, action, amount, balance_after, note)
-        VALUES (?, ?, ?, ?, ?)
-      `).run(userId, `payment_success:${plan}`, config.jetons, row.balance, note);
-
-      logger.info(`Paiement traité — ${txType}`, {
-        userId, plan, txType,
-        creditedTokens: config.jetons,
-        newBalance: row.balance,
-        ...(txType === 'sub' ? { oldPlan: user.plan, newPlan: plan } : {}),
-      });
-    }
-
-    // Répondre 200 OK immédiatement à PayTech
-    res.status(200).send('OK');
+      const updateSql = config.isTopup
+        ? 'UPDATE users SET jetons = jetons + ? WHERE id = ? RETURNING jetons AS balance'
+        : "UPDATE users SET plan = ?, jetons = jetons + ?, jetons_reset_date = TO_CHAR(NOW(), 'YYYY-MM'), plan_expires_at = NOW() + INTERVAL '31 days' WHERE id = ? RETURNING jetons AS balance";
+      const params = config.isTopup ? [config.jetons, userId] : [plan, config.jetons, userId];
+      const row = await tx.prepare(updateSql).get(...params);
+      if (!row) throw new Error('Payment user missing');
+      await tx.prepare(
+        'INSERT INTO jeton_transactions (user_id, action, amount, balance_after, note) VALUES (?, ?, ?, ?, ?)'
+      ).run(userId, 'payment_success:' + plan, config.jetons, row.balance, 'PayTech ' + ref_command);
+      await tx.prepare("UPDATE payments SET status = 'paid', paid_at = NOW() WHERE ref_command = ?")
+        .run(ref_command);
+      return { code: 200, message: 'OK' };
+    });
+    if (result.code !== 200) alertPaymentRejected(result.message, { ref_command, userId, plan });
+    res.status(result.code).send(result.message);
 
   } catch (err) {
     logger.error('Erreur lors du traitement en base de données de l\'IPN PayTech', {
@@ -278,6 +238,18 @@ publicRouter.post('/', async (req, res) => {
     alertPaymentRejected('erreur interne pendant le crédit (PayTech va retenter)', { ref_command, userId, plan, erreur: err.message });
     res.status(500).send('Internal Server Error');
   }
+});
+
+// Mounted behind authentication; never reveal another user's purchase.
+protectedRouter.get('/status/:reference', async (req, res, next) => {
+  try {
+    const payment = await db.prepare(
+      'SELECT ref_command, plan, status FROM payments WHERE ref_command = ? AND user_id = ?'
+    ).get(req.params.reference, req.user.id);
+    res.setHeader('Cache-Control', 'no-store');
+    if (!payment) return res.status(404).json({ error: 'Paiement introuvable.' });
+    res.json({ reference: payment.ref_command, plan: payment.plan, status: payment.status });
+  } catch (err) { next(err); }
 });
 
 module.exports = {

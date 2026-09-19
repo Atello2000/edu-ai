@@ -89,3 +89,11 @@ generate summary
 payment checkout callback
 Google OAuth callback, if enabled
 ```
+
+## Proxy trust and billing corrections (September 2026)
+
+The backend ignores x-vercel-forwarded-for unless x-jangalai-proxy-secret matches TRUSTED_PROXY_SECRET (at least 32 characters). Leave the secret unset for direct hosting: req.ip is used. With the existing Vercel rewrite, requests share the proxy IP until a trusted server-side proxy injects this secret and overwrites the client-IP header. Do not put this secret in VITE_* variables or public vercel.json headers. Configure a private proxy before scaling the split deployment; the safe fallback may group users under one rate limit.
+
+Credits are added once per confirmed payment. No calendar-month balance reset occurs. Pro/Max access lasts 31 days from payment; remaining credits survive expiry. No schema migration is needed for this correction. Existing paid transactions without credits must be reconciled against provider records, not replayed blindly.
+
+The payment return URL only starts verification. GET /api/payment/status/:reference requires the owner's authenticated account; paid is committed in the same SQL transaction as the credit and ledger entry. Keep PAYMENTS_LOCKED and VITE_PAYMENTS_LOCKED enabled until staging payment callbacks, retries and ownership checks pass.

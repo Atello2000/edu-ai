@@ -2,9 +2,9 @@
  * services/jetons.js — système de crédits (jetons) par action
  *
  * Coûts identiques quel que soit le plan.
- * La différence entre plans = allocation mensuelle (free:40, pro:150, max:400).
+ * La différence entre plans = allocation mensuelle (free:80, pro:150, max:400).
  *
- * Rechargement automatique mensuel selon le plan.
+ * Crédit des jetons à chaque paiement confirmé.
  * Toutes les écritures sont atomiques (UPDATE … WHERE jetons >= cost).
  */
 
@@ -29,45 +29,21 @@ const JETON_COSTS = {
 };
 
 // ── Allocation par plan ───────────────────────────────────────────────────────
-// Free : 40 jetons offerts une seule fois à l'inscription (pas de rechargement mensuel).
-// Pro/Max : rechargement mensuel automatique.
+// Free : 80 jetons offerts une seule fois à l'inscription (pas de rechargement mensuel).
+// Pro/Max : allocation créditée au paiement de chaque période.
 const MONTHLY_JETONS = {
   free: 80,   // allocation unique à l'inscription
   pro:  150,  // ~75 quiz ou ~30 sessions complètes/mois
   max:  400,  // ~200 quiz ou ~80 sessions complètes/mois
 };
 
-function getCurrentMonth() {
-  return new Date().toISOString().slice(0, 7); // 'YYYY-MM'
-}
-
-/**
- * Recharge les jetons si le mois a changé.
- * Vérifie d'abord que le plan payant est encore actif (plan_expires_at).
- * Si expiré → downgrade automatique vers free + pas de rechargement.
- * Retourne le plan effectivement actif après la vérification.
- */
+// Credits are granted once by each confirmed payment, never by calendar month.
+// Expiring an entitlement must not erase the remaining purchased balance.
 async function refillIfNeeded(userId, plan) {
-  if (plan === 'free') return 'free';
-
-  // Vérifier l'expiration de l'abonnement
-  const user = await prepare('SELECT plan_expires_at FROM users WHERE id = ?').get(userId);
-  if (user?.plan_expires_at && new Date(user.plan_expires_at) < new Date()) {
-    await prepare("UPDATE users SET plan = 'free', plan_expires_at = NULL WHERE id = ?").run(userId);
-    require('./logger').info('Plan expired — downgraded to free', { userId, was: plan });
-    return 'free';
-  }
-
-  const month      = getCurrentMonth();
-  const allocation = MONTHLY_JETONS[plan] ?? MONTHLY_JETONS.free;
-
-  await prepare(`
-    UPDATE users
-    SET jetons = ?, jetons_reset_date = ?
-    WHERE id = ? AND (jetons_reset_date IS NULL OR jetons_reset_date < ?)
-  `).run(allocation, month, userId, month);
-
-  return plan;
+  await prepare("UPDATE users SET plan = 'free', plan_expires_at = NULL WHERE id = ? AND plan_expires_at <= NOW()")
+    .run(userId);
+  const user = await prepare('SELECT plan FROM users WHERE id = ?').get(userId);
+  return user?.plan || plan || 'free';
 }
 
 /**
@@ -85,7 +61,7 @@ async function checkAndDeduct(userId, action, plan, costOverride = null) {
 
   const cost = costOverride !== null ? Number(costOverride) : (JETON_COSTS[action] ?? 1);
 
-  // Rechargement mensuel si besoin
+  // Vérifier seulement l’expiration du plan, sans modifier les crédits
   await refillIfNeeded(userId, plan);
 
   // Déduction atomique : échoue si solde insuffisant

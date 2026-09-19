@@ -1,18 +1,18 @@
+const { timingSafeEqual } = require('crypto');
+const { isIP } = require('net');
 const { ipKeyGenerator, rateLimit } = require('express-rate-limit');
 
-/**
- * IP réelle du client.
- * Le frontend Vercel proxifie /api/* vers Render (rewrites) : req.ip est alors
- * l'IP de sortie Vercel, partagée par TOUS les utilisateurs — un rate limit
- * par req.ip deviendrait un verrou collectif. Vercel transmet l'IP réelle dans
- * x-vercel-forwarded-for ; on l'utilise en priorité, avec req.ip en fallback
- * pour le trafic direct (PayTech IPN, crawlers, accès API direct).
- */
+// Only an authenticated upstream may supply the original client address.
 function getClientIp(req) {
-  const xvff = req.headers['x-vercel-forwarded-for'];
-  if (typeof xvff === 'string' && xvff.length) {
-    const first = xvff.split(',')[0].trim();
-    if (first) return first;
+  const secret = process.env.TRUSTED_PROXY_SECRET;
+  const supplied = req.headers['x-jangalai-proxy-secret'];
+  const authenticated = typeof secret === 'string' && secret.length >= 32 &&
+    typeof supplied === 'string' && Buffer.byteLength(secret) === Buffer.byteLength(supplied) &&
+    timingSafeEqual(Buffer.from(secret), Buffer.from(supplied));
+  const forwarded = req.headers['x-vercel-forwarded-for'];
+  if (authenticated && typeof forwarded === 'string') {
+    const first = forwarded.split(',')[0].trim();
+    if (isIP(first)) return first;
   }
   return req.ip;
 }
