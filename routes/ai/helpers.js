@@ -50,6 +50,10 @@ async function getFileText(file) {
  */
 function clientErrorMessage(err) {
   if (err?.expose) return err.message;
+  if (err?.status === 429) return 'Le service IA est temporairement saturé. Patientez un instant puis réessayez.';
+  if (err?.status === 503) return 'Le service IA est temporairement indisponible. Veuillez réessayer dans quelques instants.';
+  if (err?.status === 504 || err?.code === 'ETIMEDOUT' || err?.name === 'APIConnectionTimeoutError')
+    return 'Le service IA a dépassé le délai de réponse. Veuillez réessayer.';
   if (process.env.NODE_ENV !== 'production') return err?.message || 'Erreur inconnue';
   return 'Une erreur est survenue pendant la génération. Veuillez réessayer.';
 }

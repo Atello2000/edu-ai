@@ -15,6 +15,12 @@ const CHUNK_PARALLEL = 1;  // chunks traités séquentiellement pour respecter l
 router.post('/summarize', async (req, res) => {
   const send = sseSetup(req, res);
   let deducted = 0;
+  // Long analyses may remain silent while a provider works on the first part.
+  const heartbeat = setInterval(() => {
+    if (!res.destroyed && !res.writableEnded) res.write(': heartbeat\n\n');
+  }, 15000);
+  heartbeat.unref?.();
+  res.once('close', () => clearInterval(heartbeat));
 
   try {
     const { files } = req.body;
@@ -71,10 +77,10 @@ router.post('/summarize', async (req, res) => {
     }
     deducted = jeton.cost || 0;
 
-    // ── 4. Traiter tous les fichiers en parallèle ─────────────────────────
+    // ── 4. Traiter les fichiers séquentiellement ─────────────────────────
     let streamModel = MODEL_LABEL;
 
-    await Promise.all(fileData.map(async ({ file, text, chunks, key }) => {
+    for (const { file, chunks, key } of fileData) {
 
       if (chunks.length === 1) {
         // Fichier court : streaming direct
@@ -107,12 +113,12 @@ router.post('/summarize', async (req, res) => {
         setCache(key, fullText); // fire-and-forget
 
       } else {
-        // Fichier long : chunks analysés en parallèle
+        // Fichier long : limiter les appels concurrents aux fournisseurs.
         send({ type: 'progress', name: file.name, step: 0, total: chunks.length,
                message: `Cours volumineux — analyse en ${chunks.length} parties…` });
 
         const partials = new Array(chunks.length);
-        const chunkParallel = aiCfg.provider === 'gemini' ? 1 : 3;
+        const chunkParallel = CHUNK_PARALLEL;
         for (let i = 0; i < chunks.length; i += chunkParallel) {
           await Promise.all(
             chunks.slice(i, i + chunkParallel).map(async (chunk, j) => {
@@ -158,7 +164,7 @@ router.post('/summarize', async (req, res) => {
         send({ type: 'done', name: file.name });
         setCache(key, fullText); // fire-and-forget
       }
-    }));
+    }
 
     send({ type: 'model', name: streamModel });
     send({ type: 'end' });
@@ -167,6 +173,8 @@ router.post('/summarize', async (req, res) => {
     logger.error('AI summarize error', { userId: req.user?.id, message: err.message });
     await refundJetons(req.user?.id, 'summarize', deducted);
     send({ type: 'error', message: clientErrorMessage(err) });
+  } finally {
+    clearInterval(heartbeat);
   }
   res.end();
 });

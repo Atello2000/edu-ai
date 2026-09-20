@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import eventBus from '../utils/eventBus';
 
 function getLang() {
@@ -13,14 +13,14 @@ function getLang() {
  * Returns remaining incomplete buffer.
  */
 function parseSseBuffer(buffer, onEvent) {
-  const parts = buffer.split('\n\n');
+  const parts = buffer.split(/\r?\n\r?\n/);
   const remaining = parts.pop() ?? '';
   for (const part of parts) {
     const line = part.trim();
     if (!line.startsWith('data:')) continue;
-    try {
-      onEvent(JSON.parse(line.slice(5).trim()));
-    } catch { /* skip malformed */ }
+    let data;
+    try { data = JSON.parse(line.slice(5).trim()); } catch { continue; }
+    onEvent(data);
   }
   return remaining;
 }
@@ -57,12 +57,15 @@ export function useSummarize({ saveSession } = {}) {
   }
 
   function reset() {
-    xhrRef.current?.abort();
+    const previous = xhrRef.current;
+    xhrRef.current = null;
+    previous?.abort();
     cancelRaf();
     setResults([]);
     setStreaming({});
     setProgress({});
     setError(null);
+    setLoading(false);
     targets.current     = {};
     shownLen.current    = {};
     finished.current    = {};
@@ -70,6 +73,13 @@ export function useSummarize({ saveSession } = {}) {
     endReceived.current = false;
     navigated.current   = false;
   }
+
+  useEffect(() => () => {
+    const xhr = xhrRef.current;
+    xhrRef.current = null;
+    xhr?.abort();
+    cancelRaf();
+  }, []);
 
   function restoreFrom(savedResults) {
     if (!Array.isArray(savedResults) || !savedResults.length) return;
@@ -85,6 +95,7 @@ export function useSummarize({ saveSession } = {}) {
 
 
     let buffer = '';
+    let settled = false;
 
     // ── Boucle de révélation progressive ─────────────────────────────────────
     function ensureRaf() {
@@ -147,6 +158,8 @@ export function useSummarize({ saveSession } = {}) {
     }
 
     function finalize() {
+      if (settled) return;
+      settled = true;
       if (accumulated.current.length) {
         saveSession?.({ summaries: accumulated.current });
         eventBus.emit('quota:refresh');
@@ -156,7 +169,30 @@ export function useSummarize({ saveSession } = {}) {
       setLoading(false);
     }
 
+    function fail(message) {
+      if (settled) return;
+      settled = true;
+      cancelRaf();
+      // Keep only files which the server explicitly completed, even if the
+      // typewriter animation had not yet caught up. Never save a partial result.
+      const completed = Object.keys(targets.current)
+        .filter(name => finished.current[name])
+        .map(name => ({ name, summary: targets.current[name] }));
+      accumulated.current = [...accumulated.current, ...completed];
+      setResults(accumulated.current);
+      if (accumulated.current.length) saveSession?.({ summaries: accumulated.current });
+      targets.current = {};
+      shownLen.current = {};
+      finished.current = {};
+      setStreaming({});
+      setProgress({});
+      setError(message || 'La génération a échoué. Veuillez réessayer.');
+      setLoading(false);
+      eventBus.emit('quota:refresh');
+    }
+
     function handleEvent(data) {
+      if (settled) return;
       if (data.type === 'start') {
         targets.current[data.name]  = '';
         shownLen.current[data.name] = 0;
@@ -167,8 +203,8 @@ export function useSummarize({ saveSession } = {}) {
           eventBus.emit('nav:section', 'summary-section');
         }
 
-      } else if (data.type === 'delta') {
-        targets.current[data.name] = (targets.current[data.name] || '') + (data.text || '');
+      } else if (data.type === 'delta' || data.type === 'patch') {
+        targets.current[data.name] = (targets.current[data.name] || '') + (data.type === 'patch' ? '\n\n' : '') + (data.text || '');
         // Le streaming réel a commencé → on retire le message de progression
         setProgress(prev => {
           if (!(data.name in prev)) return prev;
@@ -181,6 +217,10 @@ export function useSummarize({ saveSession } = {}) {
         ensureRaf();
 
       } else if (data.type === 'end') {
+        if (Object.keys(targets.current).some(name => !finished.current[name])) {
+          fail('La génération a été interrompue avant la fin. Veuillez réessayer.');
+          return;
+        }
         endReceived.current = true;
         setProgress({});
         // Si plus rien à révéler/commiter, finaliser immédiatement ; sinon la
@@ -189,16 +229,26 @@ export function useSummarize({ saveSession } = {}) {
         else ensureRaf();
 
       } else if (data.type === 'progress') {
+        if (!(data.name in targets.current)) {
+          targets.current[data.name] = '';
+          shownLen.current[data.name] = 0;
+          finished.current[data.name] = false;
+        }
         // Cours volumineux (passe 1) — message lisible affiché dans la carte en cours
         setProgress(prev => ({
           ...prev,
           [data.name]: data.message || `Partie ${data.step}/${data.total}…`,
         }));
 
+      } else if (data.type === 'file_error') {
+        delete targets.current[data.name];
+        delete shownLen.current[data.name];
+        delete finished.current[data.name];
+        setStreaming(prev => { const next = { ...prev }; delete next[data.name]; return next; });
+        setProgress(prev => { const next = { ...prev }; delete next[data.name]; return next; });
+        setError(data.message || 'Un fichier n’a pas pu être analysé.');
       } else if (data.type === 'error') {
-        cancelRaf();
-        setError(data.message);
-        setLoading(false);
+        fail(data.message);
       }
     }
 
@@ -209,29 +259,47 @@ export function useSummarize({ saveSession } = {}) {
 
     let processedLen = 0;
 
-    xhr.onprogress = () => {
+    function consumeResponse() {
       const chunk = xhr.responseText.slice(processedLen);
       processedLen = xhr.responseText.length;
       buffer = parseSseBuffer(buffer + chunk, handleEvent);
+    }
+    xhr.onprogress = () => {
+      if (xhrRef.current !== xhr || settled || xhr.status >= 400) return;
+      consumeResponse();
     };
-
     xhr.onload = () => {
-      // Flush any remaining buffer
-      if (buffer.trim()) parseSseBuffer(buffer + '\n\n', handleEvent);
-      // Si le serveur n'a jamais émis 'end' (réseau coupé après done), garantir la fin.
-      if (!endReceived.current && Object.keys(targets.current).length === 0
-          && !accumulated.current.length) {
-        setLoading(false);
+      if (xhrRef.current !== xhr || settled) return;
+      if (xhr.status < 200 || xhr.status >= 300) {
+        let message;
+        try { message = JSON.parse(xhr.responseText).error; } catch { /* proxy HTML response */ }
+        fail(message || (xhr.status === 401 ? 'Votre session a expiré. Reconnectez-vous.' :
+          xhr.status === 429 ? 'Trop de demandes. Patientez un instant puis réessayez.' :
+          'Le serveur n’a pas pu terminer la génération. Veuillez réessayer.'));
+        return;
       }
+      consumeResponse();
+      if (buffer.trim()) { parseSseBuffer(buffer + '\n\n', handleEvent); buffer = ''; }
+      if (settled) return;
+      const incomplete = Object.keys(targets.current).some(name => !finished.current[name]);
+      if (incomplete || (!endReceived.current && !accumulated.current.length && !Object.keys(targets.current).length)) {
+        fail('La génération a été interrompue avant la fin. Veuillez réessayer.');
+        return;
+      }
+      // A completed file is valid even if the final end frame was lost.
+      endReceived.current = true;
+      if (Object.keys(targets.current).length) ensureRaf();
+      else finalize();
     };
-
     xhr.onerror = () => {
-      cancelRaf();
-      setError('Erreur réseau');
-      setLoading(false);
+      if (xhrRef.current === xhr) fail('Connexion interrompue. Vérifiez votre réseau puis réessayez.');
     };
-
-    xhr.onabort = () => { cancelRaf(); setLoading(false); };
+    xhr.ontimeout = () => {
+      if (xhrRef.current === xhr) fail('Le délai de génération est dépassé. Veuillez réessayer.');
+    };
+    xhr.onabort = () => {
+      if (xhrRef.current === xhr) fail('Génération annulée.');
+    };
 
     xhr.withCredentials = true;
     xhr.send(JSON.stringify({ files, lang: getLang() }));
